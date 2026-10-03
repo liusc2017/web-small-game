@@ -1,0 +1,2581 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>百家乐 · Baccarat</title>
+<style>
+/* ============================================================
+   主题变量（默认午夜蓝，applyTheme 会整体改写）
+   ============================================================ */
+:root{
+  --bg:#0a1020; --glow-1:#1c2f4f; --glow-2:#241c4a;
+  --panel:rgba(23,33,54,.78); --panel2:#16233a; --panel-brd:rgba(148,163,184,.20);
+  --line:rgba(148,163,184,.22);
+  --text:#e8eefb; --muted:#8fa2bb;
+  --accent:#38bdf8; --accent-2:#f5b942; --danger:#f87171; --win:#4ade80;
+  --felt-1:#12402f; --felt-2:#07231a;
+  --wood-1:#f2d5a0; --wood-2:#e7c088; --wood-3:#d6a45f;
+  --wline:rgba(88,55,20,.75); --wframe:rgba(70,42,14,.90);
+}
+*{box-sizing:border-box}
+html,body{min-height:100%}
+body{
+  margin:0;min-height:100vh;padding:12px 16px 14px;
+  font-family:"Segoe UI",system-ui,-apple-system,"Microsoft YaHei","PingFang SC",sans-serif;
+  color:var(--text);background:
+    radial-gradient(1200px 700px at 20% -10%,var(--glow-1),transparent 60%),
+    radial-gradient(1000px 600px at 85% 0%,var(--glow-2),transparent 55%),
+    var(--bg);
+  -webkit-font-smoothing:antialiased;
+}
+h1,h2,h3,h4{margin:0}
+button{
+  font:inherit;font-size:13px;padding:8px 14px;border-radius:9px;cursor:pointer;
+  color:var(--text);background:rgba(148,163,184,.12);border:1px solid var(--panel-brd);
+  transition:background .15s,border-color .15s,transform .06s;
+}
+button:hover:not(:disabled){background:rgba(148,163,184,.20);border-color:rgba(148,163,184,.38)}
+button:active:not(:disabled){transform:translateY(1px)}
+button:disabled{opacity:.38;cursor:not-allowed}
+button.primary{background:linear-gradient(180deg,#f3cd7a,#d9a63a);color:#241a05;border-color:rgba(255,231,170,.7);font-weight:700}
+button.primary:hover:not(:disabled){background:linear-gradient(180deg,#ffdd93,#e6b445)}
+button.ghost{background:transparent}
+select,input[type=range]{font:inherit;font-size:12.5px}
+select{
+  color:var(--text);background:var(--panel2);border:1px solid var(--panel-brd);
+  border-radius:8px;padding:5px 8px;outline:none;max-width:150px;
+}
+kbd{background:rgba(148,163,184,.16);border:1px solid var(--line);border-radius:5px;padding:1px 5px;font-size:11px;font-family:inherit}
+
+/* ============================================================
+   三栏布局（参考中国象棋）
+   ============================================================ */
+.app{max-width:none;width:100%;margin:0 auto;padding:0;display:flex;flex-direction:column;gap:10px}
+header{text-align:center}
+header h1{font-size:26px;letter-spacing:.34em;font-weight:800;
+  background:linear-gradient(180deg,#fff,#a9c6e6);-webkit-background-clip:text;background-clip:text;color:transparent}
+header .sub{color:var(--muted);font-size:12px;letter-spacing:.14em;margin-top:4px}
+main{
+  display:grid;
+  grid-template-columns:clamp(250px,17vw,330px) minmax(0,1fr) clamp(250px,17vw,330px);
+  grid-template-rows:minmax(0,1fr);
+  gap:14px;align-items:stretch;
+  height:calc(100vh - 136px);min-height:600px;
+}
+.side-col{display:flex;flex-direction:column;gap:12px;min-height:0;overflow-y:auto;padding-right:3px}
+.side-col::-webkit-scrollbar{width:7px}
+.side-col::-webkit-scrollbar-thumb{background:var(--line);border-radius:4px}
+.side-col::-webkit-scrollbar-track{background:transparent}
+.board-col{min-width:0;display:flex;flex-direction:column;gap:10px;min-height:0}
+.panel{background:var(--panel);border:1px solid var(--panel-brd);border-radius:14px;
+  backdrop-filter:blur(6px);box-shadow:0 6px 20px rgba(0,0,0,.22)}
+.sec{padding:12px;display:flex;flex-direction:column;gap:10px;flex:none}
+.sec h2{margin:0;font-size:12px;letter-spacing:.14em;color:var(--muted);font-weight:700}
+.field{display:flex;align-items:center;justify-content:space-between;gap:9px;font-size:13px}
+.field span{color:var(--muted)}
+.field .hintline{font-size:11px;color:var(--muted);opacity:.85}
+.btns2{display:flex;flex-direction:column;gap:8px}
+.btns2 button{width:100%}
+.volbox{display:flex;align-items:center;gap:8px;font-size:13px}
+.volbox input[type=range]{
+  -webkit-appearance:none;appearance:none;width:100px;height:4px;border-radius:3px;
+  background:linear-gradient(90deg,var(--accent),rgba(148,163,184,.30));cursor:pointer;outline:none;
+}
+.volbox input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none;appearance:none;width:13px;height:13px;border-radius:50%;
+  background:#fff;border:2px solid var(--accent);cursor:pointer;
+}
+.vn{font-variant-numeric:tabular-nums;min-width:26px;text-align:right;color:var(--muted);font-size:12px}
+
+/* 新手教学条 */
+.coach{border-radius:14px;border:1px solid rgba(74,222,128,.35);
+  background:linear-gradient(180deg,rgba(74,222,128,.10),rgba(74,222,128,.03));padding:11px 12px;
+  display:flex;flex-direction:column;gap:8px;flex:none}
+.coach-head{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.coach-tag{font-size:11px;font-weight:800;letter-spacing:.06em;padding:2px 8px;border-radius:999px;
+  background:rgba(74,222,128,.22);color:#4ade80;border:1px solid rgba(74,222,128,.45);white-space:nowrap}
+.coach-main{font-size:14px;font-weight:700}
+.coach-why{font-size:12.5px;color:var(--muted);line-height:1.7}
+.coach-why b{color:#4ade80}
+.coach-warn{font-size:12.5px;line-height:1.7;color:#fbbf24}
+.coach-foot{font-size:11px;color:var(--muted);opacity:.8;line-height:1.6}
+.coach-foot b{color:var(--text)}
+
+/* 状态行 */
+.stat-row{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-size:13px}
+.stat-row span{color:var(--muted)}
+.stat-row b{font-size:15px;font-variant-numeric:tabular-nums}
+.statsbar{font-size:12.5px;color:var(--muted);display:flex;flex-wrap:wrap;gap:10px;align-items:baseline}
+.statsbar b{font-size:15px;color:var(--text);font-variant-numeric:tabular-nums}
+.statsbar .sb-win{color:var(--win)} .statsbar .sb-lose{color:var(--danger)}
+.sb-note{width:100%;font-size:11px;opacity:.65}
+
+/* ============================================================
+   牌桌
+   ============================================================ */
+.table{
+  flex:1 1 auto;min-height:0;border-radius:16px;padding:12px 14px;display:flex;flex-direction:column;
+  justify-content:space-between;gap:8px;position:relative;overflow:auto;
+  background:radial-gradient(120% 90% at 50% 0%,var(--felt-1),var(--felt-2) 72%);
+  border:3px solid var(--wood-3);
+  box-shadow:inset 0 0 0 2px var(--wline),0 10px 30px rgba(0,0,0,.42);
+}
+.table::-webkit-scrollbar{width:7px}
+.table::-webkit-scrollbar-thumb{background:rgba(255,255,255,.22);border-radius:4px}
+.table::-webkit-scrollbar-track{background:transparent}
+.table::after{content:"";position:absolute;inset:0;pointer-events:none;
+  background:repeating-linear-gradient(45deg,rgba(255,255,255,.014) 0 2px,transparent 2px 5px)}
+.hand-zone{display:flex;flex-direction:column;gap:6px;align-items:center;position:relative;z-index:1}
+.hand-title{font-size:12px;letter-spacing:.14em;color:rgba(226,240,255,.74);display:flex;align-items:center;gap:10px}
+.hand-title b{font-size:15px;letter-spacing:0;color:#fff}
+.hand-title .pv{font-size:12px;padding:2px 9px;border-radius:999px;background:rgba(255,255,255,.10);
+  border:1px solid rgba(255,255,255,.16);font-variant-numeric:tabular-nums;min-width:26px;text-align:center}
+.hand-title .pv.nine{background:rgba(245,185,66,.24);border-color:rgba(245,185,66,.55);color:#ffe1a3}
+.hand-title .pv.nat{background:rgba(74,222,128,.24);border-color:rgba(74,222,128,.55);color:#a7f3c8}
+.hand-title .pv.lose{background:rgba(148,163,184,.14);border-color:rgba(148,163,184,.30)}
+.hand-title .pv.win{background:rgba(74,222,128,.20);border-color:rgba(74,222,128,.50);color:#bbf7d0}
+.center-msg{text-align:center;font-size:14px;font-weight:600;color:#d7e7f5;letter-spacing:.03em;
+  min-height:42px;z-index:1;position:relative;display:flex;flex-direction:column;justify-content:center;gap:2px}
+.center-msg .big{font-size:19px}
+.center-msg .up{color:var(--win)} .center-msg .down{color:#ffb4b4} .center-msg .sub{font-size:12px;color:rgba(215,231,245,.72);font-weight:500}
+
+/* 扑克牌 */
+.cards{display:flex;gap:8px;align-items:flex-end;min-height:104px;justify-content:center;flex-wrap:wrap}
+.card{
+  width:70px;height:98px;border-radius:9px;position:relative;flex:none;
+  background:linear-gradient(160deg,#fff,#eef1f6);color:#16202f;
+  border:1px solid rgba(0,0,0,.22);box-shadow:0 5px 14px rgba(0,0,0,.34);
+  display:flex;align-items:center;justify-content:center;
+  animation:dealIn .26s ease-out;
+}
+@keyframes dealIn{from{opacity:0;transform:translateY(-16px) scale(.92)}to{opacity:1;transform:none}}
+.card.red{color:#c81e3a}
+.card .cn{position:absolute;left:6px;top:5px;text-align:center;line-height:1}
+.card .cn .rk{font-size:17px;font-weight:800;display:block}
+.card .cn .st{font-size:12px;display:block}
+.card .mid{font-size:36px;line-height:1;opacity:.92}
+.card.back{
+  background:repeating-linear-gradient(45deg,#1e3a8a 0 6px,#16306f 6px 12px);
+  border-color:rgba(255,255,255,.25);
+}
+.card.back::after{content:"";position:absolute;inset:8px;border-radius:5px;
+  border:1px solid rgba(255,255,255,.30);background:rgba(255,255,255,.06)}
+.card.dim{filter:grayscale(.35) brightness(.82)}
+.card.pop{animation:cardPop .30s cubic-bezier(.2,1.5,.5,1)}
+@keyframes cardPop{from{transform:scale(1.14) rotate(3deg)}to{transform:none}}
+
+/* 下注盘 */
+.betgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;position:relative;z-index:1}
+.betgrid.pairs{grid-template-columns:repeat(2,minmax(0,1fr))}
+.bbtn{
+  position:relative;padding:10px 6px 9px;border-radius:12px;min-height:60px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+  background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.20);color:#fff;
+  font-weight:700;font-size:14px;line-height:1.15;
+}
+.bbtn:hover:not(:disabled){background:rgba(255,255,255,.18)}
+.bbtn small{font-weight:600;font-size:10px;color:rgba(226,240,255,.68);letter-spacing:0}
+.bbtn .amt{position:absolute;top:-7px;right:-6px;min-width:22px;padding:1px 6px;border-radius:999px;
+  background:linear-gradient(180deg,#f3cd7a,#d9a63a);color:#241a05;font-size:11px;font-weight:800;
+  box-shadow:0 2px 6px rgba(0,0,0,.4)}
+.bbtn.has{background:rgba(245,185,66,.20);border-color:rgba(245,185,66,.62)}
+.bbtn.win{background:rgba(74,222,128,.26);border-color:rgba(74,222,128,.70)}
+.bbtn.hit{animation:betHit .32s ease-out}
+@keyframes betHit{from{box-shadow:0 0 0 6px rgba(74,222,128,.35)}to{box-shadow:0 0 0 0 rgba(74,222,128,0)}}
+.bbtn[data-k="P"].tinted{background:rgba(59,130,246,.16);border-color:rgba(59,130,246,.45)}
+.bbtn[data-k="B"].tinted{background:rgba(226,87,74,.16);border-color:rgba(226,87,74,.45)}
+
+/* 底部操作条 */
+.mine{padding:11px 12px;display:flex;flex-direction:column;gap:9px;flex:0 0 auto}
+.betbar{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;align-items:center}
+.betchip{
+  min-width:58px;padding:8px 12px;border-radius:999px;font-weight:700;font-size:13px;
+  background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.20);color:#fff;
+}
+.betchip.on{background:linear-gradient(180deg,#f3cd7a,#d9a63a);color:#241a05;border-color:rgba(255,231,170,.8)}
+.sel-info{font-size:12px;color:var(--muted);text-align:center;min-height:17px}
+
+/* ============================================================
+   庄家本钱（赌台资金池）/ 昵称输入 / 多人坐位 / 结果区 / 排行榜
+   ============================================================ */
+.field input[type=number]{
+  width:104px;flex:none;text-align:right;font:inherit;font-size:13px;font-variant-numeric:tabular-nums;
+  color:var(--text);background:var(--panel2);border:1px solid var(--panel-brd);border-radius:8px;
+  padding:5px 8px;outline:none;
+}
+.field input[type=number]:focus{border-color:var(--accent)}
+
+/* 昵称输入 */
+.namebox{display:flex;flex-direction:column;gap:6px}
+.namefield{display:flex;align-items:center;gap:8px;font-size:12.5px}
+.namefield span{color:var(--muted);width:58px;flex:none;font-size:11.5px}
+.namefield input{
+  flex:1;min-width:0;font:inherit;font-size:12.5px;color:var(--text);
+  background:var(--panel2);border:1px solid var(--panel-brd);border-radius:8px;padding:5px 8px;outline:none;
+}
+.namefield input:focus{border-color:var(--accent)}
+.namefield input::placeholder{color:var(--muted);opacity:.6}
+
+/* 结果区：左右两组，整块居中，组内每行左对齐
+   左 =【本局总结】赢/输/和 各多少人；右 =【详情情况】赌台一行 + 每人一行 */
+.center-msg .resbox{display:inline-flex;gap:0;text-align:left;margin-top:6px;vertical-align:top;
+  align-items:flex-start;align-self:center}
+.center-msg .resgroup{display:block;padding:0 24px}
+.center-msg .resgroup + .resgroup{border-left:1px dashed rgba(148,163,184,.35)}
+/* 组标题比内容更大更粗 */
+.center-msg .resgtitle{font-size:21px;line-height:1.35;color:var(--text);font-weight:800;
+  letter-spacing:.06em;margin-bottom:5px}
+.center-msg .resline{display:block;font-size:18px;line-height:1.5;font-weight:600;letter-spacing:.02em;
+  font-variant-numeric:tabular-nums}
+.center-msg .resline b{font-weight:800}
+
+/* 牌桌上：赌台本钱读数 */
+.dealer-strip{display:flex;justify-content:center;position:relative;z-index:1}
+.dealer-bank{font-size:11.5px;color:rgba(226,240,255,.78);letter-spacing:.02em;
+  background:rgba(0,0,0,.20);border:1px solid rgba(255,255,255,.12);border-radius:999px;padding:2px 12px}
+.dealer-bank b{color:#fff;font-variant-numeric:tabular-nums}
+.dealer-bank .up{color:var(--win)} .dealer-bank .down{color:#ffb4b4}
+.dealer-bank.broke{border-color:rgba(248,113,113,.6);color:#ffb4b4}
+
+/* 多人：每个玩家一个坐位 */
+.players-row{display:flex;gap:8px;justify-content:center;align-items:stretch;
+  flex-wrap:wrap;position:relative;z-index:1}
+.pzone{display:flex;flex-direction:column;gap:3px;align-items:center;
+  padding:5px 10px;border-radius:12px;border:1px solid rgba(255,255,255,.10);
+  background:rgba(0,0,0,.14);transition:border-color .15s,background .15s,box-shadow .15s;min-width:110px}
+.pzone.active{border-color:var(--accent);background:rgba(56,189,248,.10);
+  box-shadow:0 0 0 3px rgba(56,189,248,.13)}
+.pzone.win{border-color:rgba(74,222,128,.55)}
+.pzone.lose{border-color:rgba(248,113,113,.38)}
+.pzone.out{opacity:.5}
+.pzone .pname{font-size:12.5px;font-weight:700;color:#fff;max-width:150px;overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap}
+.pzone .pchips{font-size:11px;color:rgba(226,240,255,.75);font-variant-numeric:tabular-nums}
+.pstate{font-size:10.5px;letter-spacing:.04em;padding:1px 8px;border-radius:999px;
+  background:rgba(148,163,184,.16);border:1px solid rgba(148,163,184,.22);
+  color:rgba(226,240,255,.72);white-space:nowrap;min-width:52px;text-align:center}
+.pstate.turn{background:rgba(56,189,248,.20);border-color:rgba(56,189,248,.5);color:#bae6fd}
+.pstate.win{background:rgba(74,222,128,.20);border-color:rgba(74,222,128,.5);color:#a7f3c8}
+.pstate.lose{background:rgba(248,113,113,.18);border-color:rgba(248,113,113,.45);color:#ffb4b4}
+.pbet{font-size:10px;color:var(--muted);letter-spacing:.02em;text-align:center}
+.pbet b{color:var(--text);font-variant-numeric:tabular-nums}
+
+/* 排行榜：每行第一行「名字 + 筹码」，第二行「本局 ± / 累计胜胜负和」 */
+.rank{display:flex;flex-direction:column;gap:3px;font-size:12.5px}
+.rankrow{display:grid;grid-template-columns:18px minmax(0,1fr) auto;gap:1px 6px;
+  align-items:baseline;padding:4px 6px;border-radius:7px}
+.rankrow.active{background:rgba(56,189,248,.14);box-shadow:inset 0 0 0 1px rgba(56,189,248,.35)}
+.rankrow.dealer{background:rgba(245,185,66,.10);box-shadow:inset 0 0 0 1px rgba(245,185,66,.28);margin-bottom:3px}
+.rankrow.dealer .rn{color:var(--accent-2)}
+.rankrow.dealer.broke{box-shadow:inset 0 0 0 1px rgba(248,113,113,.45)}
+.rankrow.dealer.broke .rc{color:#ffb4b4}
+.rankrow .rk{grid-row:1/3;align-self:center;color:var(--muted);text-align:center;font-variant-numeric:tabular-nums}
+.rankrow .rn{grid-column:2;grid-row:1;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rankrow .rc{grid-column:3;grid-row:1;text-align:right;font-variant-numeric:tabular-nums;font-weight:700}
+.rankrow .rd{grid-column:2;grid-row:2;color:var(--muted);font-size:11.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rankrow .rs{grid-column:3;grid-row:2;text-align:right;color:var(--muted);font-variant-numeric:tabular-nums;font-size:11px}
+.rankrow .up{color:var(--win)} .rankrow .down{color:#ffb4b4}
+.ranknote{font-size:11px;color:var(--muted);opacity:.8;margin-top:7px;line-height:1.6}
+
+/* ============================================================
+   路单（珠盘路 / 大路）
+   ============================================================ */
+.roadwrap{display:flex;flex-direction:column;gap:6px}
+.roadhead{font-size:11.5px;letter-spacing:.14em;color:var(--muted);display:flex;align-items:baseline;gap:8px}
+.roadhead .pv{font-size:11px;color:var(--text);background:rgba(148,163,184,.14);
+  border:1px solid var(--line);border-radius:999px;padding:1px 7px;font-variant-numeric:tabular-nums}
+.bead,.bigroad{
+  display:grid;grid-auto-flow:column;grid-template-rows:repeat(6,15px);
+  gap:2px;justify-content:start;align-content:start;overflow-x:auto;padding-bottom:2px;
+}
+.bead::-webkit-scrollbar,.bigroad::-webkit-scrollbar{height:6px}
+.bead::-webkit-scrollbar-thumb,.bigroad::-webkit-scrollbar-thumb{background:var(--line);border-radius:3px}
+.dot{width:15px;height:15px;border-radius:50%;background:rgba(148,163,184,.16);
+  border:1px solid rgba(148,163,184,.22);position:relative;display:flex;align-items:center;justify-content:center}
+.dot.empty{opacity:.30}
+.dot.p{background:#3b82f6;border-color:rgba(191,219,254,.55)}
+.dot.b{background:#e2574a;border-color:rgba(254,202,202,.55)}
+.dot.t{background:#22c55e;border-color:rgba(187,247,208,.55)}
+.dot i{position:absolute;width:4px;height:4px;border-radius:50%;background:rgba(255,255,255,.92);display:none}
+.dot.pp i{display:block;left:1.5px;top:1.5px}
+.dot.bp i{display:block;right:1.5px;bottom:1.5px}
+.dot b{font-size:8px;color:rgba(255,255,255,.95);font-weight:800;line-height:1}
+.roadstats{display:flex;flex-wrap:wrap;gap:10px;font-size:12px;color:var(--muted);align-items:baseline}
+.roadstats b{color:var(--text);font-variant-numeric:tabular-nums}
+.roadstats .rp{color:#7fb2ff} .roadstats .rb{color:#ff9c92} .roadstats .rt{color:#7ee2a8}
+
+/* 规则卡 */
+.rules{position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;
+  background:rgba(4,8,16,.74);backdrop-filter:blur(3px);padding:20px}
+.rules.on{display:flex}
+.rules-box{max-width:min(94vw,700px);max-height:86vh;overflow:auto;border-radius:16px;padding:20px 22px;
+  background:var(--panel2);border:1px solid var(--panel-brd);line-height:1.85;font-size:13.5px;color:var(--text)}
+.rules-box h3{margin:0 0 10px;font-size:16px}
+.rules-box h4{margin:15px 0 6px;font-size:13.5px;color:#4ade80}
+.rules-box ul,.rules-box ol{margin:0;padding-left:20px}
+.rules-box li{margin:4px 0}
+.rules-box b{color:#fbbf24}
+.rules-box table{border-collapse:collapse;width:100%;font-size:12.5px;margin:6px 0}
+.rules-box th,.rules-box td{border:1px solid rgba(148,163,184,.24);padding:3px 7px;text-align:center}
+.rules-box th{color:var(--muted);font-weight:700}
+.rules-box .close{margin-top:16px;width:100%}
+/* 庄家赔光时的提示卡 */
+.rules-box.broke{max-width:min(94vw,460px);border-color:rgba(248,113,113,.5)}
+.rules-box.broke h3{color:#ffb4b4}
+.broke-big{font-size:42px;line-height:1;text-align:center;margin:2px 0 12px}
+.broke-kv{display:flex;justify-content:space-between;gap:10px;font-size:13px;padding:5px 0;
+  border-bottom:1px dashed rgba(148,163,184,.22)}
+.broke-kv span{color:var(--muted)}
+.broke-kv b{font-variant-numeric:tabular-nums}
+.broke-kv b.down{color:#ffb4b4}
+
+.toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(14px);
+  padding:10px 18px;border-radius:10px;background:rgba(15,23,42,.95);border:1px solid var(--panel-brd);
+  font-size:13.5px;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:70}
+.toast.on{opacity:1;transform:translateX(-50%)}
+
+@media (max-width:1180px){
+  main{grid-template-columns:1fr;height:auto;min-height:0}
+  .side-col{overflow:visible}
+  .board-col{min-height:80vh}
+}
+/* 矮屏（笔记本 / 小窗口）：牌和路单格子缩一号，页面允许滚动 */
+@media (max-height:900px){
+  main{height:auto;min-height:660px}
+  .card{width:60px;height:84px}
+  .card .cn .rk{font-size:15px}
+  .card .mid{font-size:30px}
+  .cards{min-height:90px}
+  .bead,.bigroad{grid-template-rows:repeat(6,12px)}
+  .dot{width:12px;height:12px}
+  .bbtn{min-height:52px;font-size:13px}
+}
+
+/* ===== 专注/全屏模式：藏起标题和左右两栏，中间区域吃满窗口（Shift+F 或点右上角按钮） ===== */
+body.focus header,body.focus .side-col,body.focus aside{display:none}
+body.focus main{grid-template-columns:minmax(0,1fr) !important;height:calc(100vh - 44px) !important;min-height:0 !important}
+body.focus .app{padding:8px 10px 10px !important;gap:8px;max-width:none !important}
+body.focus .board-col{min-height:0 !important}
+.focus-fab{position:fixed;top:9px;right:11px;z-index:80;display:flex;align-items:center;gap:6px;
+  padding:6px 12px;border-radius:999px;font:inherit;font-size:12.5px;font-weight:700;cursor:pointer;
+  color:#e8eefb;background:rgba(15,23,42,.74);border:1px solid rgba(148,163,184,.32);
+  -webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
+  opacity:.6;transition:opacity .15s,transform .15s}
+.focus-fab:hover{opacity:1;transform:translateY(-1px)}
+body.focus .focus-fab{opacity:.92}
+</style>
+</head>
+<body>
+<button class="focus-fab" id="focusFab" title="隐藏标题和两侧面板，让中间占满窗口（Shift+F）">⛶ 专注模式</button>
+<div class="app">
+
+  <header>
+    <h1>百 家 乐</h1>
+    <p class="sub">BACCARAT · 8 副牌 · 庄 / 闲 / 和 + 对子 · 标准补牌规则 · 新手教学模式</p>
+  </header>
+
+  <main>
+    <!-- ================= 左栏：设置 + 新手教学 ================= -->
+    <div class="side-col left">
+      <section class="panel sec">
+        <h2>对局设置</h2>
+        <label class="field" title="每个筹码代表多少分"><span>筹码面额</span>
+          <select id="chipSel">
+            <option value="10">10 分</option>
+            <option value="50" selected>50 分</option>
+            <option value="100">100 分</option>
+            <option value="500">500 分</option>
+          </select>
+        </label>
+        <label class="field" title="一局最多押多少分（每个下注区单独限红）"><span>单注限红</span>
+          <select id="limitSel">
+            <option value="100">100 分</option>
+            <option value="500" selected>500 分</option>
+            <option value="2000">2000 分</option>
+            <option value="0">不限红</option>
+          </select>
+        </label>
+        <label class="field" title="这张赌台开局带多少赔付资金。赔光了就只赔到 0（欠的不赔），补钱或重新开局会按这个数重发"><span>庄家本钱</span>
+          <input type="number" id="dealerBankIn" min="0" max="1000000" step="10" value="100">
+        </label>
+        <div class="field" style="margin-top:-4px">
+          <span style="font-size:11px;color:var(--muted)">默认 100 分，随时可改（改完立刻生效）</span>
+        </div>
+        <label class="field" title="赌台本钱不够赔时先赔给谁：按赢额大小 = 赢得多的人先拿满；按玩家顺序 = 先押注的先拿满"><span>赔不过来时</span>
+          <select id="payOrderSel">
+            <option value="points">按赢额大小赔</option>
+            <option value="order">按玩家顺序赔</option>
+          </select>
+        </label>
+        <div class="field" style="margin-top:-4px">
+          <span style="font-size:11px;color:var(--muted)" id="payOrderHint">赢得多的人先拿满，赢得少的少拿/拿不到</span>
+        </div>
+        <label class="field" title="同一台电脑上几个人轮流下注（1 个人就是单人模式），各自押各自的，一起看同一手牌结算"><span>玩家人数</span>
+          <select id="playerSel"></select>
+        </label>
+        <div class="field" style="margin-top:2px;margin-bottom:2px"><span style="font-size:11.5px;color:var(--muted)">玩家昵称（可留空）</span></div>
+        <div class="namebox" id="nameBox"></div>
+        <label class="field" title="标准赌场用 8 副牌（416 张）"><span>牌靴</span>
+          <select id="deckSel">
+            <option value="8" selected>8 副（416 张）</option>
+            <option value="6">6 副（312 张）</option>
+            <option value="1">1 副（练习用）</option>
+          </select>
+        </label>
+        <label class="field" title="自动下注每局押多少分（押全桌赌场优势最小的庄）"><span>自动下注额</span>
+          <select id="autoStakeSel">
+            <option value="10">10 分</option>
+            <option value="50" selected>50 分</option>
+            <option value="100">100 分</option>
+            <option value="500">500 分</option>
+          </select>
+        </label>
+        <label class="field" title="发牌动画的速度"><span>发牌节奏</span>
+          <select id="speedSel">
+            <option value="420">慢</option>
+            <option value="260" selected>标准</option>
+            <option value="140">快</option>
+            <option value="0">立刻开牌</option>
+          </select>
+        </label>
+        <label class="field" title="轮到你下注时最多等你多久，超时自动接管"><span>我方限时</span>
+          <select id="myDelaySel">
+            <option value="3000">3 秒</option>
+            <option value="5000" selected>5 秒</option>
+            <option value="10000">10 秒</option>
+            <option value="-1">不限时</option>
+          </select>
+        </label>
+        <label class="field"><span>主题</span><select id="theme"></select></label>
+      </section>
+
+      <section class="coach" id="coachCard">
+        <div class="coach-head">
+          <span class="coach-tag" id="coachTag">教学</span>
+          <span class="coach-main" id="coachMain">准备中…</span>
+        </div>
+        <div class="coach-why" id="coachWhy"></div>
+        <div class="coach-warn" id="coachWarn"></div>
+        <div class="coach-foot" id="coachFoot"></div>
+        <div class="btns2" style="margin-top:2px">
+          <button id="auto">🤖 自动下注</button>
+          <button id="coach">🎓 教学中</button>
+        </div>
+      </section>
+    </div>
+
+    <!-- ================= 中栏：牌桌 ================= -->
+    <div class="board-col">
+      <div class="table" id="table">
+        <div class="hand-zone">
+          <div class="hand-title"><span>闲 PLAYER</span><b id="pName">闲家</b>
+            <span class="pv" id="pPv">—</span></div>
+          <div class="cards" id="pCards"></div>
+        </div>
+
+        <div class="center-msg" id="centerMsg">
+          <div>选筹码面额 → 点下注区押注 → 点「发 牌」</div>
+          <div class="sub" id="shoeInfo">牌靴 —</div>
+        </div>
+
+        <div class="hand-zone">
+          <div class="hand-title"><span>庄 BANKER</span><b id="bName">庄家</b>
+            <span class="pv" id="bPv">—</span></div>
+          <div class="cards" id="bCards"></div>
+        </div>
+
+        <!-- 赌台（真正付钱的一方）的本钱读数 -->
+        <div class="dealer-strip">
+          <div class="dealer-bank" id="dealerBank">本钱 —</div>
+        </div>
+
+        <!-- 玩家的坐位由脚本按人数生成（1~4 人） -->
+        <div class="players-row" id="playersRow"></div>
+
+        <div class="betgrid" id="betGrid">
+          <button class="bbtn tinted" data-k="P">闲 家<small>赢 1 赔 1</small></button>
+          <button class="bbtn" data-k="T">和 局<small>赢 1 赔 8</small></button>
+          <button class="bbtn tinted" data-k="B">庄 家<small>赢 1 赔 0.95</small></button>
+        </div>
+        <div class="betgrid pairs" id="pairGrid">
+          <button class="bbtn" data-k="PP">闲 对<small>头两张同点 · 1 赔 11</small></button>
+          <button class="bbtn" data-k="BP">庄 对<small>头两张同点 · 1 赔 11</small></button>
+        </div>
+      </div>
+
+      <div class="mine panel">
+        <div class="sel-info" id="selInfo">先押注，再点「发 牌」</div>
+        <div class="betbar" id="betBar">
+          <button class="betchip" data-chip="10">10</button>
+          <button class="betchip" data-chip="50">50</button>
+          <button class="betchip" data-chip="100">100</button>
+          <button class="betchip" data-chip="500">500</button>
+          <button id="undo">↶ 撤销</button>
+          <button id="clearBets">清空下注</button>
+          <button id="repeat">重复上局</button>
+          <button id="deal" class="primary">发 牌</button>
+        </div>
+      </div>
+
+      <section class="panel sec" id="roadPanel">
+        <h2>路单</h2>
+        <div class="roadwrap">
+          <div class="roadhead">珠盘路<span class="pv" id="beadPv">0 手</span></div>
+          <div class="bead" id="beadPlate"></div>
+        </div>
+        <div class="roadwrap">
+          <div class="roadhead">大路<span class="pv" id="bigPv">0 列</span></div>
+          <div class="bigroad" id="bigRoad"></div>
+        </div>
+        <div class="roadstats" id="roadStats"></div>
+      </section>
+    </div>
+
+    <!-- ================= 右栏：状态 + 战绩 + 操作 + 说明 ================= -->
+    <div class="side-col right">
+      <section class="panel sec">
+        <h2>本局状态</h2>
+        <div class="stat-row"><span>正在下注</span><b id="turnNow">你</b></div>
+        <div class="stat-row"><span>他的筹码</span><b id="chips">1000</b></div>
+        <div class="stat-row"><span>他的本局下注</span><b id="betNow">0</b></div>
+        <div class="stat-row"><span>闲 / 庄 点数</span><b id="scoreNow">—</b></div>
+        <div class="stat-row"><span>他的本局派彩</span><b id="payNow">—</b></div>
+        <div class="stat-row"><span>他付的抽水 5%</span><b id="commNow">0</b></div>
+        <div class="stat-row"><span>庄家本钱</span><b id="dealerChips">—</b></div>
+        <div class="stat-row"><span>庄家本局</span><b id="dealerDelta">—</b></div>
+        <div class="stat-row"><span>牌靴剩余</span><b id="shoeLeft">—</b></div>
+      </section>
+
+      <section class="panel sec" id="rankSec">
+        <h2>玩家排行</h2>
+        <div class="rank" id="rankBox"></div>
+        <div class="ranknote">按筹码自动排名 · 每人开局 1000 分 · 每行第一行是「名字 + 筹码」，第二行是「本局输赢 + 累计胜/负/和」</div>
+      </section>
+
+      <section class="panel sec">
+        <h2>本次战绩</h2>
+        <div class="statsbar">
+          <span>总 <b id="stTotal">0</b></span>
+          <span>胜 <b id="stWin" class="sb-win">0</b></span>
+          <span>负 <b id="stLose" class="sb-lose">0</b></span>
+          <span>和 <b id="stPush">0</b></span>
+          <span class="sb-note">只算本次打开页面后的局数，刷新即清零（筹码也一样）</span>
+        </div>
+      </section>
+
+      <section class="panel sec">
+        <h2>操作</h2>
+        <div class="btns2">
+          <div class="volbox"><span>音量</span>
+            <input type="range" id="volRange" min="0" max="100" step="1" value="70">
+            <span class="vn" id="volNum">70</span>
+          </div>
+          <button id="sound">🔊 音效</button>
+          <button id="rulesBtn">📖 怎么玩（H）</button>
+          <button id="resetChips">筹码回到 1000</button>
+          <button id="resetShoe">换新牌靴</button>
+          <button id="newRound" class="primary">重新开局</button>
+        </div>
+      </section>
+
+      <section class="panel sec">
+        <h2>玩法与快捷键</h2>
+        <div style="font-size:12px;color:var(--muted);line-height:1.9">
+          发牌后比大小：<b style="color:var(--text)">个位点数</b>大的赢，最大 9。<br>
+          <b style="color:var(--text)">补不补第三张牌是死规则</b>，不由人决定 —— 闲 0~5 补、6~7 停；庄按闲的第三张牌查表。<br>
+          <b style="color:var(--danger)">没有一注是正期望</b>：庄 1.06%，闲 1.24%，和 14.36%，对子 10.36%。<br>
+          <b style="color:var(--text)">1~4 个人</b>轮流下注（1 个人就是单人模式），每人自己一份 1000 分筹码，
+          各自押庄/闲/和/对子，押完<b style="color:var(--text)">一起看同一手牌</b>、各自按自己的注结算。<br>
+          <b style="color:var(--win)">赌台也有本钱</b>：默认 <b style="color:var(--text)">100 分</b>（左栏「庄家本钱」随时能改），
+          之后收进输家的注、赔给赢家，会一直累积；<b style="color:var(--text)">本钱赔光了就只赔到 0</b>，
+          欠的部分不赔（会明确告诉你差多少、谁被少给了）。<br>
+          <span style="display:inline-block;margin-top:6px">快捷键：<kbd>空格</kbd> 发牌/下一位 ·
+          <kbd>1</kbd>闲 <kbd>2</kbd>和 <kbd>3</kbd>庄 <kbd>4</kbd>闲对 <kbd>5</kbd>庄对 ·
+          <kbd>C</kbd> 清空 · <kbd>U</kbd> 撤销 · <kbd>R</kbd> 重复上局 ·
+          <kbd>D</kbd> 自动 · <kbd>G</kbd> 教学 · <kbd>H</kbd> 规则 · <kbd>M</kbd> 音效 · <kbd>Esc</kbd> 关浮层</span>
+        </div>
+      </section>
+    </div>
+  </main>
+</div>
+
+<!-- ================= 规则卡 ================= -->
+<div class="rules" id="rulesModal">
+  <div class="rules-box">
+    <h3>百家乐怎么玩 —— 三句话入门</h3>
+    <p><b>一句话</b>：庄、闲各拿 2~3 张牌，<b>个位点数</b>大的赢；你在旁边押庄、押闲或者押和。</p>
+
+    <h4>一、点数怎么算</h4>
+    <ul>
+      <li>A = <b>1 点</b>；2~9 按<b>面值</b>；10、J、Q、K 都算 <b>0 点</b>。</li>
+      <li>两张牌相加后<b>只取个位</b>：7+6 = 13 → <b>3 点</b>；9+9 = 18 → <b>8 点</b>。</li>
+      <li>两张牌就是 <b>8 或 9 点</b>叫<b>天生赢家（自然牌）</b>，双方都不再补牌，直接开。</li>
+    </ul>
+
+    <h4>二、补牌是死规则，你不用记，但知道一下更好</h4>
+    <ul>
+      <li><b>闲家</b>：0~5 点补第三张，<b>6~7 点停牌</b>，8~9 点直接开。</li>
+      <li><b>庄家</b>：看自己两张牌的点数，<b>再查闲家第三张牌</b>决定补不补：</li>
+    </ul>
+    <table>
+      <tr><th>庄家点数</th><th>庄家补牌条件</th></tr>
+      <tr><td>0 · 1 · 2</td><td>总是补</td></tr>
+      <tr><td>3</td><td>闲家第三张<b>不是 8</b> 就补</td></tr>
+      <tr><td>4</td><td>闲家第三张是 <b>2~7</b> 才补</td></tr>
+      <tr><td>5</td><td>闲家第三张是 <b>4~7</b> 才补</td></tr>
+      <tr><td>6</td><td>闲家第三张是 <b>6~7</b> 才补</td></tr>
+      <tr><td>7</td><td>不补</td></tr>
+      <tr><td>8 · 9</td><td>双方都不补（自然牌）</td></tr>
+    </table>
+    <p>如果闲家停牌（没补第三张），庄家就按普通规则：<b>0~5 补，6~7 停</b>。</p>
+
+    <h4>三、赔率与庄家优势</h4>
+    <table>
+      <tr><th>下注区</th><th>赔率</th><th>出现概率</th><th>庄家优势</th></tr>
+      <tr><td>庄 BANKER</td><td>1 赔 0.95（抽水 5%）</td><td>约 45.86%</td><td><b>1.06%</b> ← 全桌最小</td></tr>
+      <tr><td>闲 PLAYER</td><td>1 赔 1</td><td>约 44.62%</td><td>1.24%</td></tr>
+      <tr><td>和 TIE</td><td>1 赔 8</td><td>约 9.52%</td><td><b>14.36%</b> ← 最坑</td></tr>
+      <tr><td>闲对 / 庄对</td><td>1 赔 11</td><td>约 7.47%</td><td>10.36%</td></tr>
+    </table>
+    <ul>
+      <li>开<b>和局</b>时，押庄、押闲的注<b>退回本金</b>（不算输）；押和的赢 8 倍；对子注照常按牌面结算。</li>
+      <li>「和」看起来赔 8 倍很诱人，但它只占约 9.5% 的局数，长期算下来每押 100 分亏 14.36 分 ——
+          是庄/闲的十几倍。</li>
+      <li><b>没有任何下注法能翻正期望。</b>什么缆法、加倍、看路单，都改变不了上面这张表；
+          牌靴剩余的牌确实会让优势浮动零点几个百分点，但翻不过正。</li>
+    </ul>
+
+    <h4>四、关于路单</h4>
+    <ul>
+      <li><b>珠盘路</b>：按开牌顺序把每一手记成一格 —— <span style="color:#ff9c92">红＝庄赢</span>、
+          <span style="color:#7fb2ff">蓝＝闲赢</span>、<span style="color:#7ee2a8">绿＝和</span>。
+          格子里的白点表示这一手出了对子（左上＝闲对，右下＝庄对）。</li>
+      <li><b>大路</b>：把同一方连赢的合并成一列，用来长龙一眼看穿。超过 6 连的长龙向右延伸（这是简化画法）。</li>
+      <li><b>路单只记录历史，不能预测下一手。</b>每一手都是独立的，牌靴里少了哪些牌只会让优势浮动零点几个百分点。</li>
+    </ul>
+
+    <h4>五、赌台本钱（庄家）与 1~4 人热座</h4>
+    <ul>
+      <li>真正付钱的是<b>赌台</b>（庄家），它有一份<b>本钱</b>：默认 <b>100 分</b>，
+        左栏「对局设置 → 庄家本钱」里<b>随时可改</b>（0 ~ 1000000），<b>改完立刻生效</b>，
+        下次打开还是这个数；点「重新开局」或换人数时按这个设定值<b>重发</b>。</li>
+      <li>之后赌台就跟玩家一样累积：<b>收走输家的注、赔给赢家</b>，不会每局重置 ——
+        所以你有可能把它赢到破产，也可能看着它越滚越大。赌台净额 = <b>−（所有玩家净额之和）</b>。</li>
+      <li><b>本钱赔光了就赔不出来</b>：只赔到 0，欠的部分不赔，并且会明确告诉你「还差 X 分」，
+        被少给的人也会在自己的那一行写明「本钱不够，少拿 X 分」。</li>
+      <li><b>本钱不够时先赔给谁，可以自己选</b>（左栏「对局设置 → 赔不过来时」）：
+        <ul>
+          <li><b>按赢额大小赔（默认）</b>：赢得多的人先拿满，赢得少的少拿/拿不到；赢额相同时<b>后押注的先被扣</b>。</li>
+          <li><b>按玩家顺序赔</b>：先押注的先拿满，后面的少拿/拿不到。</li>
+        </ul>
+        两种都只是「谁先拿钱」的差别，<b>总共赔出去的钱一样多</b>（赌台赔到 0 为止），账目永远是平的。</li>
+      <li><b>赔到 0 就会自动弹卡片</b>告诉你这一局结束了：「🔄 补给赌台并继续下一局」按你设定的本钱补满接着玩；
+        「✏️ 改庄家本钱」直接去改数字；「就到这里」先停手看看牌桌。
+        赌台没钱的时候不会让你白开一局（赢了也拿不到钱）。</li>
+      <li>把本钱设成 <b>0</b> 也能玩：赌台一分钱没有，但它赢了照样把注收进来。</li>
+      <li><b>1~4 个人</b>在同一台电脑上轮流下注：每人开局 <b>1000 分</b>，各押各的
+        （庄/闲/和/闲对/庄对随便押）；全部押完之后<b>只发一次牌</b>，每个人按自己的押法各自结算。
+        排名靠筹码自动排，排行榜最上面那一行是赌台。轮到你的时候左侧「底注区」和筹码条改的是<b>你这一份</b>。</li>
+      <li><b>赔率与 5% 抽水一个字都没改</b>：派彩永远先按原规则算（庄赢 1 赔 0.95、和 1 赔 8、对子 1 赔 11），
+        然后才由赌台的本钱决定能不能全付。</li>
+    </ul>
+
+    <h4>六、这个游戏的简化说明</h4>
+    <ul>
+      <li>牌靴剩不到 24 张就<b>换新牌靴</b>（真实赌场用切牌卡，位置各家不同）。</li>
+      <li>庄赢抽水按 <b>5%</b> 直接从派彩里扣，不做「先记欠账后结清」。</li>
+      <li>只做庄/闲/和/闲对/庄对五种注，不做幸运 6、龙宝等边注。</li>
+      <li>筹码只在本次打开页面内有效，刷新即回到 10000 —— 这是个教学玩具，不涉及任何真实金钱。</li>
+    </ul>
+
+    <button class="primary close" id="rulesClose">知道了</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- ================= 庄家（赌台）赔光提示 ================= -->
+<div class="rules" id="brokeModal">
+  <div class="rules-box broke">
+    <div class="broke-big">💸</div>
+    <h3 id="brokeTitle">赌台本钱赔光了 —— 这一轮结束了</h3>
+    <p id="brokeText" style="color:var(--muted);margin:0 0 10px">赌台的钱已经见底，它赔不出任何赢注了。要不要补钱、再开一局？</p>
+    <div id="brokeStats"></div>
+    <div class="btns2" style="margin-top:14px">
+      <button id="brokeContinue" class="primary">🔄 补给赌台并继续下一局</button>
+      <button id="brokeEdit">✏️ 改庄家本钱</button>
+    </div>
+    <button class="close" id="brokeClose">就到这里</button>
+  </div>
+</div>
+
+<!-- ============================================================
+     核心：牌 / 补牌规则 / 派彩 / 路单（不依赖 DOM，可单独提取做单元测试）
+     ============================================================ -->
+<script id="core">
+'use strict';
+/* ---------- 牌 ---------- */
+const SUITS = ['♠', '♥', '♣', '♦'];
+const RANKS = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
+const DECKS_DEFAULT = 8;
+
+/* 百家乐点数：A=1，2~9 面值，10/J/Q/K=0 */
+function cardValue(c) {
+  const r = c.r;
+  if (r === 'A') return 1;
+  if (r === '2') return 2; if (r === '3') return 3; if (r === '4') return 4;
+  if (r === '5') return 5; if (r === '6') return 6; if (r === '7') return 7;
+  if (r === '8') return 8; if (r === '9') return 9;
+  return 0;                                   /* 10 / J / Q / K */
+}
+/* 手牌点数：相加取个位 */
+function handTotal(cards) {
+  let t = 0;
+  for (const c of cards) t += cardValue(c);
+  return t % 10;
+}
+const isPair = (cards) => cards.length >= 2 && cards[0].r === cards[1].r;
+const isNatural = (cards) => cards.length === 2 && handTotal(cards) >= 8;
+
+function buildShoe(decks, rnd) {
+  const n = Math.max(1, decks | 0) * 52;
+  const s = new Array(n);
+  let k = 0;
+  for (let d = 0; d < decks; d++)
+    for (const su of SUITS)
+      for (const r of RANKS) s[k++] = { r: r, s: su };
+  /* Fisher–Yates；测试里可传入确定性随机数 */
+  const R = rnd || Math.random;
+  for (let i = n - 1; i > 0; i--) {
+    const j = (R() * (i + 1)) | 0;
+    const t = s[i]; s[i] = s[j]; s[j] = t;
+  }
+  return s;
+}
+
+/* ---------- 补牌规则（Punto Banco，8 副牌标准） ----------
+   闲：0~5 补，6~7 停；任一方两张 8/9 点（自然牌）则双方都不补。
+   庄：如果闲停牌 —— 0~5 补，6~7 停；
+       如果闲补了第三张 —— 查下面这张表（pt = 闲第三张的点数）。 */
+function playerDraws(pt) { return pt <= 5; }
+function bankerDraws(bt, pt) {
+  if (pt === null || pt === undefined) return bt <= 5;   /* 闲停牌 */
+  if (bt <= 2) return true;
+  if (bt === 3) return pt !== 8;
+  if (bt === 4) return pt >= 2 && pt <= 7;
+  if (bt === 5) return pt >= 4 && pt <= 7;
+  if (bt === 6) return pt === 6 || pt === 7;
+  return false;                                          /* 7 点不补 */
+}
+
+/* 判定一手牌要不要补第三张 —— 抽出来单独测
+   返回 { pDraw, bDraw }；natural=true 时两者都是 false */
+function drawDecision(pCards, bCards) {
+  const p2 = handTotal(pCards), b2 = handTotal(bCards);
+  if (isNatural(pCards) || isNatural(bCards)) return { pDraw: false, bDraw: false, natural: true, p2: p2, b2: b2 };
+  const pDraw = playerDraws(p2);
+  /* 闲停牌时，庄按自己的点数；闲补牌时要用闲第三张的点数 —— 
+     这里没有第三张牌，所以只回答"闲补不补"和"庄在闲停牌情况下补不补" */
+  const bDraw = pDraw ? null : bankerDraws(b2, null);
+  return { pDraw: pDraw, bDraw: bDraw, natural: false, p2: p2, b2: b2 };
+}
+
+/* 完整打一手：从牌靴顶部取牌，返回发牌顺序（供动画用） */
+function playHand(shoe, pos) {
+  let i = pos || 0;
+  const next = () => shoe[i++];
+  const P = [], B = [];
+  P.push(next()); B.push(next()); P.push(next()); B.push(next());
+
+  const steps = [];            /* 每一步都记下来，界面按顺序播动画 */
+  steps.push({ who: 'P', card: P[0] }, { who: 'B', card: B[0] },
+             { who: 'P', card: P[1] }, { who: 'B', card: B[1] });
+
+  const natural = isNatural(P) || isNatural(B);
+  let pThird = null;
+  if (!natural) {
+    if (playerDraws(handTotal(P))) {
+      pThird = next(); P.push(pThird);
+      steps.push({ who: 'P', card: pThird, third: true });
+      if (bankerDraws(handTotal(B), cardValue(pThird))) {
+        const bc = next(); B.push(bc);
+        steps.push({ who: 'B', card: bc, third: true });
+      }
+    } else {
+      const pv = null;
+      if (bankerDraws(handTotal(B), pv)) {
+        const bc = next(); B.push(bc);
+        steps.push({ who: 'B', card: bc, third: true });
+      }
+    }
+  }
+  const pt = handTotal(P), bt = handTotal(B);
+  const winner = pt > bt ? 'P' : (bt > pt ? 'B' : 'T');
+  return {
+    player: P, banker: B, steps: steps,
+    pTotal: pt, bTotal: bt, natural: natural,
+    pPair: isPair(P), bPair: isPair(B),
+    winner: winner, cardsUsed: i - (pos || 0), next: i
+  };
+}
+
+/* ---------- 派彩 ----------
+   庄赢 1 赔 0.95（抽水 5%）；闲赢 1 赔 1；和 1 赔 8；
+   开和局时庄/闲的注退回本金；对子 1 赔 11，且和局照样结算。 */
+const PAYOUT = { P: 1, B: 0.95, T: 8, PP: 11, BP: 11 };
+const COMMISSION = 0.05;
+const BET_KEYS = ['P', 'B', 'T', 'PP', 'BP'];
+
+const r2 = (x) => Math.round(x * 100) / 100;      /* 分数只到小数点后两位 */
+
+/* 赔率读法：「1 赔 1」= 押 s 分赢了净赚 s 分，连本带回 2s 分。
+   所以赢的时候返还 = 本金 + 本金×赔率；和局返还本金；输了返还 0。 */
+function settleBets(bets, outcome) {
+  const detail = [];
+  let stake = 0, ret = 0, commission = 0;
+  for (const k of BET_KEYS) {
+    const s = bets[k] || 0;
+    if (s <= 0) continue;
+    stake += s;
+    let won = false, push = false, pay = 0;
+    if (k === 'P') {
+      if (outcome.winner === 'P') won = true;
+      else if (outcome.winner === 'T') push = true;
+    } else if (k === 'B') {
+      if (outcome.winner === 'B') { won = true; commission += r2(s * COMMISSION); }
+      else if (outcome.winner === 'T') push = true;
+    } else if (k === 'T') {
+      if (outcome.winner === 'T') won = true;
+    } else if (k === 'PP') {
+      if (outcome.pPair) won = true;
+    } else if (k === 'BP') {
+      if (outcome.bPair) won = true;
+    }
+    if (won) pay = s * PAYOUT[k];
+    const back = (won || push) ? s : 0;          /* 赢/和都退还本金 */
+    ret += back + pay;
+    detail.push({ key: k, stake: s, won: won, push: push, pay: r2(pay), back: r2(back) });
+  }
+  stake = r2(stake); ret = r2(ret); commission = r2(commission);
+  return { stake: stake, ret: ret, commission: commission,
+           net: r2(ret - stake), detail: detail, profit: r2(ret - stake) };
+}
+
+/* ---------- 路单 ---------- */
+/* 珠盘路：按顺序铺格子，6 行一列，往下填满再换列（CSS grid-auto-flow:column 负责） */
+function beadRows(history) {
+  return history.map(function (h) {
+    return { w: h.winner, pp: !!h.pPair, bp: !!h.bPair };
+  });
+}
+
+/* 大路：同一方连赢合并成一列；换边就新起一列；
+   一列填满 6 格后长龙往右延伸（简化画法：固定在第 6 行往右长）。
+   返回 [{col,row,w,ties,pp,bp}]，col/row 从 0 开始。 */
+function buildBigRoad(history) {
+  const out = [];
+  let cols = [];        /* cols[c] = 该列已占用的行数 */
+  let cur = -1, lastW = null, lastCell = null;
+  for (const h of history) {
+    if (h.winner === 'T') {
+      if (lastCell) lastCell.ties++;      /* 和局在上一格上挂一个绿标 */
+      continue;
+    }
+    const same = (h.winner === lastW);
+    if (cur < 0) {
+      cols[0] = 1; cur = 0;
+      lastCell = { col: 0, row: 0, w: h.winner, ties: 0, pp: !!h.pPair, bp: !!h.bPair };
+      out.push(lastCell);
+    } else if (same) {
+      if (cols[cur] < 6) {
+        lastCell = { col: cur, row: cols[cur], w: h.winner, ties: 0, pp: !!h.pPair, bp: !!h.bPair };
+        cols[cur]++;
+        out.push(lastCell);
+      } else {
+        /* 长龙尾：向右找一列，放在底行（第 6 行） */
+        let nc = cur + 1;
+        while (cols[nc] !== undefined && cols[nc] >= 6) nc++;
+        cols[nc] = 6;                        /* 这一列从底行那一格算起 */
+        cur = nc;
+        lastCell = { col: nc, row: 5, w: h.winner, ties: 0, pp: !!h.pPair, bp: !!h.bPair };
+        out.push(lastCell);
+      }
+    } else {
+      cur = cur + 1;
+      while (cols[cur] !== undefined && cols[cur] >= 6) cur++;
+      cols[cur] = 1;
+      lastCell = { col: cur, row: 0, w: h.winner, ties: 0, pp: !!h.pPair, bp: !!h.bPair };
+      out.push(lastCell);
+    }
+    lastW = h.winner;
+  }
+  return out;
+}
+
+/* 路单统计：庄/闲/和 手数、最长连庄/连闲、对子数 */
+function roadStats(history) {
+  const s = { total: history.length, P: 0, B: 0, T: 0, pPair: 0, bPair: 0, maxP: 0, maxB: 0 };
+  let runW = null, run = 0;
+  for (const h of history) {
+    s[h.winner] = (s[h.winner] || 0) + 1;
+    if (h.pPair) s.pPair++;
+    if (h.bPair) s.bPair++;
+    if (h.winner === 'T') continue;
+    if (h.winner === runW) run++;
+    else { runW = h.winner; run = 1; }
+    if (runW === 'P') s.maxP = Math.max(s.maxP, run);
+    else s.maxB = Math.max(s.maxB, run);
+  }
+  return s;
+}
+
+/* ---------- 理论值（给教学条和自检用） ---------- */
+const HOUSE_EDGE = { P: 0.0124, B: 0.0106, T: 0.1436, PP: 0.1036, BP: 0.1036 };
+const BET_NAME = { P: '闲家', B: '庄家', T: '和局', PP: '闲对', BP: '庄对' };
+</script>
+
+<!-- ============================================================
+     界面
+     ============================================================ -->
+<script id="ui">
+(function () {
+  'use strict';
+  const $ = (id) => document.getElementById(id);
+
+  /* ==================================================================
+     主题（与其它几个游戏共用同一张 26 字段配色表）
+     ================================================================== */
+  const THEME_KEYS = ['key','name','bg','glow1','glow2','panel','brd','text','muted','accent','accent2','danger',
+                      'felt1','felt2','back1','back2','wood1','wood2','wood3','wline','wframe','board1','board2','grid','panel2','line'];
+  const THEME_ROWS = [
+    'midnight|午夜蓝|#0a1020|#1c2f4f|#241c4a|rgba(23,33,54,.78)|rgba(148,163,184,.20)|#e8eefb|#8fa2bb|#38bdf8|#f5b942|#f87171|#17335c|#0a1a33|#3a5a8f|#1d3355|#f2d5a0|#e7c088|#d6a45f|rgba(88,55,20,.75)|rgba(70,42,14,.90)|#0d1526|#080e1a|rgba(148,163,184,.09)|#16233a|#25364e',
+    'emerald|翡翠|#06120e|#0f3d2e|#14261c|rgba(14,37,29,.78)|rgba(110,231,183,.18)|#e4f5ec|#7fa595|#34d399|#fbbf24|#fb7185|#124a37|#072018|#2f7d5f|#1a4736|#ecd9ac|#ddc48c|#c8a869|rgba(74,56,24,.72)|rgba(60,44,16,.90)|#0a1a14|#061009|rgba(148,220,190,.10)|#0f2a20|#1c4a3a',
+    'rosewood|紫檀|#17100b|#4a2415|#2b1620|rgba(46,26,19,.78)|rgba(214,160,110,.22)|#f8ece3|#b69884|#f59e0b|#60a5fa|#ef4444|#5c2a1c|#2e1410|#8f4a35|#4a2018|#e8c39a|#d9ab7c|#c08d5e|rgba(80,44,24,.78)|rgba(64,34,16,.92)|#140d09|#0c0705|rgba(230,190,150,.10)|#33201a|#4a3126',
+    'obsidian|曜金|#08080a|#2c2614|#1a1a22|rgba(22,22,26,.82)|rgba(234,179,8,.20)|#f6f2e6|#a49c86|#eab308|#22d3ee|#f87171|#2a2a30|#141418|#4a4a52|#232328|#e6d9b8|#d4c194|#bda871|rgba(70,58,32,.75)|rgba(54,44,22,.92)|#0c0c10|#050507|rgba(234,200,120,.08)|#17171c|#2e2e34',
+    'sakura|樱雪|#fdf6f7|#ffe3ec|#fff1e6|rgba(255,255,255,.86)|rgba(190,120,145,.24)|#3a2b31|#8a7078|#e0526f|#7c6bd6|#dc2626|#e9bfc9|#d69fae|#c98a9c|#a06374|#fbe8e6|#f3d5d2|#e6bdb9|rgba(150,96,96,.55)|rgba(140,86,86,.80)|#eef1f7|#e2e7f0|rgba(120,140,170,.18)|#ffffff|rgba(190,120,145,.30)',
+    'frost|霜白|#f2f6fb|#dbeafe|#e6e6ff|rgba(255,255,255,.88)|rgba(100,116,139,.20)|#1e293b|#64748b|#2563eb|#0891b2|#dc2626|#c9d8ea|#aec2da|#7f9ec4|#4e6d92|#e8eef6|#d7e1ee|#c2cfe0|rgba(80,100,130,.50)|rgba(66,84,110,.78)|#eef2f8|#e2e8f2|rgba(120,140,170,.18)|#ffffff|rgba(100,116,139,.22)'
+  ];
+  const THEMES = {}, THEME_LIST = [];
+  THEME_ROWS.forEach(function (row) {
+    const p = row.split('|'), t = {};
+    for (let i = 0; i < THEME_KEYS.length; i++) t[THEME_KEYS[i]] = p[i];
+    THEMES[t.key] = t; THEME_LIST.push(t);
+  });
+  const THEME_CSS = { bg:'--bg', glow1:'--glow-1', glow2:'--glow-2', panel:'--panel', brd:'--panel-brd',
+                      text:'--text', muted:'--muted', accent:'--accent', accent2:'--accent-2', danger:'--danger',
+                      felt1:'--felt-1', felt2:'--felt-2', line:'--line', panel2:'--panel2',
+                      wood1:'--wood-1', wood2:'--wood-2', wood3:'--wood-3', wline:'--wline', wframe:'--wframe' };
+  let theme = THEMES.midnight;
+  function applyTheme(key) {
+    theme = THEMES[key] || THEMES.midnight;
+    const s = document.documentElement.style;
+    for (const k in THEME_CSS) s.setProperty(THEME_CSS[k], theme[k]);
+    /* 台呢用 felt1/felt2，和骰宝/轮盘一套感觉 */
+    s.setProperty('--felt-1', theme.felt1);
+    s.setProperty('--felt-2', theme.felt2);
+  }
+  const pref = {
+    get: function (k, d) { try { const v = localStorage.getItem(k); return v === null ? d : v; } catch (e) { return d; } },
+    set: function (k, v) { try { localStorage.setItem(k, String(v)); } catch (e) {} }
+  };
+
+  /* ==================================================================
+     音效（WebAudio 实时合成，不依赖任何外部文件）
+     ================================================================== */
+  const Sfx = (function () {
+    const VOLS = { off: 0, low: 0.32, mid: 0.68, high: 1.0 };
+    let ctx = null, master = null, noise = null, level = 'mid';
+    let vol = VOLS.mid;
+    try {
+      const sv = localStorage.getItem('bac.vol');
+      if (sv !== null) { const v = Number(sv); if (v >= 0 && v <= 1 && v > 0) vol = v; }
+    } catch (e) {}
+    const gain = () => vol;
+    const isOn = () => gain() > 0;
+    function ensure() {
+      if (!isOn()) return false;
+      try {
+        if (!ctx) {
+          const AC = window.AudioContext || window.webkitAudioContext;
+          if (!AC) return false;
+          ctx = new AC();
+          master = ctx.createGain();
+          master.gain.value = gain();
+          master.connect(ctx.destination);
+          const len = Math.max(1, Math.floor(ctx.sampleRate * 0.16));
+          noise = ctx.createBuffer(1, len, ctx.sampleRate);
+          const d = noise.getChannelData(0);
+          for (let i = 0; i < len; i++) {
+            const t = i / len;
+            d[i] = (Math.random() * 2 - 1) * Math.pow(1 - t, 2.2);
+          }
+        }
+        if (ctx.state === 'suspended') ctx.resume();
+        return true;
+      } catch (e) { return false; }
+    }
+    function bus(pan) {
+      const out = ctx.createGain();
+      if (ctx.createStereoPanner) {
+        const p = ctx.createStereoPanner();
+        p.pan.value = Math.max(-0.85, Math.min(0.85, pan || 0));
+        out.connect(p); p.connect(master);
+      } else out.connect(master);
+      return out;
+    }
+    /* 噪声瞬态（洗牌 / 出牌 / 落筹码都用它） */
+    function hiss(t, out, o) {
+      const src = ctx.createBufferSource();
+      src.buffer = noise;
+      const f = ctx.createBiquadFilter();
+      f.type = o.type || 'bandpass';
+      f.frequency.value = o.freq;
+      f.Q.value = o.q || 1.0;
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(Math.max(0.0002, o.gain), t + (o.attack || 0.006));
+      g.gain.exponentialRampToValueAtTime(0.0001, t + o.decay);
+      src.connect(f); f.connect(g); g.connect(out);
+      src.start(t); src.stop(t + o.decay + 0.03);
+    }
+    function tone(t, out, f0, f1, dur, g0, type) {
+      const osc = ctx.createOscillator();
+      osc.type = type || 'triangle';
+      osc.frequency.setValueAtTime(f0, t);
+      osc.frequency.exponentialRampToValueAtTime(Math.max(1, f1), t + dur);
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(g0, t + 0.012);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      osc.connect(g); g.connect(out);
+      osc.start(t); osc.stop(t + dur + 0.03);
+    }
+    return {
+      isOn: isOn,
+      get volume() { return vol; },
+      setVolume: function (v) {
+        vol = Math.max(0, Math.min(1, Number(v) || 0));
+        try { localStorage.setItem('bac.vol', String(vol)); } catch (e) {}
+        if (vol > 0) ensure();
+        if (master) master.gain.value = gain();
+        return vol;
+      },
+      setLevel: function (v) { level = v; return this.setVolume(VOLS[v] === undefined ? 0 : VOLS[v]); },
+      level: function () { return level; },
+      resume: ensure,
+
+      /* 放筹码：短促的塑料/陶瓷碰击 */
+      chip: function (pan) {
+        if (!ensure()) return;
+        const t = ctx.currentTime + 0.001, out = bus(pan);
+        hiss(t, out, { freq: 4200, gain: 0.30, decay: 0.022, q: 1.4, attack: 0.002 });
+        tone(t, out, 1750, 1500, 0.035, 0.09, 'triangle');
+      },
+      /* 发牌：纸牌从牌靴滑出来 */
+      deal: function (pan, delay) {
+        if (!ensure()) return;
+        const t = ctx.currentTime + 0.001 + (delay || 0), out = bus(pan);
+        hiss(t, out, { freq: 2600, gain: 0.26, decay: 0.085, q: 0.7, type: 'bandpass', attack: 0.02 });
+        hiss(t + 0.03, out, { freq: 5200, gain: 0.12, decay: 0.05, q: 1.0 });
+      },
+      /* 翻牌：一记轻脆的「啪」 */
+      flip: function (pan, delay) {
+        if (!ensure()) return;
+        const t = ctx.currentTime + 0.001 + (delay || 0), out = bus(pan);
+        hiss(t, out, { freq: 6400, gain: 0.30, decay: 0.014, q: 1.6, attack: 0.001 });
+        tone(t, out, 2600, 2100, 0.028, 0.07, 'square');
+      },
+      /* 补第三张：比翻牌更重一点，带一点悬念 */
+      third: function (pan) {
+        if (!ensure()) return;
+        const t = ctx.currentTime + 0.001, out = bus(pan);
+        hiss(t, out, { freq: 3000, gain: 0.30, decay: 0.10, q: 0.8, attack: 0.02 });
+        tone(t + 0.02, out, 520, 700, 0.10, 0.07, 'sine');
+      },
+      /* 洗牌：一串错开的纸牌摩擦声 */
+      shuffle: function () {
+        if (!ensure()) return;
+        const out = bus(0);
+        for (let i = 0; i < 9; i++)
+          hiss(ctx.currentTime + 0.001 + i * 0.045 + Math.random() * 0.012, out,
+               { freq: 2000 + Math.random() * 2600, gain: 0.13 + Math.random() * 0.08, decay: 0.07, q: 0.7, attack: 0.015 });
+      },
+      /* 开和：中性两音 */
+      push: function () {
+        if (!ensure()) return;
+        const t = ctx.currentTime + 0.10, out = bus(0);
+        tone(t, out, 523, 523, 0.22, 0.13, 'sine');
+        tone(t + 0.16, out, 466, 466, 0.26, 0.12, 'sine');
+      },
+      /* 和局下注命中：绿色调 */
+      tie: function () {
+        if (!ensure()) return;
+        const t = ctx.currentTime + 0.10, out = bus(0);
+        [523, 659, 784].forEach(function (f, i) { tone(t + i * 0.09, out, f, f, 0.20, 0.13, 'triangle'); });
+      },
+      win: function () {
+        if (!ensure()) return;
+        const t = ctx.currentTime + 0.12, out = bus(0);
+        [523, 659, 784, 1047].forEach(function (f, i) {
+          const tt = t + i * 0.115;
+          tone(tt, out, f, f, 0.30, 0.15, 'triangle');
+          tone(tt, out, f * 2, f * 2, 0.15, 0.04, 'sine');
+        });
+      },
+      lose: function () {
+        if (!ensure()) return;
+        const t = ctx.currentTime + 0.12, out = bus(0);
+        [440, 370, 294].forEach(function (f, i) { tone(t + i * 0.12, out, f, f * 0.94, 0.28, 0.13, 'sine'); });
+      },
+      click: function () {
+        if (!ensure()) return;
+        tone(ctx.currentTime + 0.001, bus(0), 900, 700, 0.03, 0.05, 'sine');
+      }
+    };
+  })();
+
+  /* ==================================================================
+     状态
+     ================================================================== */
+  const START_CHIPS = 1000;                /* 每人开局 1000 分 */
+  const MIN_CHIP = 10;                     /* 最小筹码面额，买不起这一注就轮空 */
+  const RESHUFFLE_AT = 24;                 /* 剩不到这么多张就换新牌靴 */
+  let chipDenom = 50;
+  let betLimit = 500;                      /* 0 = 不限红 */
+  let decks = DECKS_DEFAULT;
+  let autoStake = 50;
+  let dealSpeed = 260;                     /* 毫秒/张，0 = 立刻开牌 */
+  let myLimit = 5000;
+
+  /* ---------- 下注工作副本 ----------
+     chips / bets / betLog / lastBets 永远是「正在下注的那个玩家」的副本：
+     换人时 syncOut() 写回 players[]、syncIn() 从 players[] 取出来。
+     这样整个押注面板的代码都不用改成 per-player 的写法。 */
+  let chips = START_CHIPS;
+  const newBets = () => ({ P: 0, B: 0, T: 0, PP: 0, BP: 0 });
+  let bets = newBets();
+  let betLog = [];                         /* 下注历史，供撤销 */
+  let lastBets = null;                     /* 重复上局 */
+
+  /* ---------- 玩家（1~4 人热座，各押各的，看同一手牌） ---------- */
+  const PLAYER_COUNTS = [1, 2, 3, 4];
+  const PLAYERS_DEFAULT = 1;
+  const PLAYER_NAMES = ['玩家 1', '玩家 2', '玩家 3', '玩家 4'];
+  const NAME_MAX = 8;
+  /* 一个人玩的时候就叫「你」，跟原来的单人模式一致 */
+  const playerName = (i, n) => ((n === undefined ? playerCount : n) === 1 ? '你' : PLAYER_NAMES[i]);
+  let customNames = ['', '', '', ''];
+  try {
+    const rawNames = localStorage.getItem('bac.names');
+    if (rawNames) {
+      const arr = JSON.parse(rawNames);
+      if (Array.isArray(arr)) for (let i = 0; i < 4; i++) customNames[i] = String(arr[i] || '').slice(0, NAME_MAX);
+    }
+  } catch (e) {}
+  function nameFor(i, n) {
+    const c = String(customNames[i] || '').trim();
+    return c ? c.slice(0, NAME_MAX) : playerName(i, n === undefined ? playerCount : n);
+  }
+  function setPlayerName(i, v) {
+    if (!(i >= 0 && i < 4)) return false;
+    customNames[i] = String(v == null ? '' : v).trim().slice(0, NAME_MAX);
+    try { localStorage.setItem('bac.names', JSON.stringify(customNames)); } catch (e) {}
+    if (players[i]) players[i].name = nameFor(i, playerCount);
+    syncNameInputs();
+    renderTable();
+    return true;
+  }
+  /* 昵称输入框：只显示当前人数对应的那几个 */
+  function buildNameInputs() {
+    const box = $('nameBox');
+    if (!box) return;
+    box.innerHTML = '';
+    for (let i = 0; i < playerCount; i++) {
+      const lb = document.createElement('label');
+      lb.className = 'namefield';
+      const sp = document.createElement('span');
+      sp.id = 'nameLabel-' + i;
+      sp.textContent = (playerCount === 1) ? '你的昵称' : ('玩家 ' + (i + 1));
+      const inp = document.createElement('input');
+      inp.id = 'nameIn-' + i;
+      inp.type = 'text';
+      inp.maxLength = NAME_MAX;
+      inp.value = customNames[i] || '';
+      inp.placeholder = playerName(i, playerCount);
+      inp.addEventListener('input', function () { setPlayerName(i, this.value); });
+      lb.appendChild(sp); lb.appendChild(inp);
+      box.appendChild(lb);
+    }
+  }
+  function syncNameInputs() {
+    for (let i = 0; i < 4; i++) {
+      const inp = $('nameIn-' + i), lb = $('nameLabel-' + i);
+      if (inp && inp.value !== (customNames[i] || '')) inp.value = customNames[i] || '';
+      if (inp) inp.placeholder = playerName(i, playerCount);
+      if (lb) lb.textContent = (playerCount === 1) ? '你的昵称' : ('玩家 ' + (i + 1));
+    }
+  }
+  const normPlayers = (v) => (PLAYER_COUNTS.indexOf(Number(v)) >= 0 ? Number(v) : PLAYERS_DEFAULT);
+
+  function newPlayer(i, n) {
+    return { name: nameFor(i, n), chips: START_CHIPS, bets: newBets(), betLog: [], lastBets: null,
+             delta: 0, shorted: 0, kind: '', out: false, settle: null,
+             stats: { win: 0, lose: 0, push: 0 } };
+  }
+  let playerCount = PLAYERS_DEFAULT;
+  let players = [];
+  let turn = 0;                            /* 正在下注的玩家下标（永远是 0~playerCount-1） */
+  function forEachPlayer(fn) { for (let i = 0; i < players.length; i++) fn(players[i], i); }
+  const curP = () => players[turn] || players[0];
+  const curBets = () => (curP() ? curP().bets : bets);
+  const betTotal = (b) => BET_KEYS.reduce((a, k) => a + ((b && b[k]) || 0), 0);
+  const chipsOk = (p) => !!p && p.chips >= MIN_CHIP;
+  /* 分数显示：整数不带小数点，半个筹码才显示两位 */
+  const fmtAmt = (x) => {
+    const n = r2(x);
+    return (Math.abs(n - Math.round(n)) < 1e-9) ? String(Math.round(n)) : n.toFixed(2);
+  };
+  const intDelta = (x) => (x > 0 ? '+' + fmtAmt(x) : (x < 0 ? fmtAmt(x) : '±0'));
+  function resetPlayers(n) {
+    playerCount = normPlayers(n);
+    players = [];
+    for (let i = 0; i < playerCount; i++) players.push(newPlayer(i, playerCount));
+    turn = 0;
+  }
+  /* 换人时把工作副本写回 / 取出来 */
+  function syncOut() {
+    const p = players[turn];
+    if (!p) return;
+    p.chips = chips; p.bets = bets; p.betLog = betLog; p.lastBets = lastBets;
+  }
+  function syncIn(i) {
+    turn = i;
+    const p = players[turn];
+    if (!p) return;
+    chips = p.chips; bets = p.bets; betLog = p.betLog; lastBets = p.lastBets;
+    lastSettle = p.settle;                 /* 右侧「本局派彩」显示他自己的上一局 */
+  }
+  /* 兜底：把「正在下注那个玩家」的工作副本写回。
+     注意只有当前 turn 那个人的 chips 是新值，别人的 chips 本来就在 players[] 里，
+     所以不能对每个人轮流 syncOut（那会把同一个 chips 写进所有人）。 */
+  function syncAll() { syncOut(); }
+
+  /* ---------- 庄家（赌台）的本钱 ----------
+     这张桌子用来赔付的资金池：默认 100 分，可以随时改。
+     重新开局 / 换人数时按这个数重发；之后就跟玩家一样累积。
+     赌台净额 = −（所有玩家净额之和）。 */
+  const DEALER_BANK_DEFAULT = 100;
+  const DEALER_BANK_MAX = 1000000;
+  const normDealerBank = (v) => {
+    const n = Math.floor(Number(v));
+    if (!isFinite(n)) return DEALER_BANK_DEFAULT;
+    return Math.max(0, Math.min(DEALER_BANK_MAX, n));
+  };
+  let dealerBank = normDealerBank(pref.get('bac.dealerbank', String(DEALER_BANK_DEFAULT)));
+  const dealer = { name: '赌台', chips: 0, delta: 0, short: 0 };
+  const dealerGrant = () => dealerBank;
+  function grantDealer() {
+    dealer.chips = dealerGrant();
+    dealer.delta = 0; dealer.short = 0;
+  }
+  /* 用户改了「庄家本钱」→ 立刻把赌台的钱改成新值
+     strict=false（边打字）：空着或写错就先不动，别把人家的数字抹成 0
+     strict=true（确认时）：空着或写错就回到默认值 */
+  function applyDealerBank(v, quiet, strict) {
+    const raw = String(v == null ? '' : v).trim();
+    let n;
+    if (raw === '' || !isFinite(Number(raw))) {
+      if (!strict) return dealerBank;
+      n = DEALER_BANK_DEFAULT;
+    } else {
+      n = Math.floor(Number(raw));
+    }
+    dealerBank = normDealerBank(n);
+    pref.set('bac.dealerbank', String(dealerBank));
+    dealer.chips = dealerBank;
+    dealer.delta = 0; dealer.short = 0;
+    const inp = $('dealerBankIn');
+    if (inp) inp.value = String(dealerBank);
+    renderPanel();
+    if (!quiet) toast('庄家本钱改成 ' + dealerBank + ' 分');
+    return dealerBank;
+  }
+  /* 赌台本钱不够赔时，先赔给谁：
+     'points' = 按赢额大小（赢得多的人先拿满）—— 默认
+     'order'  = 按玩家顺序（先押注的先拿满） */
+  const PAY_ORDERS = ['points', 'order'];
+  const PAY_ORDER_DEFAULT = 'points';
+  const normPayOrder = (v) => (PAY_ORDERS.indexOf(String(v)) >= 0 ? String(v) : PAY_ORDER_DEFAULT);
+  const PAY_ORDER_CN = { points: '按赢额大小', order: '按玩家顺序' };
+  let payOrder = normPayOrder(pref.get('bac.payorder', PAY_ORDER_DEFAULT));
+  function setPayOrder(v) {
+    payOrder = normPayOrder(v);
+    pref.set('bac.payorder', payOrder);
+    const sel = $('payOrderSel'); if (sel) sel.value = payOrder;
+    const hint = $('payOrderHint');
+    if (hint) hint.textContent = (payOrder === 'points')
+      ? '赢得多的人先拿满，赢得少的少拿/拿不到'
+      : '先押注的先拿满，后面的少拿/拿不到';
+    renderPanel();
+    return payOrder;
+  }
+  /* 本钱不够时要「从谁身上扣回来」的次序（先被扣的 = 最后拿到的）
+     points：应赢金额小的先扣，所以赢额大的先拿满；赢额相同时后押注的先扣
+     order ：后押注的先扣（前面的先拿满） */
+  function clawbackOrder() {
+    const gainers = [];
+    forEachPlayer((p, i) => { if (p.delta > 0) gainers.push({ p: p, i: i }); });
+    if (payOrder === 'order') gainers.sort((a, b) => b.i - a.i);
+    else gainers.sort((a, b) => {
+      if (a.p.delta !== b.p.delta) return a.p.delta - b.p.delta;   /* 赢额小的先被扣 */
+      return b.i - a.i;                                            /* 赢额相同：后押注的先被扣 */
+    });
+    return gainers;
+  }
+
+  let shoe = [], shoePos = 0;
+  let history = [];                        /* 每手结果 {winner,pPair,bPair,pTotal,bTotal} */
+  let phase = 'bet';                       /* bet | dealing */
+  let cur = null;                          /* 本局 playHand 结果 */
+  let shown = { P: [], B: [] };            /* 已经翻开的牌 */
+  let revealQueue = [];
+  let revealTimer = null;
+  let brokeAutoTimer = null;               /* 赔光卡片的延时弹出 */
+  let roundGen = 0;
+  let lastSettle = null;                   /* 当前玩家上一局的派彩明细 */
+  let autoOn = false;
+  let coachOn = true;
+  let myTimer = null, myLeft = 0, myTick = null;
+  let lastVol = 0.68;                      /* 静音前的音量，恢复时用 */
+  let autoPref = false;                    /* 存档里的自动下注开关，等赌台发钱后再打开 */
+  let stats = { total: 0, win: 0, lose: 0, push: 0 };
+  const later = (fn, ms) => { brokeAutoTimer = setTimeout(fn, ms); return brokeAutoTimer; };
+
+  /* ==================================================================
+     渲染：牌 / 点数 / 面板
+     ================================================================== */
+  const SUIT_CLS = (s) => (s === '♥' || s === '♦') ? ' red' : '';
+
+  function cardHTML(c, hidden, dim) {
+    if (hidden) return '<div class="card back"></div>';
+    return '<div class="card' + SUIT_CLS(c.s) + (dim ? ' dim' : '') + '">' +
+             '<span class="cn"><span class="rk">' + c.r + '</span><span class="st">' + c.s + '</span></span>' +
+             '<span class="mid">' + c.s + '</span>' +
+           '</div>';
+  }
+
+  function renderCards() {
+    $('pCards').innerHTML = shown.P.map((c, i) => cardHTML(c, false, false)).join('');
+    $('bCards').innerHTML = shown.B.map((c, i) => cardHTML(c, false, false)).join('');
+  }
+
+  function totalBadge(el, cards, isPlayer) {
+    if (!cards.length) { el.className = 'pv'; el.textContent = '—'; return; }
+    const t = handTotal(cards);
+    let cls = 'pv';
+    if (cards.length === 2 && t >= 8) cls += ' nat';
+    else if (t === 9) cls += ' nine';
+    /* 结算后标出谁赢（lastSettle 留着，下一局发牌时清掉） */
+    if (lastSettle && cur) {
+      if (cur.winner !== 'T') {
+        if ((cur.winner === 'P') === !!isPlayer) cls += ' win'; else cls += ' lose';
+      }
+    }
+    el.className = cls;
+    el.textContent = t + ' 点';
+  }
+
+  function renderPanel() {
+    const bet = betTotal(bets);
+    $('chips').textContent = fmtAmt(chips);
+    $('betNow').textContent = bet;
+    $('scoreNow').textContent = (shown.P.length && shown.B.length)
+      ? (handTotal(shown.P) + ' / ' + handTotal(shown.B)) : '—';
+    $('shoeLeft').textContent = Math.max(0, shoe.length - shoePos) + ' 张';
+    $('turnNow').textContent = (phase === 'dealing') ? (curP() ? curP().name : '—') : curP().name;
+
+    totalBadge($('pPv'), shown.P, true);
+    totalBadge($('bPv'), shown.B, false);
+
+    for (const k of BET_KEYS) {
+      const b = document.querySelector('.bbtn[data-k="' + k + '"]');
+      if (!b) continue;
+      const amt = b.querySelector('.amt');
+      const v = bets[k] || 0;
+      b.classList.toggle('has', v > 0);
+      if (amt) amt.textContent = v > 0 ? String(v) : '';
+      if (amt && !v) amt.remove();
+      if (v > 0 && !amt) {
+        const s = document.createElement('span');
+        s.className = 'amt'; s.textContent = String(v);
+        b.appendChild(s);
+      }
+      b.disabled = phase !== 'bet';
+    }
+
+    /* 本局派彩 / 抽水（显示的是「正在下注那个玩家」的） */
+    if (lastSettle) {
+      const net = lastSettle.net;
+      $('payNow').innerHTML = '<span style="color:' + (net > 0 ? 'var(--win)' : (net < 0 ? 'var(--danger)' : 'var(--muted)')) + '">' +
+        (net > 0 ? '+' : '') + fmtAmt(net) + '</span>';
+      $('commNow').textContent = lastSettle.commission ? lastSettle.commission.toFixed(2) : '0';
+    } else {
+      $('payNow').textContent = '—';
+      $('commNow').textContent = '0';
+    }
+
+    /* 赌台（庄家）本钱 */
+    $('dealerChips').textContent = fmtAmt(dealer.chips);
+    const ddl = $('dealerDelta');
+    if (phase !== 'dealing' && dealer.delta !== 0 || dealer.short > 0) {
+      ddl.innerHTML = '<span style="color:' + (dealer.delta > 0 ? 'var(--win)' : dealer.delta < 0 ? 'var(--danger)' : 'inherit') + '">' +
+        intDelta(dealer.delta) + '</span>' + (dealer.short > 0 ? '（欠 ' + dealer.short + '）' : '');
+    } else ddl.textContent = '—';
+
+    $('deal').disabled = phase !== 'bet' || (bet === 0 && playerCount === 1);
+    $('deal').textContent = dealBtnLabel();
+    $('undo').disabled = phase !== 'bet' || !betLog.length;
+    $('clearBets').disabled = phase !== 'bet' || bet === 0;
+    $('repeat').disabled = phase !== 'bet' || !lastBets;
+    renderTable();
+    renderRoad();
+    renderRank();
+  }
+
+  /* 发牌按钮上的字：多人时先「交给下一位」，最后一个人押完才真的发牌 */
+  function dealBtnLabel() {
+    if (phase !== 'bet') return '发 牌';
+    const b = betTotal(bets);
+    const nextName = (turn < playerCount - 1) ? players[turn + 1].name : '';
+    if (b > 0) return (turn < playerCount - 1) ? ('✅ 押好了 → ' + nextName) : '发 牌';
+    return (playerCount > 1) ? ('⏭ ' + curP().name + ' 不下注' + (turn < playerCount - 1 ? ' → ' + nextName : '，发牌'))
+                             : '发 牌';
+  }
+
+  /* ---------- 牌桌上的坐位 + 赌台本钱读数 ---------- */
+  function buildPlayersUI() {
+    const row = $('playersRow');
+    if (!row) return;
+    row.innerHTML = '';
+    for (let i = 0; i < playerCount; i++) {
+      const z = document.createElement('div');
+      z.className = 'pzone';
+      z.id = 'pzone-' + i;
+      const nm = document.createElement('div');
+      nm.className = 'pname';
+      nm.id = 'pName-' + i;
+      nm.textContent = players[i] ? players[i].name : playerName(i, playerCount);
+      const ch = document.createElement('div');
+      ch.className = 'pchips';
+      ch.innerHTML = '筹码 <b id="pChips-' + i + '">' + (players[i] ? players[i].chips : START_CHIPS) + '</b>';
+      const st = document.createElement('div');
+      st.className = 'pstate';
+      st.id = 'pState-' + i;
+      st.textContent = '等待';
+      const bt = document.createElement('div');
+      bt.className = 'pbet';
+      bt.id = 'pBet-' + i;
+      bt.textContent = '—';
+      z.appendChild(nm); z.appendChild(ch); z.appendChild(st); z.appendChild(bt);
+      row.appendChild(z);
+    }
+  }
+  const pRow = (i) => $('pzone-' + i);
+
+  /* 坐位上的一句话状态 */
+  const PBET_CN = { P: '闲', B: '庄', T: '和', PP: '闲对', BP: '庄对' };
+  function betSummary(b) {
+    const parts = [];
+    for (const k of BET_KEYS) if (b && b[k] > 0) parts.push(PBET_CN[k] + ' ' + b[k]);
+    return parts.length ? parts.join(' · ') : '';
+  }
+  function pStateText(p) {
+    if (p.kind === 'out') return '轮空';
+    if (p.kind === 'win') return '赢 ' + intDelta(p.delta);
+    if (p.kind === 'lose') return '输 ' + p.delta;
+    if (p.kind === 'push') return '和 ±0';
+    const s = betSummary(p.bets);
+    return s ? ('已押 ' + betTotal(p.bets)) : '未下注';
+  }
+
+  function renderTable() {
+    if (phase === 'dealing') {
+      $('dealerBank').innerHTML = '本钱 <b>' + fmtAmt(dealer.chips) + '</b>' +
+        ((cur ? ' · 本局 <b class="' + (dealer.delta > 0 ? 'up' : dealer.delta < 0 ? 'down' : '') + '">' + intDelta(dealer.delta) + '</b>' : '')) +
+        (dealer.short > 0 ? ' · 欠 ' + dealer.short : (dealer.chips <= 0 ? ' · 已赔光' : ''));
+      $('dealerBank').classList.toggle('broke', dealer.chips <= 0);
+    } else {
+      $('dealerBank').innerHTML = '本钱 <b>' + fmtAmt(dealer.chips) + '</b>' +
+        ((dealer.delta !== 0 || dealer.short > 0)
+          ? ' · 本局 <b class="' + (dealer.delta > 0 ? 'up' : dealer.delta < 0 ? 'down' : '') + '">' +
+            intDelta(dealer.delta) + '</b>' : '') +
+        (dealer.short > 0 ? ' · 欠 ' + dealer.short : (dealer.chips <= 0 ? ' · 已赔光' : ''));
+      $('dealerBank').classList.toggle('broke', dealer.chips <= 0);
+    }
+
+    forEachPlayer(function (p, i) {
+      const z = pRow(i);
+      const nm = $('pName-' + i), ch = $('pChips-' + i), st = $('pState-' + i), bt = $('pBet-' + i);
+      if (nm && nm.textContent !== p.name) nm.textContent = p.name;
+      if (ch) ch.textContent = fmtAmt(p.chips);
+      const betting = (phase === 'bet' && i === turn);
+      if (st) {
+        st.className = 'pstate' + (betting ? ' turn' : (p.kind === 'win' ? ' win' : (p.kind === 'lose' ? ' lose' : '')));
+        st.textContent = (betting && betTotal(p.bets) === 0 ? '▸ 该你下注' : (betting ? '▸ 下注中' : pStateText(p)));
+      }
+      if (bt) bt.textContent = p.kind === 'out' ? '轮空' : (betSummary(p.bets) || '—');
+      if (z) {
+        z.classList.toggle('active', betting);
+        z.classList.toggle('win', p.kind === 'win');
+        z.classList.toggle('lose', p.kind === 'lose');
+        z.classList.toggle('out', p.kind === 'out');
+      }
+    });
+  }
+
+  /* ---------- 排行榜：最上面是金色的赌台那一行 ---------- */
+  function renderRank() {
+    const order = players.map((p, i) => ({ p: p, i: i }))
+      .sort((a, b) => (b.p.chips - a.p.chips) || (a.i - b.i));
+    const betting = (phase === 'bet');
+    let h = '<div class="rankrow dealer' + (dealer.chips <= 0 ? ' broke' : '') + '">' +
+              '<span class="rk">台</span>' +
+              '<span class="rn">' + dealer.name + '</span>' +
+              '<span class="rc">' + fmtAmt(dealer.chips) + '</span>' +
+              '<span class="rd ' + (dealer.delta > 0 ? 'up' : dealer.delta < 0 ? 'down' : '') + '">' +
+                (dealer.delta !== 0 ? intDelta(dealer.delta) + (dealer.short > 0 ? ' 欠' + dealer.short : '') : '—') + '</span>' +
+              '<span class="rs">本钱 ' + dealerBank + '</span>' +
+            '</div>';
+    order.forEach(function (o, k) {
+      const p = o.p;
+      h += '<div class="rankrow' + (betting && o.i === turn ? ' active' : '') + '">' +
+             '<span class="rk">' + (k + 1) + '</span>' +
+             '<span class="rn">' + p.name + (betting && o.i === turn ? ' ▸' : '') + '</span>' +
+             '<span class="rc">' + fmtAmt(p.chips) + '</span>' +
+             '<span class="rd ' + (p.delta > 0 ? 'up' : p.delta < 0 ? 'down' : '') + '">' + pStateText(p) + '</span>' +
+             '<span class="rs">胜 ' + p.stats.win + ' 负 ' + p.stats.lose + ' 和 ' + p.stats.push + '</span>' +
+           '</div>';
+    });
+    $('rankBox').innerHTML = h;
+  }
+
+  /* ---------- 路单 ---------- */
+  function renderRoad() {
+    const bead = $('beadPlate');
+    const cls = (w, pp, bp, extra) =>
+      'dot ' + (w === 'P' ? 'p' : w === 'B' ? 'b' : 't') + (pp ? ' pp' : '') + (bp ? ' bp' : '') + (extra || '');
+    let html = '';
+    history.forEach(function (h, i) {
+      html += '<div class="' + cls(h.winner, h.pPair, h.bPair) + '" title="第' + (i + 1) + '手">' +
+              '<i></i></div>';
+    });
+    bead.innerHTML = html || '<div class="dot empty"></div>';
+    $('beadPv').textContent = history.length + ' 手';
+
+    const cells = buildBigRoad(history);
+    let maxCol = 0;
+    for (const c of cells) maxCol = Math.max(maxCol, c.col + 1);
+    let bh = '';
+    for (const c of cells) {
+      bh += '<div class="' + cls(c.w, c.pp, c.bp) + '" style="grid-column:' + (c.col + 1) + ';grid-row:' + (c.row + 1) + '">' +
+            (c.ties ? '<b>' + c.ties + '</b>' : '<i></i>') + '</div>';
+    }
+    $('bigRoad').innerHTML = bh || '<div class="dot empty"></div>';
+    $('bigPv').textContent = maxCol + ' 列';
+
+    const s = roadStats(history);
+    $('roadStats').innerHTML =
+      '<span class="rb">庄 <b>' + s.B + '</b></span>' +
+      '<span class="rp">闲 <b>' + s.P + '</b></span>' +
+      '<span class="rt">和 <b>' + s.T + '</b></span>' +
+      '<span>最长连庄 <b>' + s.maxB + '</b></span>' +
+      '<span>最长连闲 <b>' + s.maxP + '</b></span>' +
+      '<span>对子 <b>' + (s.pPair + s.bPair) + '</b></span>';
+  }
+
+  /* ---------- 战绩 ---------- */
+  function renderStats() {
+    $('stTotal').textContent = stats.total;
+    $('stWin').textContent = stats.win;
+    $('stLose').textContent = stats.lose;
+    $('stPush').textContent = stats.push;
+  }
+  function recordResult(r) {
+    stats.total++;
+    if (r === 'win') stats.win++;
+    else if (r === 'lose') stats.lose++;
+    else stats.push++;
+    renderStats();
+  }
+
+  /* ==================================================================
+     新手教学：实时模拟当前牌靴的理论优势
+     ================================================================== */
+  function simulateEdges(remaining, n) {
+    /* 用剩余牌做蒙特卡洛：每手从剩余牌里等概率抽 6 张（不放回），
+       抽完把位置换回去，下一手还能用同一个池子。
+       估算值只用来教学，误差约 ±0.3%。 */
+    const N = n || 20000;
+    let sP = 0, sB = 0, sT = 0, sPP = 0, sBP = 0;
+    const pool = remaining;
+    const L = pool.length;
+    if (L < 12) return null;
+    const swaps = [];
+    for (let k = 0; k < N; k++) {
+      swaps.length = 0;
+      for (let t = 0; t < 6; t++) {
+        const j = t + ((Math.random() * (L - t)) | 0);
+        swaps.push(j);
+        const tmp = pool[t]; pool[t] = pool[j]; pool[j] = tmp;
+      }
+      const P = [pool[0], pool[2]], B = [pool[1], pool[3]];
+      const nat = handTotal(P) >= 8 || handTotal(B) >= 8;
+      if (!nat) {
+        if (playerDraws(handTotal(P))) {
+          P.push(pool[4]);
+          if (bankerDraws(handTotal(B), cardValue(P[2]))) B.push(pool[5]);
+        } else if (bankerDraws(handTotal(B), null)) {
+          B.push(pool[4]);
+        }
+      }
+      const pt = handTotal(P), bt = handTotal(B);
+      if (pt > bt) sP++; else if (bt > pt) sB++; else sT++;
+      if (isPair(P)) sPP++;
+      if (isPair(B)) sBP++;
+      /* 逆序把 swap 换回去 */
+      for (let t = 5; t >= 0; t--) {
+        const j = swaps[t];
+        const tmp = pool[t]; pool[t] = pool[j]; pool[j] = tmp;
+      }
+    }
+    return { P: sP / N, B: sB / N, T: sT / N, PP: sPP / N, BP: sBP / N, n: N };
+  }
+
+  function updateCoach() {
+    if (!coachOn) return;
+    const left = shoe.length - shoePos;
+    const bet = betTotal(bets);
+    const who = (playerCount > 1) ? (curP().name + ' · ') : '';
+    const tag = $('coachTag'), main = $('coachMain'), why = $('coachWhy'), warn = $('coachWarn'), foot = $('coachFoot');
+    const rw = function (s) { return playerCount > 1 ? (who + s) : s; };
+
+    /* 押了和 → 直接劝 */
+    if (bets.T > 0) {
+      tag.textContent = '劝退';
+      main.textContent = rw('「和」是全桌最差的一注');
+      why.innerHTML = '和的赔率 1 赔 8 看着诱人，但它只占约 <b>9.5%</b> 的局数，' +
+        '长期庄家优势 <b>14.36%</b> —— 是庄/闲的十几倍。押 100 分的期望是亏 14.36 分。';
+      warn.textContent = '已押和 ' + bets.T + ' 分。想练手的话，把这一注撤回去（点「撤销」）。';
+      foot.innerHTML = '牌靴剩余 <b>' + left + '</b> 张。';
+      return;
+    }
+    /* 还没押注 → 推荐庄 */
+    if (bet === 0) {
+      tag.textContent = '推荐';
+      main.textContent = rw('押「庄」—— 全桌庄家优势最小（1.06%）');
+      why.innerHTML = '庄的补牌规则天生占便宜：<b>庄家在闲家补牌之后才决定补不补</b>，' +
+        '所以庄赢的概率约 45.86%，闲只有 44.62%。扣掉 5% 抽水之后，庄的优势仍然只有 <b>1.06%</b>，' +
+        '比闲（1.24%）还小。';
+      warn.textContent = '「闲 1 赔 1 不用抽水」听起来划算，其实闲的真实优势更大（1.24%）。';
+      foot.innerHTML = '押 <b>' + autoStake + '</b> 分庄，长期每局期望亏 <b>' +
+        (autoStake * HOUSE_EDGE.B).toFixed(2) + '</b> 分。牌靴剩余 <b>' + left + '</b> 张。' +
+        (playerCount > 1 ? '<br>多人：只发一次牌，每个人按<b>自己的注</b>各自结算；赌台本钱不够时按「' +
+          PAY_ORDER_CN[payOrder] + '」赔。' : '');
+      return;
+    }
+    /* 押了庄/对子 → 说明期望 */
+    const parts = [];
+    let ev = 0;
+    for (const k of BET_KEYS) {
+      if (bets[k] > 0) {
+        parts.push(BET_NAME[k] + ' ' + bets[k] + ' 分（庄家优势 ' + (HOUSE_EDGE[k] * 100).toFixed(2) + '%）');
+        ev -= bets[k] * HOUSE_EDGE[k];
+      }
+    }
+    tag.textContent = '已押';
+    main.textContent = rw('本局共押 ' + bet + ' 分：' + parts.join('，'));
+    why.innerHTML = '这一注的<b>期望值约 ' + ev.toFixed(2) + ' 分</b>（负数就是长期要亏的）。' +
+      '单局输赢全靠运气，这个数字只在几百局之后才显出来。';
+    warn.textContent = bets.PP || bets.BP
+      ? '对子注的优势 10.36%，比庄/闲大十倍，只适合偶尔玩一下。'
+      : (dealerBroke() ? '⚠ 赌台本钱已经赔光了，这一局赢了也拿不到钱 —— 先补钱（或改本钱）再玩。' : '');
+    /* 实时估算当前牌靴的优势（教学点：牌靴剩什么几乎不影响结论） */
+    const est = simulateEdges(remainingCards().slice(), 6000);
+    foot.innerHTML = est
+      ? '按当前牌靴剩余牌实时模拟 ' + est.n + ' 手：庄赢 ' + (est.B * 100).toFixed(1) + '%、闲赢 ' +
+        (est.P * 100).toFixed(1) + '%、和 ' + (est.T * 100).toFixed(1) +
+        '%（<b>牌少了哪些牌几乎不改变结论</b>，这就是百家乐算牌没用的原因）'
+      : '牌靴剩余 <b>' + left + '</b> 张。';
+  }
+
+  /* ==================================================================
+     牌靴
+     ================================================================== */
+  function remainingCards() { return shoe.slice(shoePos); }
+
+  function newShoe(quiet) {
+    shoe = buildShoe(decks);
+    shoePos = 0;
+    if (!quiet) {
+      Sfx.shuffle();
+      toast('换新牌靴：' + decks + ' 副，共 ' + shoe.length + ' 张');
+    }
+  }
+
+  function needReshuffle() { return shoe.length - shoePos < RESHUFFLE_AT; }
+
+  /* ==================================================================
+     下注
+     ================================================================== */
+  function placeBet(k, amount) {
+    if (phase !== 'bet') return false;
+    if (!BET_KEYS.includes(k)) return false;
+    const v = amount === undefined ? chipDenom : amount;
+    if (v <= 0) return false;
+    if (betLimit > 0 && (bets[k] || 0) + v > betLimit) {
+      Sfx.click();
+      toast('「' + BET_NAME[k] + '」单注限红 ' + betLimit + ' 分');
+      return false;
+    }
+    if (v > chips) {
+      Sfx.click();
+      toast('筹码不够了（剩 ' + fmtAmt(chips) + ' 分）');
+      return false;
+    }
+    chips = r2(chips - v);
+    bets[k] = r2((bets[k] || 0) + v);
+    betLog.push({ k: k, v: v });
+    Sfx.chip(panOfBet(k));
+    const b = document.querySelector('.bbtn[data-k="' + k + '"]');
+    if (b) b.classList.add('hit');
+    setTimeout(() => { const e = document.querySelector('.bbtn[data-k="' + k + '"]'); if (e) e.classList.remove('hit'); }, 340);
+    renderPanel(); updateCoach();
+    return true;
+  }
+  function panOfBet(k) {
+    if (k === 'P' || k === 'PP') return -0.5;
+    if (k === 'B' || k === 'BP') return 0.5;
+    return 0;
+  }
+  function undoBet() {
+    if (phase !== 'bet' || !betLog.length) return;
+    const last = betLog.pop();
+    bets[last.k] = r2(Math.max(0, (bets[last.k] || 0) - last.v));
+    chips = r2(chips + last.v);
+    Sfx.click();
+    renderPanel(); updateCoach();
+  }
+  function clearBets() {
+    if (phase !== 'bet') return;
+    let back = 0;
+    for (const k of BET_KEYS) { back += bets[k] || 0; bets[k] = 0; }
+    chips = r2(chips + back);
+    betLog = [];
+    Sfx.click();
+    renderPanel(); updateCoach();
+  }
+  function repeatBets() {
+    if (phase !== 'bet' || !lastBets) return;
+    clearBets();
+    let ok = true;
+    for (const k of BET_KEYS) if (lastBets[k] > 0) ok = placeBet(k, lastBets[k]) && ok;
+    toast(ok ? '已重复上局下注' : '筹码不够，重复了一部分');
+  }
+
+  /* ==================================================================
+     发牌 / 结算
+     ================================================================== */
+  /* 当前玩家押完了：多人时先交给下一位，最后一位押完才真的发牌。
+     单人时等价于老的 doDeal（没押注就提示）。 */
+  function confirmBet() {
+    if (phase !== 'bet') return false;
+    const total = betTotal(bets);
+    if (total <= 0) {
+      if (playerCount <= 1) { toast('先押注再发牌'); return false; }
+      if (!curP().out) { curP().out = true; toast(curP().name + ' 本局不下注，轮空'); }
+    }
+    syncOut();
+    /* 后面的人筹码连最小面额都不够，直接轮空跳过 */
+    let n = turn + 1;
+    while (n < playerCount && !chipsOk(players[n])) {
+      players[n].out = true;
+      toast(players[n].name + ' 的筹码不够下注（剩 ' + fmtAmt(players[n].chips) + ' 分），本局轮空');
+      n++;
+    }
+    if (n >= playerCount) return doDeal();
+    syncIn(n);
+    stopMyTimer();
+    Sfx.click();
+    $('centerMsg').innerHTML = '<div>轮到 <b>' + curP().name + '</b> 下注</div>' +
+      '<div class="sub">押完点「✅ 押好了」，全部人押完只发一次牌，各自按自己的注结算</div>';
+    renderPanel(); updateCoach();
+    scheduleMyTurn();
+    return true;
+  }
+
+  function doDeal() {
+    if (phase !== 'bet') return false;
+    syncAll();
+    if (dealerBroke()) {
+      /* 赌台没钱：不发牌、不清桌，直接弹卡片问要不要补钱 */
+      stopAutoFor('赌台本钱赔光了');
+      showBrokeCard();
+      return false;
+    }
+    if (!players.some(function (p) { return !p.out && betTotal(p.bets) > 0; })) {
+      toast(playerCount <= 1 ? '先押注再发牌' : '这一局没有人下注 —— 先押注再发牌');
+      turn = 0; syncIn(0);
+      renderPanel(); updateCoach();
+      return false;
+    }
+    if (needReshuffle()) newShoe();
+    stopMyTimer();
+    /* 记下每个人的「重复上局」，并清掉上一局留下的每局字段 */
+    forEachPlayer(function (p) {
+      p.lastBets = JSON.parse(JSON.stringify(p.bets));
+      p.delta = 0; p.shorted = 0; p.settle = null; p.kind = '';
+    });
+    /* 工作副本里的 lastBets 也要跟着换成新的，否则后面 syncOut 会把刚记下的覆盖掉 */
+    if (players[turn]) lastBets = players[turn].lastBets;
+    roundGen++;
+    const gen = roundGen;
+    phase = 'dealing';
+    lastSettle = null;
+    shown = { P: [], B: [] };
+    cur = playHand(shoe, shoePos);
+    shoePos = cur.next;
+    $('centerMsg').innerHTML = '<div class="big">发牌中…</div><div class="sub">闲先手</div>';
+    renderCards(); renderPanel();
+
+    const steps = cur.steps;
+    if (dealSpeed === 0) {
+      for (const s of steps) shown[s.who].push(s.card);
+      renderCards(); renderPanel();
+      finishRound();
+      return true;
+    }
+    let i = 0;
+    const tick = function () {
+      if (gen !== roundGen) return;
+      if (i >= steps.length) { finishRound(); return; }
+      const s = steps[i++];
+      shown[s.who].push(s.card);
+      if (s.third) { Sfx.third(s.who === 'P' ? -0.4 : 0.4); } else { Sfx.deal(s.who === 'P' ? -0.4 : 0.4); }
+      Sfx.flip(s.who === 'P' ? -0.4 : 0.4, 0.09);
+      renderCards(); renderPanel();
+      if (i === 4) {
+        /* 四张发完，先报一下点数（有自然牌就直接跳到结算） */
+        const nat = cur.natural;
+        $('centerMsg').innerHTML = '<div class="big">闲 ' + handTotal(shown.P) + ' 点 · 庄 ' + handTotal(shown.B) + ' 点</div>' +
+          '<div class="sub">' + (nat ? '出现自然牌（8/9 点），双方都不补牌' : '按规则判定要不要补第三张…') + '</div>';
+      }
+      revealTimer = setTimeout(tick, dealSpeed);
+    };
+    revealTimer = setTimeout(tick, dealSpeed);
+    return true;
+  }
+
+  /* ==================================================================
+     赌台（庄家）结算
+     赌台本局净额 = −（所有玩家本局净额之和）。
+     本钱不够赔时：只赔到 0，欠的部分从赢家身上扣回来，扣的次序由
+     「赔不过来时」这个设置决定（按赢额大小 / 按玩家顺序），
+     每个被扣的人记在 p.shorted 里，赌台欠的总数记在 dealer.short 里明说。
+     这样账目永远是平的。
+     ================================================================== */
+  function settleDealerBank() {
+    dealer.short = 0;
+    forEachPlayer(function (p) { p.shorted = 0; });
+    let net = 0;
+    forEachPlayer(function (p) { net += p.delta; });
+    const dDelta = r2(-net);
+    if (dealer.chips + dDelta < 0) {
+      dealer.short = r2(-(dealer.chips + dDelta));
+      let need = dealer.short;
+      clawbackOrder().forEach(function (o) {
+        if (need <= 0) return;
+        const p = o.p;
+        const take = r2(Math.min(p.delta, need));
+        p.delta = r2(p.delta - take);
+        p.chips = r2(p.chips - take);
+        p.shorted = r2((p.shorted || 0) + take);
+        need = r2(need - take);
+      });
+      let net2 = 0;
+      forEachPlayer(function (p) { net2 += p.delta; });
+      dealer.chips = 0;
+      dealer.delta = r2(-net2);
+    } else {
+      dealer.chips = r2(dealer.chips + dDelta);
+      dealer.delta = dDelta;
+    }
+    return dealer.delta;
+  }
+
+  /* ---------- 结果区：左边【本局总结】，右边【详情情况】 ---------- */
+  /* 每个人的明细「押了什么 + 结果」 */
+  function pDetail(p) {
+    if (p.kind === 'out') return '轮空';
+    if (!p.settle || !p.settle.detail.length) return '没押注';
+    return p.settle.detail.map(function (d) {
+      return '押' + PBET_CN[d.key] + ' ' + fmtAmt(d.stake) +
+             '（' + (d.won ? '赢' : (d.push ? '和局退回' : '输')) + '）';
+    }).join(' · ');
+  }
+  /* 详情区的一行：「名字：押了什么，±输赢」 */
+  function resultLine(name, what, delta, shorted, tail) {
+    const cls = delta > 0 ? 'up' : delta < 0 ? 'down' : '';
+    const short = (shorted > 0) ? '（本钱不够，少拿 ' + fmtAmt(shorted) + ' 分）' : '';
+    return '<div class="resline">' + name + '：' + what + '，<b class="' + cls + '">' + intDelta(delta) + '</b>' +
+           short + (tail || '') + '</div>';
+  }
+  /* 总结区一行：「赢：2 人」 */
+  function sumLine(label, n) { return '<div class="resline">' + label + '：' + n + ' 人</div>'; }
+  /* 赌台（庄家）那一行，永远排在【详情情况】的第一行 */
+  function houseLine() {
+    let what;
+    if (cur) {
+      const oc = cur.winner === 'P' ? '闲赢' : (cur.winner === 'B' ? '庄赢' : '和局');
+      what = '闲 ' + cur.pTotal + ' 点 / 庄 ' + cur.bTotal + ' 点（' + oc + '）';
+    } else what = '本局';
+    return resultLine(dealer.name, what, dealer.delta, 0,
+      dealer.short > 0 ? '（还欠 ' + fmtAmt(dealer.short) + ' 分）' : '');
+  }
+  function resultBox(wins, loses, draws, outs) {
+    let left = '<div class="resgroup"><div class="resgtitle">【本局总结】</div>' +
+      sumLine('赢', wins) + sumLine('输', loses) + sumLine('和', draws);
+    if (outs) left += sumLine('轮空', outs);
+    left += '</div>';
+    let right = '<div class="resgroup"><div class="resgtitle">【详情情况】</div>';
+    right += houseLine();
+    forEachPlayer(function (p) { right += resultLine(p.name, pDetail(p), p.delta, p.shorted); });
+    right += '</div>';
+    return '<div class="resbox">' + left + right + '</div>';
+  }
+
+  function finishRound() {
+    /* 只有发牌中才结算，防止动画回调与「立刻开牌」重复触发 */
+    if (phase !== 'dealing' || !cur) return;
+    phase = 'bet';
+    syncAll();
+    turn = 0; syncIn(0);
+
+    /* ---------- 每个人按自己的注各自结算（赔率与 5% 抽水照旧） ---------- */
+    let wins = 0, loses = 0, draws = 0, outs = 0;
+    forEachPlayer(function (p) {
+      p.shorted = 0;
+      if (p.out || betTotal(p.bets) <= 0) {
+        p.kind = 'out'; p.delta = 0; p.settle = null; outs++;
+      } else {
+        const res = settleBets(p.bets, cur);
+        p.settle = res;
+        p.chips = r2(p.chips + res.ret);
+        p.delta = r2(res.net);
+        if (res.net > 0) { p.kind = 'win'; wins++; p.stats.win++; stats.win++; }
+        else if (res.net < 0) { p.kind = 'lose'; loses++; p.stats.lose++; stats.lose++; }
+        else { p.kind = 'push'; draws++; p.stats.push++; stats.push++; }
+        stats.total++;
+        /* 中奖的下注区闪一下 */
+        for (const d of res.detail) {
+          if (!d.won) continue;
+          const b = document.querySelector('.bbtn[data-k="' + d.key + '"]');
+          if (b) { b.classList.add('hit'); setTimeout(((el) => () => el.classList.remove('hit'))(b), 340); }
+        }
+      }
+      for (const k of BET_KEYS) p.bets[k] = 0;
+      p.betLog = [];
+    });
+
+    history.push({ winner: cur.winner, pPair: cur.pPair, bPair: cur.bPair,
+                   pTotal: cur.pTotal, bTotal: cur.bTotal });
+
+    /* ---------- 赌台本钱结算（可能赔不光，也可能赔到 0） ---------- */
+    settleDealerBank();
+    const roundDelta = r2(players.reduce((a, p) => a + p.delta, 0));
+
+    /* ---------- 中间的结果区 ---------- */
+    const name = cur.winner === 'P' ? '闲家赢' : (cur.winner === 'B' ? '庄家赢' : '和局');
+    const me = players[0];
+    const conclusion = (playerCount === 1)
+      ? (me.kind === 'out' ? '（你轮空了）'
+        : me.delta > 0 ? ('你赢了 ' + intDelta(me.delta))
+        : me.delta < 0 ? ('你输了 ' + fmtAmt(me.delta)) : '不输不赢')
+      : '';
+    let html = '<div class="big ' + (me.delta > 0 ? 'up' : (me.delta < 0 && playerCount === 1 ? 'down' : '')) + '">' +
+      name + ' · 闲 ' + cur.pTotal + ' : ' + cur.bTotal + ' 庄' + (conclusion ? ' · ' + conclusion : '') + '</div>';
+    const bits = [];
+    if (cur.natural) bits.push('自然牌');
+    if (cur.pPair) bits.push('闲对');
+    if (cur.bPair) bits.push('庄对');
+    if (cur.player.length === 3 || cur.banker.length === 3)
+      bits.push('闲' + cur.player.length + '张 / 庄' + cur.banker.length + '张');
+    const comm = players.reduce((a, p) => a + (p.settle ? p.settle.commission : 0), 0);
+    if (comm) bits.push('抽水 ' + comm.toFixed(2));
+    if (dealer.short > 0) {
+      bits.push(PAY_ORDER_CN[payOrder] + '赔：还差 ' + fmtAmt(dealer.short) + ' 分');
+      toast('赌台本钱不够：' + PAY_ORDER_CN[payOrder] + '赔，还差 ' + fmtAmt(dealer.short) + ' 分（这部分不赔）');
+    } else if (dealer.chips <= 0) {
+      toast('赌台本钱已经归零，后面的赢注都赔不出来了');
+    }
+    html += '<div class="sub">' + bits.join(' · ') + '</div>';
+    html += resultBox(wins, loses, draws, outs);
+    $('centerMsg').innerHTML = html;
+
+    /* ---------- 音效 ---------- */
+    if (wins && !loses) Sfx.win();
+    else if (loses && !wins) Sfx.lose();
+    else if (cur.winner === 'T') Sfx.tie();
+    else Sfx.push();
+
+    /* 每局字段收尾：下一轮重新下注时 out 会重新判定 */
+    forEachPlayer(function (p) { p.out = false; });
+    turn = 0; syncIn(0);
+    lastSettle = players[0].settle;
+
+    if (players.every(function (p) { return p.chips < MIN_CHIP; })) {
+      toast(playerCount === 1 ? '筹码见底了 —— 点右侧「筹码回到 1000」继续'
+                              : '所有人的筹码都见底了 —— 点右侧「筹码回到 1000」继续');
+    }
+    renderStats(); renderCards(); renderPanel(); updateCoach(); updateSelInfo(); scheduleMyTurn();
+
+    /* 赌台赔光了：这一局到此为止，弹卡片问要不要补钱（自动下注也停下来等人决定） */
+    if (dealerBroke()) {
+      stopAutoFor('赌台本钱赔光了');
+      later(function () { if (phase === 'bet' && dealerBroke()) showBrokeCard(); }, 900);
+      return true;
+    }
+    return true;
+  }
+
+  /* ==================================================================
+     赌台赔光（本钱 ≤ 0）：弹卡片问要不要继续
+     ================================================================== */
+  const dealerBroke = () => dealer.chips <= 0;
+  const brokeOpen = () => { const m = $('brokeModal'); return !!m && m.classList.contains('on'); };
+
+  function showBrokeCard() {
+    const m = $('brokeModal');
+    if (!m || brokeOpen()) return false;
+    const owed = dealer.short > 0 ? dealer.short : 0;
+    $('brokeTitle').textContent = '赌台本钱赔光了 —— 这一局结束了';
+    $('brokeText').innerHTML = '赌台（庄家）现在 <b style="color:#ffb4b4">0 分</b>，一分钱都赔不出来，' +
+      '再开一局赢了也拿不到钱。补钱就能接着玩，或者你自己改个本钱数。';
+    let h = '';
+    h += '<div class="broke-kv"><span>本局赌台盈亏</span><b class="' + (dealer.delta < 0 ? 'down' : '') + '">' +
+         intDelta(dealer.delta) + ' 分</b></div>';
+    h += '<div class="broke-kv"><span>赌台本钱</span><b class="down">' + fmtAmt(dealer.chips) + ' 分</b></div>';
+    if (owed) h += '<div class="broke-kv"><span>还欠赢家（不赔）</span><b class="down">' + fmtAmt(owed) + ' 分</b></div>';
+    h += '<div class="broke-kv"><span>赔付次序</span><b>' + PAY_ORDER_CN[payOrder] + '</b></div>';
+    h += '<div class="broke-kv"><span>' + curP().name + '的筹码</span><b>' + fmtAmt(curP().chips) + ' 分</b></div>';
+    h += '<div class="broke-kv"><span>补给后本钱</span><b>' + dealerBank + ' 分</b></div>';
+    $('brokeStats').innerHTML = h;
+    $('brokeContinue').textContent = '🔄 补给赌台 ' + dealerBank + ' 分，继续下一局';
+    m.classList.add('on');
+    Sfx.lose();
+    return true;
+  }
+  function hideBrokeCard() { const m = $('brokeModal'); if (m) m.classList.remove('on'); }
+
+  /* 「发牌」的语义入口：赌台没钱时不要发牌，先弹卡片问要不要补钱 */
+  function continueToNextRound() {
+    if (phase !== 'bet') return false;
+    if (dealerBroke()) { stopAutoFor('赌台本钱赔光了'); showBrokeCard(); return false; }
+    return confirmBet();
+  }
+
+  /* 需要人来决定的时候（赌台赔光）先把自动下注停下来 */
+  function stopAutoFor(why) {
+    if (!autoOn) return false;
+    clearTimeout(brokeAutoTimer);
+    stopMyTimer();                           /* 别让待触发的自动下注在卡片后面偷偷下注 */
+    autoOn = false;
+    pref.set('bac.auto', 'off');
+    setAuto(false);
+    toast(why + '，自动下注已停');
+    return true;
+  }
+
+  /* ==================================================================
+     我方限时 / 自动下注
+     ================================================================== */
+  function stopMyTimer() {
+    if (myTimer) { clearTimeout(myTimer); myTimer = null; }
+    if (myTick) { clearInterval(myTick); myTick = null; }
+  }
+  function scheduleMyTurn() {
+    stopMyTimer();
+    if (phase !== 'bet') { updateSelInfo(); return; }
+    if (!autoOn && myLimit < 0) { updateSelInfo(); return; }
+    const wait = autoOn ? 900 : myLimit;
+    myLeft = Math.ceil(wait / 1000);
+    if (!autoOn) {
+      myTick = setInterval(function () {
+        myLeft = Math.max(0, myLeft - 1);
+        updateSelInfo();
+      }, 1000);
+    }
+    myTimer = setTimeout(function () {
+      stopMyTimer();
+      if (phase !== 'bet') return;
+      if (!autoOn) toast('⏱ 限时到，自动接管这一手');
+      if (betTotal(bets) === 0 && chipsOk(curP())) placeBet('B', Math.min(autoStake, curP().chips));
+      confirmBet();
+    }, wait);
+    updateSelInfo();
+  }
+  function updateSelInfo() {
+    const bet = betTotal(bets);
+    if (phase === 'dealing') { $('selInfo').textContent = '发牌中…'; return; }
+    const who = (playerCount > 1) ? (curP().name + ' · ') : '';
+    if (autoOn) { $('selInfo').textContent = '🤖 自动下注中：' + who + '每局押庄 ' + autoStake + ' 分'; return; }
+    const t = (myLimit >= 0 && myLeft > 0) ? '（' + myLeft + ' 秒后自动接管）' : '';
+    const nextTxt = (playerCount > 1 && turn < playerCount - 1)
+      ? '，点「✅ 押好了 → ' + players[turn + 1].name + '」'
+      : '，点「发 牌」';
+    $('selInfo').textContent = bet > 0 ? (who + '已押 ' + bet + ' 分' + nextTxt + t) : (who + '先押注' + nextTxt + t);
+  }
+
+  /* ==================================================================
+     控件
+     ================================================================== */
+  function toast(msg) {
+    const t = $('toast');
+    t.textContent = msg;
+    t.classList.add('on');
+    clearTimeout(t._h);
+    t._h = setTimeout(function () { t.classList.remove('on'); }, 1900);
+  }
+  function showRules(on) {
+    const m = $('rulesModal');
+    m.classList.toggle('on', on === undefined ? !m.classList.contains('on') : !!on);
+  }
+
+  function setChip(v) {
+    chipDenom = Number(v);
+    for (const b of document.querySelectorAll('.betchip'))
+      b.classList.toggle('on', Number(b.dataset.chip) === chipDenom);
+    pref.set('bac.chip', String(chipDenom));
+  }
+  function setAuto(on) {
+    autoOn = !!on;
+    pref.set('bac.auto', autoOn ? 'on' : 'off');
+    $('auto').textContent = autoOn ? '🤖 自动下注中' : '🤖 自动下注';
+    $('auto').classList.toggle('primary', autoOn);
+    updateSelInfo(); updateCoach();
+    /* 打开自动就立刻接管当前局面（多人时会一个接一个自己押完） */
+    if (autoOn && phase === 'bet') {
+      if (dealerBroke()) { stopAutoFor('赌台本钱赔光了'); showBrokeCard(); return; }
+      scheduleMyTurn();
+    }
+  }
+  function setCoach(on) {
+    coachOn = !!on;
+    pref.set('bac.coach', coachOn ? 'on' : 'off');
+    $('coach').textContent = coachOn ? '🎓 教学中' : '🎓 教学关';
+    $('coachCard').style.display = coachOn ? '' : 'none';
+    if (coachOn) updateCoach();
+  }
+  function syncVolUI() {
+    const pct = Math.round(Sfx.volume * 100);
+    $('volRange').value = String(pct);
+    $('volNum').textContent = String(pct);
+    $('sound').textContent = pct > 0 ? '🔊 音效' : '🔇 静音';
+  }
+  function setSound(on) {
+    if (on) Sfx.setVolume(lastVol > 0 ? lastVol : 0.68);
+    else { if (Sfx.volume > 0) lastVol = Sfx.volume; Sfx.setVolume(0); }
+    syncVolUI();
+  }
+  function volChanged(v) {
+    const nv = Math.max(0, Math.min(1, Number(v) / 100));
+    if (nv > 0) lastVol = nv;
+    Sfx.setVolume(nv);
+    syncVolUI();
+  }
+  function resetRound() {
+    stopMyTimer();
+    roundGen++;
+    clearTimeout(revealTimer);
+    clearTimeout(brokeAutoTimer);
+    hideBrokeCard();
+    phase = 'bet';
+    shown = { P: [], B: [] };
+    cur = null; lastSettle = null;
+    resetPlayers(playerCount);               /* 每个人都回到 1000 分 */
+    grantDealer();                           /* 赌台本钱按设定值重发（默认 100） */
+    syncIn(0);
+    buildPlayersUI();
+    history = [];
+    stats = { total: 0, win: 0, lose: 0, push: 0 };
+    newShoe(true);
+    $('centerMsg').innerHTML = '<div>选筹码面额 → 点下注区押注 → 点「发 牌」</div><div class="sub" id="shoeInfo">牌靴 ' + decks + ' 副 · ' + shoe.length + ' 张</div>';
+    renderStats(); renderCards(); renderPanel(); updateCoach(); scheduleMyTurn();
+    toast('重新开局：每人 ' + START_CHIPS + ' 分，赌台本钱 ' + dealerBank + '，新牌靴');
+  }
+
+  /* ---------- 事件绑定 ---------- */
+  for (const b of document.querySelectorAll('.bbtn')) {
+    b.addEventListener('click', function () {
+      if (phase !== 'bet') { toast('本局已经开始了，等结算完再押'); return; }
+      placeBet(this.dataset.k);
+    });
+  }
+  for (const b of document.querySelectorAll('.betchip')) {
+    b.addEventListener('click', function () { setChip(this.dataset.chip); Sfx.click(); });
+  }
+  $('undo').addEventListener('click', undoBet);
+  $('clearBets').addEventListener('click', clearBets);
+  $('repeat').addEventListener('click', repeatBets);
+  $('deal').addEventListener('click', function () { continueToNextRound(); });
+  $('auto').addEventListener('click', function () { setAuto(!autoOn); Sfx.click(); });
+  $('coach').addEventListener('click', function () { setCoach(!coachOn); Sfx.click(); });
+  $('sound').addEventListener('click', function () { setSound(Sfx.volume <= 0); Sfx.click(); });
+  $('rulesBtn').addEventListener('click', function () { showRules(true); Sfx.click(); });
+  $('rulesClose').addEventListener('click', function () { showRules(false); });
+  $('rulesModal').addEventListener('click', function (e) { if (e.target === this) showRules(false); });
+  /* 赌台赔光提示卡 */
+  $('brokeContinue').addEventListener('click', function () {
+    hideBrokeCard();
+    grantDealer();                           /* 补给赌台到设定值 */
+    Sfx.chip();
+    toast('赌台补给 ' + dealerBank + ' 分，继续下一局');
+    renderPanel(); updateCoach(); scheduleMyTurn();
+  });
+  $('brokeEdit').addEventListener('click', function () {
+    hideBrokeCard();
+    const inp = $('dealerBankIn');
+    if (inp && inp.focus) inp.focus();
+    toast('改「庄家本钱」的数值就能继续（改完直接押注发牌）');
+    renderPanel();
+  });
+  $('brokeClose').addEventListener('click', hideBrokeCard);
+  $('brokeModal').addEventListener('click', function (e) { if (e.target === this) hideBrokeCard(); });
+  $('resetChips').addEventListener('click', function () {
+    forEachPlayer(function (p) { p.chips = START_CHIPS; p.settle = null; p.delta = 0; p.shorted = 0; p.kind = ''; });
+    syncIn(turn);
+    grantDealer();                           /* 赌台本钱也回到设定值 */
+    Sfx.click(); renderPanel(); updateCoach();
+    toast(playerCount === 1 ? ('筹码回到 ' + START_CHIPS + '，赌台本钱回到 ' + dealerBank)
+                            : ('所有人筹码回到 ' + START_CHIPS + '，赌台本钱回到 ' + dealerBank));
+  });
+  $('resetShoe').addEventListener('click', function () { newShoe(); renderPanel(); updateCoach(); });
+  $('newRound').addEventListener('click', function () { Sfx.click(); resetRound(); });
+
+  const volRange = $('volRange'), volNum = $('volNum');
+  volRange.addEventListener('input', function () { volChanged(this.value); });
+  volRange.addEventListener('change', function () { if (Sfx.volume > 0) Sfx.chip(0); });
+
+  $('chipSel').addEventListener('change', function () { setChip(this.value); });
+  $('limitSel').addEventListener('change', function () { betLimit = Number(this.value) || 0; pref.set('bac.limit', String(betLimit)); });
+  /* 赌台本钱：改完立刻生效（也记住，下次打开还是这个数） */
+  $('dealerBankIn').addEventListener('change', function () {
+    const v = applyDealerBank(this.value, false, true);   /* 确认时留空/写错 → 回默认值 */
+    this.value = String(v);
+    Sfx.chip(); renderPanel(); updateCoach();
+  });
+  $('dealerBankIn').addEventListener('input', function () {
+    const v = applyDealerBank(this.value, true);          /* 边打字边生效，空着就先不动、也不弹提示 */
+    if (String(v) !== this.value && this.value !== '') this.value = String(v);
+  });
+  /* 赔不过来时先赔给谁 */
+  $('payOrderSel').addEventListener('change', function () {
+    setPayOrder(this.value);
+    Sfx.click();
+    toast('本钱不够时改成：' + PAY_ORDER_CN[payOrder] + '赔');
+  });
+  /* 玩家人数（1~4，默认 1）：改了就是重新开局，赌台本钱重发 */
+  $('playerSel').addEventListener('change', function () {
+    playerCount = normPlayers(this.value);
+    pref.set('bac.players', String(playerCount));
+    stopMyTimer(); roundGen++; clearTimeout(revealTimer); clearTimeout(brokeAutoTimer); hideBrokeCard();
+    resetPlayers(playerCount);
+    grantDealer();
+    syncIn(0);
+    buildPlayersUI(); buildNameInputs();
+    phase = 'bet'; shown = { P: [], B: [] };
+    cur = null; lastSettle = null;
+    history = []; stats = { total: 0, win: 0, lose: 0, push: 0 };
+    Sfx.click();
+    $('centerMsg').innerHTML = '<div>改成 ' + playerCount + ' 个人 —— 每人 ' + START_CHIPS + ' 分</div>' +
+      '<div class="sub">轮流押注，全部押完只发一次牌，各自按自己的注结算</div>';
+    renderStats(); renderCards(); renderPanel(); updateCoach(); scheduleMyTurn();
+  });
+  $('deckSel').addEventListener('change', function () {
+    decks = Number(this.value) || DECKS_DEFAULT;
+    pref.set('bac.decks', String(decks));
+    newShoe(); renderPanel(); updateCoach();
+  });
+  $('autoStakeSel').addEventListener('change', function () {
+    autoStake = Number(this.value) || 50;
+    pref.set('bac.autoStake', String(autoStake));
+    updateCoach();
+  });
+  $('speedSel').addEventListener('change', function () { dealSpeed = Number(this.value) || 0; pref.set('bac.speed', String(dealSpeed)); });
+  $('myDelaySel').addEventListener('change', function () {
+    const v = Number(this.value);
+    myLimit = (this.value === '' || !(v >= -1)) ? 5000 : v;
+    pref.set('bac.myLimit', String(myLimit));
+    scheduleMyTurn();
+  });
+  $('theme').innerHTML = THEME_LIST.map(t => '<option value="' + t.key + '">' + t.name + '</option>').join('');
+  $('theme').addEventListener('change', function () {
+    applyTheme(this.value); pref.set('bac.theme', this.value); Sfx.click(); this.blur();
+  });
+
+  window.addEventListener('keydown', function (e) {
+    /* 在输入框/下拉框里打字时不要触发游戏快捷键（只让 Esc 取消焦点） */
+    const tn = (e.target && e.target.tagName) || '';
+    if (tn === 'INPUT' || tn === 'SELECT' || tn === 'TEXTAREA') {
+      if (e.key === 'Escape' && e.target.blur) e.target.blur();
+      return;
+    }
+    const k = e.key ? e.key.toLowerCase() : '';
+    if (e.code === 'Space') {
+      e.preventDefault();
+      if (phase === 'bet') continueToNextRound();
+      return;
+    }
+    if (k === 'escape') { hideBrokeCard(); showRules(false); return; }
+    if (phase !== 'bet') {
+      if (k === 'h') { showRules(); }
+      else if (k === 'm') { setSound(Sfx.volume <= 0); }
+      return;
+    }
+    const map = { '1': 'P', '2': 'T', '3': 'B', '4': 'PP', '5': 'BP' };
+    if (map[k]) { e.preventDefault(); placeBet(map[k]); return; }
+    if (k === 'c') { e.preventDefault(); clearBets(); }
+    else if (k === 'u') { e.preventDefault(); undoBet(); }
+    else if (k === 'r') { e.preventDefault(); repeatBets(); }
+    else if (k === 'd') { e.preventDefault(); setAuto(!autoOn); }
+    else if (k === 'g') { e.preventDefault(); setCoach(!coachOn); }
+    else if (k === 'h') { e.preventDefault(); showRules(); }
+    else if (k === 'm') { e.preventDefault(); setSound(Sfx.volume <= 0); }
+  });
+
+  /* ==================================================================
+     启动
+     ================================================================== */
+  function restore() {
+    applyTheme(pref.get('bac.theme', 'midnight'));
+    $('theme').value = THEMES[theme.key] ? theme.key : 'midnight';
+
+    chipDenom = Number(pref.get('bac.chip', '50'));
+    if (![10, 50, 100, 500].includes(chipDenom)) chipDenom = 50;
+    $('chipSel').value = String(chipDenom);
+    for (const b of document.querySelectorAll('.betchip')) b.classList.toggle('on', Number(b.dataset.chip) === chipDenom);
+
+    betLimit = Number(pref.get('bac.limit', '500'));
+    if (!(betLimit >= 0)) betLimit = 500;
+    $('limitSel').value = String(betLimit);
+
+    decks = Number(pref.get('bac.decks', String(DECKS_DEFAULT)));
+    if (![1, 6, 8].includes(decks)) decks = DECKS_DEFAULT;
+    $('deckSel').value = String(decks);
+
+    autoStake = Number(pref.get('bac.autoStake', '50'));
+    if (autoStake <= 0) autoStake = 50;
+    $('autoStakeSel').value = String(autoStake);
+
+    dealSpeed = Number(pref.get('bac.speed', '260'));
+    if (!(dealSpeed >= 0)) dealSpeed = 260;
+    $('speedSel').value = String(dealSpeed);
+
+    myLimit = Number(pref.get('bac.myLimit', '5000'));
+    if (!(myLimit >= -1)) myLimit = 5000;
+    $('myDelaySel').value = String(myLimit);
+
+    /* 玩家人数（1~4，默认 1） */
+    playerCount = normPlayers(pref.get('bac.players', String(PLAYERS_DEFAULT)));
+    $('playerSel').value = String(playerCount);
+    pref.set('bac.players', String(playerCount));
+
+    /* 赌台本钱（默认 100，随时可改） */
+    dealerBank = normDealerBank(pref.get('bac.dealerbank', String(DEALER_BANK_DEFAULT)));
+    $('dealerBankIn').value = String(dealerBank);
+
+    /* 赔不过来时先赔给谁（默认按赢额大小） */
+    payOrder = normPayOrder(pref.get('bac.payorder', PAY_ORDER_DEFAULT));
+    $('payOrderSel').value = payOrder;
+    pref.set('bac.payorder', payOrder);
+    $('payOrderHint').textContent = (payOrder === 'points')
+      ? '赢得多的人先拿满，赢得少的少拿/拿不到'
+      : '先押注的先拿满，后面的少拿/拿不到';
+
+    const v0 = Number(pref.get('bac.vol', '0.68'));
+    Sfx.setVolume((v0 >= 0 && v0 <= 1) ? v0 : 0.68);
+    if (Sfx.volume > 0) lastVol = Sfx.volume;
+    syncVolUI();
+
+    setCoach(pref.get('bac.coach', 'on') !== 'off');
+    autoPref = pref.get('bac.auto', 'off') === 'on';
+  }
+
+  /* 人数下拉框由数据生成 */
+  function buildPlayerSel() {
+    const sel = $('playerSel');
+    sel.innerHTML = '';
+    for (const n of PLAYER_COUNTS) {
+      const o = document.createElement('option');
+      o.value = String(n); o.textContent = n + ' 个人';
+      sel.appendChild(o);
+    }
+  }
+
+  buildPlayerSel();
+  /* 先把玩家建出来（restore 里的 setCoach/updateSelInfo 可能要用到 curP） */
+  resetPlayers(normPlayers(pref.get('bac.players', String(PLAYERS_DEFAULT))));
+  syncIn(0);
+  buildPlayersUI();
+  buildNameInputs();
+  restore();
+  grantDealer();                             /* 赌台本钱 = 设定的「庄家本钱」（默认 100） */
+  $('dealerBankIn').value = String(dealerBank);
+  newShoe(true);
+  /* 自动下注放在最后：要等赌台本钱发下来，否则会把「赌台没钱」的卡片弹出来 */
+  setAuto(autoPref);
+  $('centerMsg').innerHTML = '<div>选筹码面额 → 点下注区押注 → 点「发 牌」</div>' +
+    '<div class="sub">牌靴 ' + decks + ' 副 · ' + shoe.length + ' 张</div>';
+  renderStats();
+  renderCards();
+  renderPanel();
+  updateCoach();
+  scheduleMyTurn();
+
+  /* ==================================================================
+     自动化测试钩子
+     ================================================================== */
+  window.__BAC = {
+    /* 核心（便于单元测试直接调用） */
+    buildShoe: buildShoe, playHand: playHand, drawDecision: drawDecision,
+    bankerDraws: bankerDraws, playerDraws: playerDraws,
+    handTotal: handTotal, cardValue: cardValue, isPair: isPair,
+    settleBets: settleBets, buildBigRoad: buildBigRoad, roadStats: roadStats,
+    beadRows: beadRows, BET_KEYS: BET_KEYS, PAYOUT: PAYOUT, HOUSE_EDGE: HOUSE_EDGE,
+    /* 状态 */
+    get chips() { return chips; }, set chips(v) { chips = v; },
+    get bets() { return JSON.parse(JSON.stringify(bets)); },
+    get history() { return history.slice(); },
+    get phase() { return phase; },
+    get cur() { return cur; },
+    get lastSettle() { return lastSettle; },
+    get shoeLeft() { return shoe.length - shoePos; },
+    get stats() { return JSON.parse(JSON.stringify(stats)); },
+    get autoOn() { return autoOn; }, get coachOn() { return coachOn; },
+    get chipDenom() { return chipDenom; }, get betLimit() { return betLimit; },
+    get decks() { return decks; }, get themeKey() { return theme.key; },
+    get myLimit() { return myLimit; },
+    /* 操作 */
+    placeBet: placeBet, undoBet: undoBet, clearBets: clearBets, repeatBets: repeatBets,
+    doDeal: doDeal, confirmBet: confirmBet, continueToNextRound: continueToNextRound,
+    resetRound: resetRound, resetAll: resetRound, newShoe: newShoe,
+    setChip: setChip, setAuto: setAuto, setCoach: setCoach,
+    setDealSpeed: function (v) { dealSpeed = Number(v) || 0; },
+    setMyLimit: function (v) { myLimit = Number(v); },
+    /* 测试用：直接塞一副指定的牌靴 / 读已经翻开的牌 */
+    setShoe: function (cards) { shoe = cards.slice(); shoePos = 0; },
+    get shown() { return { P: shown.P.slice(), B: shown.B.slice() }; },
+    finishRoundNow: function () {
+      if (phase !== 'dealing') return false;
+      roundGen++;
+      clearTimeout(revealTimer);
+      shown = { P: cur.player.slice(), B: cur.banker.slice() };
+      renderCards();
+      finishRound();
+      return true;
+    },
+    /* ---------- 1~4 人热座 ---------- */
+    PLAYER_COUNTS: PLAYER_COUNTS, PLAYERS_DEFAULT: PLAYERS_DEFAULT,
+    START_CHIPS: START_CHIPS, MIN_CHIP: MIN_CHIP, NAME_MAX: NAME_MAX,
+    normPlayers: normPlayers, resetPlayers: resetPlayers, buildPlayersUI: buildPlayersUI,
+    stopMyTimer: stopMyTimer, scheduleMyTurn: scheduleMyTurn,
+    get players() { return players.map(function (p) {
+      return { name: p.name, chips: p.chips, bets: JSON.parse(JSON.stringify(p.bets)),
+               delta: p.delta, shorted: p.shorted, kind: p.kind, out: p.out,
+               stats: JSON.parse(JSON.stringify(p.stats)) };
+    }); },
+    playerAt: function (i) { return window.__BAC.players[i] || null; },
+    get playerCount() { return playerCount; },
+    get turn() { return turn; }, set turn(v) { syncIn(Math.max(0, Math.min(playerCount - 1, Number(v) | 0))); },
+    setPlayers: function (n) {
+      playerCount = normPlayers(n);
+      pref.set('bac.players', String(playerCount));
+      $('playerSel').value = String(playerCount);
+      resetPlayers(playerCount); grantDealer(); syncIn(0);
+      buildPlayersUI(); buildNameInputs(); renderPanel(); updateCoach();
+      return playerCount;
+    },
+    setPlayerChips: function (i, v) {
+      if (!players[i]) return false;
+      players[i].chips = Number(v);
+      if (i === turn) chips = players[i].chips;
+      renderPanel();
+      return true;
+    },
+    setPlayerBets: function (i, k, v) {
+      if (!players[i] || !BET_KEYS.includes(k)) return false;
+      players[i].bets[k] = Number(v) || 0;
+      if (i === turn) bets = players[i].bets;
+      renderPanel();
+      return true;
+    },
+    betTotal: betTotal, curBets: curBets,
+    /* ---------- 赌台（庄家）本钱 ---------- */
+    DEALER_BANK_DEFAULT: DEALER_BANK_DEFAULT, DEALER_BANK_MAX: DEALER_BANK_MAX,
+    normDealerBank: normDealerBank, applyDealerBank: applyDealerBank, grantDealer: grantDealer,
+    settleDealerBank: settleDealerBank, dealerBroke: dealerBroke,
+    showBrokeCard: showBrokeCard, hideBrokeCard: hideBrokeCard, brokeOpen: brokeOpen,
+    stopAutoFor: stopAutoFor, resultBox: resultBox, houseLine: houseLine, pDetail: pDetail,
+    get dealer() { return { name: dealer.name, chips: dealer.chips, delta: dealer.delta, short: dealer.short }; },
+    setDealerChips: function (v) { dealer.chips = Number(v); renderPanel(); },
+    get dealerBank() { return dealerBank; }, set dealerBank(v) { applyDealerBank(v); },
+    /* 本钱不够时的赔付次序：'points'（默认，按赢额大小）/ 'order'（按玩家顺序） */
+    PAY_ORDERS: PAY_ORDERS, PAY_ORDER_DEFAULT: PAY_ORDER_DEFAULT, PAY_ORDER_CN: PAY_ORDER_CN,
+    normPayOrder: normPayOrder, setPayOrder: setPayOrder, clawbackOrder: clawbackOrder,
+    get payOrder() { return payOrder; }, set payOrder(v) { setPayOrder(v); },
+    /* 昵称 */
+    nameFor: nameFor, setPlayerName: setPlayerName,
+    get names() { return customNames.slice(); },
+    /* 兼容旧用法：chips / bets 都指「正在下注的那个玩家」 */
+    showRules: showRules, toast: toast, updateCoach: updateCoach, updateSelInfo: updateSelInfo,
+    coachText: function () {
+      return { tag: $('coachTag').textContent, main: $('coachMain').textContent,
+               why: $('coachWhy').textContent, warn: $('coachWarn').textContent, foot: $('coachFoot').textContent };
+    },
+    Sfx: Sfx,
+    simulateEdges: simulateEdges, remainingCards: remainingCards
+  };
+})();
+</script>
+
+<script>
+/* ===== 专注/全屏模式：独立于游戏本体，不改游戏自己的代码 ===== */
+(function () {
+  var fab = document.getElementById('focusFab');
+  function setLabel(on) {
+    if (!fab) return;
+    fab.innerHTML = on ? '⛶ 退出专注' : '⛶ 专注模式';
+    fab.title = on ? '恢复标题和两侧面板（Shift+F）' : '隐藏标题和两侧面板，让中间占满窗口（Shift+F）';
+  }
+  function refit() { try { window.dispatchEvent(new Event('resize')); } catch (e) {} }
+  function toggleFocus() {
+    var on = document.body.classList.toggle('focus');
+    setLabel(on);
+    refit();
+    setTimeout(refit, 60);
+    return on;
+  }
+  if (fab) fab.addEventListener('click', toggleFocus);
+  window.addEventListener('keydown', function (e) {
+    var t = (e.target && e.target.tagName) || '';
+    if (t === 'INPUT' || t === 'SELECT' || t === 'TEXTAREA') return;
+    if ((e.key === 'F' || e.key === 'f') && e.shiftKey) {
+      e.preventDefault();
+      e.stopPropagation();
+      toggleFocus();
+    }
+  }, true);
+})();
+</script>
+</body>
+</html>

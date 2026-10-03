@@ -1,0 +1,2561 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>魂斗罗 · Contra</title>
+<style>
+  :root{
+    --bg:#0a1020; --glow-1:#1c2f4f; --glow-2:#241c4a;
+    --panel:rgba(23,33,54,.78); --panel-brd:rgba(148,163,184,.20);
+    --text:#e8eefb; --muted:#8fa2bb;
+    --accent:#38bdf8; --accent-2:#f5b942; --danger:#f87171;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%;margin:0;overflow:hidden}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+    color:var(--text);
+    background:#05080f;
+  }
+  /* 整页就是游戏，不留边距 —— 画面能占多高就占多高 */
+  .app{width:100%;height:100%;position:relative;display:flex;flex-direction:column}
+
+  /* 顶栏浮在画面上，不占游戏高度 */
+  .topbar{
+    position:absolute;top:0;left:0;right:0;z-index:20;
+    display:flex;align-items:center;gap:9px;padding:6px 11px 16px;flex-wrap:wrap;
+    background:linear-gradient(180deg,rgba(5,9,16,.9) 0%,rgba(5,9,16,.55) 55%,transparent 100%);
+    transition:opacity .3s ease;
+  }
+  .topbar.hide{opacity:0;pointer-events:none}
+  .brand{
+    font-size:15px;font-weight:800;letter-spacing:.18em;
+    background:linear-gradient(92deg,#f87171,#f5b942 50%,#38bdf8);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+  }
+  .stat{display:flex;align-items:baseline;gap:4px;font-size:11px;color:var(--muted)}
+  .stat b{font-size:14px;font-weight:800;font-variant-numeric:tabular-nums;color:var(--text)}
+  .stat b.hi{color:var(--accent-2)}
+  .sp{flex:1}
+  .field{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted)}
+  select{appearance:none;background:rgba(16,24,40,.92);color:var(--text);border:1px solid var(--panel-brd);
+    border-radius:7px;padding:5px 21px 5px 8px;font-size:11.5px;font-family:inherit;cursor:pointer;
+    background-image:linear-gradient(45deg,transparent 50%,#7c8ea6 50%),linear-gradient(135deg,#7c8ea6 50%,transparent 50%);
+    background-position:calc(100% - 12px) 51%,calc(100% - 7px) 51%;
+    background-size:5px 5px,5px 5px;background-repeat:no-repeat}
+  select:focus{outline:none;border-color:rgba(248,113,113,.6)}
+
+  button{font-family:inherit;font-size:12px;font-weight:600;color:var(--text);
+    background:rgba(38,50,74,.92);border:1px solid rgba(148,163,184,.24);
+    border-radius:7px;padding:5px 11px;cursor:pointer;
+    transition:transform .1s ease,filter .1s ease,border-color .1s ease}
+  button:hover:not(:disabled){filter:brightness(1.3);border-color:rgba(248,113,113,.6)}
+  button:active:not(:disabled){transform:translateY(1px)}
+  button.primary{background:linear-gradient(180deg,#dc2626,#991b1b);border-color:rgba(252,165,165,.55);color:#fff5f5}
+  button.sound-off{color:var(--muted)}
+  /* 音量滑块 */
+  .volbox{gap:6px}
+  .volbox input[type=range]{
+    -webkit-appearance:none;appearance:none;width:88px;height:4px;border-radius:3px;
+    background:linear-gradient(90deg,rgba(248,113,113,.85),rgba(148,163,184,.35));
+    cursor:pointer;outline:none;
+  }
+  .volbox input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none;appearance:none;width:13px;height:13px;border-radius:50%;
+    background:#e8eefb;border:2px solid #dc2626;cursor:pointer;
+  }
+  .volbox input[type=range]::-moz-range-thumb{
+    width:13px;height:13px;border-radius:50%;background:#e8eefb;border:2px solid #dc2626;cursor:pointer;
+  }
+  .volbox #volNum{font-size:10.5px;color:var(--muted);font-variant-numeric:tabular-nums;min-width:20px;text-align:right}
+
+  /* 画面铺满整个视口 */
+  .stage{flex:1 1 0%;min-height:0;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;
+    background:radial-gradient(900px 620px at 50% 0%, var(--glow-1) 0%, transparent 65%), var(--bg)}
+  canvas{display:block;image-rendering:pixelated;image-rendering:crisp-edges;margin:auto}
+
+  /* 触屏按钮浮在画面底部；键鼠设备直接不显示，空间全留给游戏 */
+  .pad{position:absolute;left:0;right:0;bottom:0;z-index:20;
+    display:flex;gap:10px;justify-content:center;padding:10px 8px 14px;
+    background:linear-gradient(0deg,rgba(5,9,16,.85),rgba(5,9,16,.35) 60%,transparent)}
+  .pad button{min-width:54px;font-size:15px;padding:10px 14px;border-radius:11px;
+    background:rgba(44,58,84,.94);border-color:rgba(148,163,184,.32)}
+  .pad .fire{background:linear-gradient(180deg,#dc2626,#7f1d1d);border-color:rgba(252,165,165,.5)}
+  .pad .jump{background:linear-gradient(180deg,#2563eb,#1e3a8a);border-color:rgba(147,197,253,.5)}
+  @media (hover:hover) and (pointer:fine){ .pad{display:none} }
+
+  /* 底部快捷键提示：不玩游戏时自动淡出 */
+  .hint{position:absolute;left:0;right:0;bottom:6px;text-align:center;font-size:11px;color:#7c8ea6;
+    z-index:15;pointer-events:none;transition:opacity .4s ease;text-shadow:0 1px 3px #000}
+  .hint.hide{opacity:0}
+  kbd{background:rgba(16,24,40,.92);border:1px solid var(--panel-brd);border-bottom-width:2px;
+    border-radius:5px;padding:1px 6px;font-size:11px;font-family:inherit;color:#9fb2c9}
+
+/* ===== 专注/全屏模式：藏起标题，画布吃满窗口（Shift+F 或点右上角按钮） ===== */
+body.focus header,body.focus aside,body.focus .side{display:none}
+body.focus .app{max-width:none !important;width:100% !important;padding:0 !important;
+  height:calc(100vh - 2px) !important;min-height:0 !important}
+body.focus .board,body.focus .stage{flex:1 1 auto !important;min-height:0 !important}
+body.focus canvas{max-width:100% !important;max-height:100% !important}
+.focus-fab{position:fixed;top:9px;right:11px;z-index:80;display:flex;align-items:center;gap:6px;
+  padding:6px 12px;border-radius:999px;font:inherit;font-size:12.5px;font-weight:700;cursor:pointer;
+  color:#e8eefb;background:rgba(15,23,42,.74);border:1px solid rgba(148,163,184,.32);
+  -webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
+  opacity:.6;transition:opacity .15s,transform .15s}
+.focus-fab:hover{opacity:1;transform:translateY(-1px)}
+body.focus .focus-fab{opacity:.92}
+
+/* 这几个游戏顶栏本来就有控件，专注按钮就放进顶栏里，别悬浮在上面挡着 */
+.topbar .focus-fab{position:static;opacity:.78;padding:4px 10px;font-size:12px;border-radius:8px}
+.topbar .focus-fab:hover{opacity:1;transform:none}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div class="topbar" id="topbar">
+    <span class="brand">魂斗罗</span>
+    <span class="stat">分<b class="hi" id="hScore">0</b></span>
+    <span class="stat">命<b id="hLives">3</b></span>
+    <span class="stat">枪<b id="hWeapon">普通</b></span>
+    <span class="stat">进度<b id="hProg">0%</b></span>
+    <span class="stat">关<b id="hStage">丛林</b></span>
+    <span class="sp"></span>
+    <label class="field">关卡<select id="stageSel"></select></label>
+    <label class="field">主题<select id="theme"></select></label>
+    <label class="field">缩放<select id="fit">
+      <option value="int" selected>整数倍</option>
+      <option value="fill">填满</option>
+    </select></label>
+    <button id="full" title="全屏（快捷键 F）">⛶ 全屏</button>
+    <button id="pause">暂停</button>
+    <button id="restart" class="primary">重开</button>
+    <label class="field volbox" title="音效音量">🔈
+      <input type="range" id="volRange" min="0" max="100" step="1" value="70">
+      <span id="volNum">70</span>
+    </label>
+    <button id="sound" title="音效开关（M）">🔊</button>
+  <button class="focus-fab" id="focusFab" title="藏起标题，让画面占满窗口（Shift+F）">⛶ 专注模式</button>
+        </div>
+
+  <div class="stage" id="stage">
+    <canvas id="cv"></canvas>
+  </div>
+
+  <div class="pad">
+    <button data-k="left">◀</button>
+    <button data-k="down">▼</button>
+    <button data-k="up">▲</button>
+    <button data-k="right">▶</button>
+    <button data-k="fire" class="fire">射击</button>
+    <button data-k="jump" class="jump">跳跃</button>
+  </div>
+
+  <div class="hint" id="hint">
+    <kbd>← →</kbd> 移动 · <kbd>↑ ↓</kbd> 瞄准 · <kbd>Z</kbd> 射击 · <kbd>X</kbd> 跳跃 · <kbd>Enter</kbd> 开始 · <kbd>F</kbd> 全屏 · <kbd>M</kbd> 静音
+  </div>
+
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ==================================================================
+     一、基础常量
+     ================================================================== */
+  const VW = 384, VH = 216;          // 虚拟分辨率（16:9，1080p 正好 5 倍）
+  const GRAV = 0.40, JUMP_V = -6.7, RUN = 2.05, MAX_FALL = 7.2;
+  const GROUND_Y = 176;
+  /* 关卡长度 / 关底坐标由 loadStage() 从 STAGES 里取，见第五节 */
+
+  /* ==================================================================
+     二、主题（和其它几个游戏同一套配色）
+     ================================================================== */
+  const THEME_KEYS = ['key','name','bg','glow1','glow2','panel','brd','text','muted','accent','accent2','danger',
+                      'felt1','felt2','back1','back2','wood1','wood2','wood3','wline','wframe','board1','board2','grid','panel2','line'];
+  const THEME_ROWS = [
+    'midnight|午夜蓝|#0a1020|#1c2f4f|#241c4a|rgba(23,33,54,.78)|rgba(148,163,184,.20)|#e8eefb|#8fa2bb|#38bdf8|#f5b942|#f87171|#17335c|#0a1a33|#3a5a8f|#1d3355|#f2d5a0|#e7c088|#d6a45f|rgba(88,55,20,.75)|rgba(70,42,14,.90)|#0d1526|#080e1a|rgba(148,163,184,.09)|#16233a|#25364e',
+    'emerald|翡翠|#06120e|#0f3d2e|#14261c|rgba(14,37,29,.78)|rgba(110,231,183,.18)|#e4f5ec|#7fa595|#34d399|#fbbf24|#fb7185|#124a37|#072018|#2f7d5f|#1a4736|#ecd9ac|#ddc48c|#c8a869|rgba(74,56,24,.72)|rgba(60,44,16,.90)|#0a1a14|#061009|rgba(148,220,190,.10)|#0f2a20|#1c4a3a',
+    'rosewood|紫檀|#17100b|#4a2415|#2b1620|rgba(46,26,19,.78)|rgba(214,160,110,.22)|#f8ece3|#b69884|#f59e0b|#60a5fa|#ef4444|#5c2a1c|#2e1410|#8f4a35|#4a2018|#e8c39a|#d9ab7c|#c08d5e|rgba(80,44,24,.78)|rgba(64,34,16,.92)|#140d09|#0c0705|rgba(230,190,150,.10)|#33201a|#4a3126',
+    'obsidian|曜金|#08080a|#2c2614|#1a1a22|rgba(22,22,26,.82)|rgba(234,179,8,.20)|#f6f2e6|#a49c86|#eab308|#22d3ee|#f87171|#2a2a30|#141418|#4a4a52|#232328|#e6d9b8|#d4c194|#bda871|rgba(70,58,32,.75)|rgba(54,44,22,.92)|#0c0c10|#050507|rgba(234,200,120,.08)|#17171c|#2e2e34',
+    'sakura|樱雪|#fdf6f7|#ffe3ec|#fff1e6|rgba(255,255,255,.86)|rgba(190,120,145,.24)|#3a2b31|#8a7078|#e0526f|#7c6bd6|#dc2626|#e9bfc9|#d69fae|#c98a9c|#a06374|#fbe8e6|#f3d5d2|#e6bdb9|rgba(150,96,96,.55)|rgba(140,86,86,.80)|#eef1f7|#e2e7f0|rgba(120,140,170,.18)|#ffffff|rgba(190,120,145,.30)',
+    'frost|霜白|#f2f6fb|#dbeafe|#e6e6ff|rgba(255,255,255,.88)|rgba(100,116,139,.20)|#1e293b|#64748b|#2563eb|#0891b2|#dc2626|#c9d8ea|#aec2da|#7f9ec4|#4e6d92|#e8eef6|#d7e1ee|#c2cfe0|rgba(80,100,130,.50)|rgba(66,84,110,.78)|#eef2f8|#e2e8f2|rgba(120,140,170,.18)|#ffffff|rgba(100,116,139,.22)'
+  ];
+  const THEMES = {}, THEME_LIST = [];
+  THEME_ROWS.forEach(function (row) {
+    const p = row.split('|'), t = {};
+    for (let i = 0; i < THEME_KEYS.length; i++) t[THEME_KEYS[i]] = p[i];
+    THEMES[t.key] = t; THEME_LIST.push(t);
+  });
+  const THEME_CSS = { bg:'--bg', glow1:'--glow-1', glow2:'--glow-2', panel:'--panel', brd:'--panel-brd',
+                      text:'--text', muted:'--muted', accent:'--accent', accent2:'--accent-2', danger:'--danger' };
+  let theme = THEMES.midnight;
+  function applyTheme(key) {
+    theme = THEMES[key] || THEMES.midnight;
+    const s = document.documentElement.style;
+    for (const k in THEME_CSS) s.setProperty(THEME_CSS[k], theme[k]);
+  }
+  const pref = {
+    get: function (k, d) { try { return localStorage.getItem(k) || d; } catch (e) { return d; } },
+    set: function (k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+  };
+
+  /* ==================================================================
+     三、音效：全部 Web Audio 实时合成
+     ================================================================== */
+  const Sound = (function () {
+    let ctx = null, master = null, limiter = null, noiseBuf = null, enabled = true;
+    /* 音量（0..1）。以前固定 0.5 的主增益配上 0.06~0.16 的峰值，
+       实测输出只有 -22 dBFS（约正常游戏音效的 1/8），听起来就「像没声音」。
+       现在把峰值整体放大 BOOST 倍，并在末端挂一个限幅器兜住爆音。 */
+    const BOOST = 3.0;
+    let vol = 0.7;
+    try {
+      const sv = localStorage.getItem('contra.vol');
+      /* 注意：没存过时 getItem 返回 null，Number(null) === 0 会被误判成「音量 0」，
+         必须先判断 null，否则新用户一进来就是静音。 */
+      if (sv !== null) {
+        const v = Number(sv);
+        if (v >= 0 && v <= 1) vol = v;
+      }
+    } catch (e) { vol = 0.7; }
+    try { if (localStorage.getItem('contra.sound') === 'off') enabled = false; } catch (e) {}
+
+    function unlock() {
+      if (!ctx) {
+        const AC = window.AudioContext || window.webkitAudioContext;
+        if (!AC) return;
+        try {
+          ctx = new AC();
+          master = ctx.createGain();
+          master.gain.value = enabled ? vol : 0;
+          /* 限幅：爆音不削顶，整体又能推到正常响度 */
+          limiter = ctx.createDynamicsCompressor();
+          limiter.threshold.value = -4;
+          limiter.knee.value = 8;
+          limiter.ratio.value = 12;
+          limiter.attack.value = 0.003;
+          limiter.release.value = 0.14;
+          master.connect(limiter).connect(ctx.destination);
+        } catch (e) { ctx = null; return; }
+      }
+      if (ctx.state === 'suspended') ctx.resume();
+    }
+    const ready = () => !!ctx && enabled && ctx.state !== 'closed';
+    function noise() {
+      if (noiseBuf) return noiseBuf;
+      const n = Math.floor(ctx.sampleRate * 0.12);
+      noiseBuf = ctx.createBuffer(1, n, ctx.sampleRate);
+      const d = noiseBuf.getChannelData(0);
+      for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
+      return noiseBuf;
+    }
+    function burst(t, freq, q, peak, dec, type) {
+      const src = ctx.createBufferSource();
+      src.buffer = noise();
+      const f = ctx.createBiquadFilter();
+      f.type = type || 'bandpass'; f.frequency.value = freq; f.Q.value = q;
+      const g = ctx.createGain();
+      const pk = Math.max(0.0002, peak * BOOST);
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(pk, t + 0.003);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dec);
+      src.connect(f).connect(g).connect(master);
+      src.start(t); src.stop(t + dec + 0.02);
+    }
+    function sweep(t, type, f0, f1, peak, dur, delay) {
+      const at = t + (delay || 0);
+      const osc = ctx.createOscillator();
+      osc.type = type;
+      osc.frequency.setValueAtTime(f0, at);
+      osc.frequency.exponentialRampToValueAtTime(Math.max(1, f1), at + dur * 0.85);
+      const g = ctx.createGain();
+      const pk = Math.max(0.0002, peak * BOOST);
+      g.gain.setValueAtTime(0.0001, at);
+      g.gain.exponentialRampToValueAtTime(pk, at + 0.005);
+      g.gain.exponentialRampToValueAtTime(0.0001, at + dur);
+      osc.connect(g).connect(master);
+      osc.start(at); osc.stop(at + dur + 0.02);
+    }
+    function notes(seq, type, peak) {
+      if (!ready()) return;
+      const t0 = ctx.currentTime + 0.004;
+      const pk = Math.max(0.0002, peak * BOOST);
+      for (let i = 0; i < seq.length; i++) {
+        const at = t0 + seq[i][1];
+        const osc = ctx.createOscillator();
+        osc.type = type;
+        osc.frequency.setValueAtTime(seq[i][0], at);
+        const g = ctx.createGain();
+        g.gain.setValueAtTime(0.0001, at);
+        g.gain.exponentialRampToValueAtTime(pk, at + 0.01);
+        g.gain.exponentialRampToValueAtTime(0.0001, at + seq[i][2]);
+        osc.connect(g).connect(master);
+        osc.start(at); osc.stop(at + seq[i][2] + 0.03);
+      }
+    }
+
+    /* 开枪：经典「啾」——方波快速下扫 + 一点点噪声 */
+    function shoot(kind) {
+      if (!ready()) return;
+      const t = ctx.currentTime + 0.003;
+      if (kind === 'laser') { sweep(t, 'sawtooth', 1600, 420, 0.16, 0.11); burst(t, 3000, 1.2, 0.1, 0.05); }
+      else if (kind === 'fire') { sweep(t, 'sawtooth', 420, 180, 0.16, 0.09); }
+      else { sweep(t, 'square', 1050, 300, 0.13, 0.07); burst(t, 2200, 1.0, 0.07, 0.035); }
+    }
+    function jump() { if (ready()) sweep(ctx.currentTime + 0.003, 'square', 300, 780, 0.13, 0.1); }
+    function explode(big) {
+      if (!ready()) return;
+      const t = ctx.currentTime + 0.004;
+      burst(t, 700, 0.5, big ? 0.55 : 0.35, big ? 0.5 : 0.26, 'lowpass');
+      burst(t, 1800, 0.6, big ? 0.3 : 0.18, big ? 0.22 : 0.12);
+      sweep(t, 'sine', big ? 190 : 150, 40, big ? 0.5 : 0.3, big ? 0.5 : 0.28);
+    }
+    function hit() { if (ready()) sweep(ctx.currentTime + 0.003, 'square', 260, 90, 0.18, 0.16); }
+    function power() { notes([[660, 0, 0.08], [880, 0.07, 0.08], [1175, 0.14, 0.08], [1568, 0.21, 0.28]], 'square', 0.14); }
+    function die() { notes([[520, 0, 0.14], [392, 0.13, 0.14], [294, 0.26, 0.14], [196, 0.39, 0.6]], 'square', 0.16); }
+    function start() { notes([[392, 0, 0.1], [523, 0.1, 0.1], [659, 0.2, 0.1], [784, 0.3, 0.3]], 'square', 0.15); }
+    function win() { notes([[523, 0, 0.14], [659, 0.14, 0.14], [784, 0.28, 0.14], [1046, 0.42, 0.2], [1318, 0.62, 0.7]], 'square', 0.16); }
+    function click() { notes([[1200, 0, 0.025]], 'square', 0.06); }
+
+    return {
+      unlock: unlock, shoot: shoot, jump: jump, explode: explode, hit: hit,
+      power: power, die: die, start: start, win: win, click: click,
+      get enabled() { return enabled; },
+      get volume() { return vol; },
+      set: function (on) {
+        enabled = !!on;
+        try { localStorage.setItem('contra.sound', enabled ? 'on' : 'off'); } catch (e) {}
+        if (enabled) unlock();
+        if (master) master.gain.value = enabled ? vol : 0;
+        return enabled;
+      },
+      /* 音量 0..1；0 等价于静音 */
+      setVolume: function (v) {
+        vol = Math.max(0, Math.min(1, Number(v) || 0));
+        enabled = vol > 0;
+        try {
+          localStorage.setItem('contra.vol', String(vol));
+          localStorage.setItem('contra.sound', enabled ? 'on' : 'off');
+        } catch (e) {}
+        if (enabled) unlock();
+        if (master) master.gain.value = enabled ? vol : 0;
+        return vol;
+      }
+    };
+  })();
+
+  /* ==================================================================
+     四、三个关卡
+     每关有自己的地形、平台、敌人、图块风格、背景风格和关底堡垒位置
+     ================================================================== */
+  const GY = GROUND_Y;
+
+  /* ---- 第一关：丛林 ---- */
+  const S1 = {
+    key: 'jungle', name: '第一关 · 丛林', tiles: 'jungle', bg: 'jungle',
+    sky: ['#08122c', '#123a68', '#2c74a4'],
+    len: 3720, bossX: 3560, bossY: 56,
+    solids: [
+      { x: 0, y: GY, w: 500, h: 40 }, { x: 548, y: GY, w: 400, h: 40 },
+      { x: 992, y: GY, w: 330, h: 40 }, { x: 1366, y: GY, w: 430, h: 40 },
+      { x: 1840, y: GY, w: 300, h: 40 }, { x: 2184, y: GY, w: 1536, h: 40 },
+      { x: 372, y: 148, w: 44, h: 28 }, { x: 1180, y: 140, w: 52, h: 36 },
+      { x: 1584, y: 132, w: 60, h: 44 }, { x: 2400, y: 140, w: 56, h: 36 },
+      { x: 2760, y: 132, w: 64, h: 44 }, { x: 3320, y: 140, w: 44, h: 36 }
+    ],
+    plats: [
+      { x: 208, y: 130, w: 76 }, { x: 604, y: 122, w: 84 }, { x: 760, y: 88, w: 64 },
+      { x: 1040, y: 118, w: 72 }, { x: 1280, y: 96, w: 88 }, { x: 1472, y: 112, w: 68 },
+      { x: 1900, y: 120, w: 80 }, { x: 2040, y: 92, w: 72 }, { x: 2260, y: 110, w: 76 },
+      { x: 2560, y: 96, w: 84 }, { x: 2960, y: 112, w: 88 }, { x: 3140, y: 84, w: 72 }
+    ],
+    spawns: [
+      { x: 150, t: 'soldier' }, { x: 230, t: 'soldier' }, { x: 300, t: 'turret', gy: 148 },
+      { x: 420, t: 'soldier' }, { x: 470, t: 'soldier' },
+      { x: 620, t: 'soldier' }, { x: 700, t: 'soldier' }, { x: 740, t: 'flyer' },
+      { x: 800, t: 'turret', gy: 108 }, { x: 880, t: 'soldier' }, { x: 930, t: 'soldier' },
+      { x: 1060, t: 'turret', gy: 138 }, { x: 1120, t: 'soldier' }, { x: 1160, t: 'flyer' },
+      { x: 1300, t: 'soldier' }, { x: 1340, t: 'soldier' },
+      { x: 1420, t: 'turret', gy: 152 }, { x: 1500, t: 'soldier' }, { x: 1560, t: 'flyer' },
+      { x: 1620, t: 'soldier' }, { x: 1700, t: 'soldier' },
+      { x: 1900, t: 'turret', gy: 140 }, { x: 1980, t: 'soldier' }, { x: 2010, t: 'flyer' },
+      { x: 2100, t: 'soldier' }, { x: 2300, t: 'turret', gy: 160 },
+      { x: 2380, t: 'soldier' }, { x: 2420, t: 'soldier' }, { x: 2500, t: 'flyer' },
+      { x: 2600, t: 'soldier' }, { x: 2700, t: 'turret', gy: 144 },
+      { x: 2820, t: 'soldier' }, { x: 2860, t: 'soldier' }, { x: 2940, t: 'flyer' },
+      { x: 3040, t: 'soldier' }, { x: 3080, t: 'turret', gy: 152 },
+      { x: 3180, t: 'soldier' }, { x: 3240, t: 'soldier' }
+    ],
+    drops: [300, 800, 1300, 1900, 2500, 3080]
+  };
+
+  /* ---- 第二关：雪原（更多高低差，坑更密）---- */
+  const S2 = {
+    key: 'snow', name: '第二关 · 雪原', tiles: 'snow', bg: 'snow',
+    sky: ['#0a1830', '#22456e', '#7fa4c8'],
+    len: 3800, bossX: 3640, bossY: 56,
+    solids: [
+      { x: 0, y: GY, w: 380, h: 40 }, { x: 440, y: GY, w: 300, h: 40 },
+      { x: 800, y: GY, w: 260, h: 40 }, { x: 1120, y: GY, w: 380, h: 40 },
+      { x: 1560, y: GY, w: 250, h: 40 }, { x: 1870, y: GY, w: 330, h: 40 },
+      { x: 2260, y: GY, w: 1540, h: 40 },
+      { x: 300, y: 152, w: 40, h: 24 }, { x: 900, y: 136, w: 52, h: 40 },
+      { x: 1300, y: 144, w: 46, h: 32 }, { x: 1700, y: 132, w: 58, h: 44 },
+      { x: 2000, y: 140, w: 50, h: 36 }, { x: 2500, y: 132, w: 54, h: 44 },
+      { x: 2900, y: 132, w: 60, h: 44 }, { x: 3400, y: 140, w: 44, h: 36 }
+    ],
+    plats: [
+      { x: 160, y: 118, w: 80 }, { x: 480, y: 96, w: 72 }, { x: 640, y: 128, w: 64 },
+      { x: 980, y: 104, w: 88 }, { x: 1180, y: 80, w: 68 }, { x: 1420, y: 116, w: 76 },
+      { x: 1620, y: 92, w: 80 }, { x: 1900, y: 108, w: 72 }, { x: 2120, y: 84, w: 88 },
+      { x: 2380, y: 112, w: 76 }, { x: 2620, y: 88, w: 80 }, { x: 2860, y: 104, w: 68 },
+      { x: 3100, y: 92, w: 84 }, { x: 3280, y: 116, w: 72 }
+    ],
+    spawns: [
+      { x: 120, t: 'soldier' }, { x: 200, t: 'flyer' }, { x: 280, t: 'turret', gy: 152 },
+      { x: 400, t: 'soldier' }, { x: 500, t: 'soldier' },
+      { x: 620, t: 'flyer' }, { x: 700, t: 'soldier' }, { x: 820, t: 'turret', gy: 136 },
+      { x: 900, t: 'soldier' }, { x: 980, t: 'flyer' },
+      { x: 1200, t: 'soldier' }, { x: 1320, t: 'turret', gy: 144 }, { x: 1400, t: 'soldier' },
+      { x: 1500, t: 'flyer' }, { x: 1650, t: 'soldier' },
+      { x: 1720, t: 'turret', gy: 128 }, { x: 1800, t: 'soldier' }, { x: 1900, t: 'flyer' },
+      { x: 2020, t: 'turret', gy: 140 }, { x: 2100, t: 'soldier' },
+      { x: 2300, t: 'soldier' }, { x: 2400, t: 'flyer' }, { x: 2520, t: 'turret', gy: 132 },
+      { x: 2620, t: 'soldier' }, { x: 2740, t: 'soldier' },
+      { x: 2920, t: 'turret', gy: 120 }, { x: 3000, t: 'flyer' }, { x: 3100, t: 'soldier' },
+      { x: 3200, t: 'soldier' }, { x: 3320, t: 'turret', gy: 152 }, { x: 3420, t: 'soldier' }
+    ],
+    drops: [280, 820, 1320, 1720, 2520, 2920]
+  };
+
+  /* ---- 第三关：敌军基地（金属图块 + 密集炮台）---- */
+  const S3 = {
+    key: 'base', name: '第三关 · 敌军基地', tiles: 'metal', bg: 'base',
+    sky: ['#140a1c', '#2e1236', '#5c2044'],
+    len: 3900, bossX: 3740, bossY: 56,
+    solids: [
+      { x: 0, y: GY, w: 420, h: 40 }, { x: 490, y: GY, w: 340, h: 40 },
+      { x: 900, y: GY, w: 300, h: 40 }, { x: 1270, y: GY, w: 400, h: 40 },
+      { x: 1740, y: GY, w: 280, h: 40 }, { x: 2090, y: GY, w: 200, h: 40 },
+      { x: 2360, y: GY, w: 1540, h: 40 },
+      { x: 340, y: 144, w: 48, h: 32 }, { x: 760, y: 132, w: 56, h: 44 },
+      { x: 1140, y: 140, w: 50, h: 36 }, { x: 1500, y: 132, w: 62, h: 44 },
+      { x: 1880, y: 148, w: 44, h: 28 }, { x: 2200, y: 132, w: 64, h: 44 },
+      { x: 2600, y: 136, w: 52, h: 40 }, { x: 3000, y: 132, w: 58, h: 44 },
+      { x: 3520, y: 140, w: 44, h: 36 }
+    ],
+    plats: [
+      { x: 180, y: 122, w: 84 }, { x: 520, y: 100, w: 76 }, { x: 700, y: 88, w: 64 },
+      { x: 960, y: 116, w: 72 }, { x: 1180, y: 92, w: 88 }, { x: 1420, y: 108, w: 68 },
+      { x: 1660, y: 84, w: 80 }, { x: 1920, y: 100, w: 76 }, { x: 2140, y: 76, w: 72 },
+      { x: 2400, y: 104, w: 88 }, { x: 2660, y: 88, w: 76 }, { x: 2900, y: 108, w: 80 },
+      { x: 3160, y: 84, w: 72 }, { x: 3380, y: 100, w: 84 }
+    ],
+    spawns: [
+      { x: 140, t: 'turret', gy: 152 }, { x: 220, t: 'soldier' }, { x: 320, t: 'flyer' },
+      { x: 400, t: 'soldier' }, { x: 520, t: 'turret', gy: 128 },
+      { x: 620, t: 'soldier' }, { x: 720, t: 'flyer' },
+      { x: 820, t: 'turret', gy: 136 }, { x: 920, t: 'soldier' }, { x: 1020, t: 'soldier' },
+      { x: 1180, t: 'turret', gy: 140 }, { x: 1280, t: 'flyer' }, { x: 1360, t: 'soldier' },
+      { x: 1520, t: 'turret', gy: 124 }, { x: 1620, t: 'soldier' },
+      { x: 1760, t: 'flyer' }, { x: 1860, t: 'turret', gy: 148 },
+      { x: 1980, t: 'soldier' }, { x: 2120, t: 'turret', gy: 120 },
+      { x: 2220, t: 'flyer' }, { x: 2320, t: 'soldier' },
+      { x: 2460, t: 'turret', gy: 152 }, { x: 2560, t: 'soldier' }, { x: 2660, t: 'flyer' },
+      { x: 2780, t: 'turret', gy: 128 }, { x: 2880, t: 'soldier' },
+      { x: 3020, t: 'turret', gy: 128 }, { x: 3120, t: 'flyer' }, { x: 3220, t: 'soldier' },
+      { x: 3340, t: 'soldier' }, { x: 3440, t: 'turret', gy: 152 }, { x: 3560, t: 'soldier' }
+    ],
+    drops: [520, 1180, 1520, 2120, 2780, 3020]
+  };
+
+  const STAGES = [S1, S2, S3];
+
+  /* 当前关卡的数据（由 loadStage 填） */
+  let STAGE = S1;
+  let SOLIDS = S1.solids, PLATS = S1.plats, SPAWNS = S1.spawns;
+  let LEVEL_W = S1.len, BOSS_X = S1.bossX, BOSS_Y = S1.bossY;
+  let DROPPERS = {};
+  let stageIdx = 0;
+
+  function loadStage(i) {
+    stageIdx = Math.max(0, Math.min(STAGES.length - 1, i));
+    STAGE = STAGES[stageIdx];
+    SOLIDS = STAGE.solids; PLATS = STAGE.plats; SPAWNS = STAGE.spawns;
+    LEVEL_W = STAGE.len; BOSS_X = STAGE.bossX; BOSS_Y = STAGE.bossY;
+    DROPPERS = {};
+    for (let k = 0; k < STAGE.drops.length; k++) DROPPERS[STAGE.drops[k]] = 1;
+  }
+  loadStage(0);
+
+  /* 关卡简称：「第一关 · 丛林」-> 「丛林」，HUD 和标题按钮共用 */
+  function stageShort(i) {
+    const s = STAGES[i] || STAGE;
+    return s.name.split('·').pop().trim();
+  }
+
+  /* ==================================================================
+     五、游戏状态
+     ================================================================== */
+  const WEAPONS = {
+    N: { name: '普通', cd: 11, speed: 5.2, dmg: 1, color: '#ffe66d', size: 3 },
+    M: { name: '机枪', cd: 5, speed: 6.0, dmg: 1, color: '#fff3a0', size: 3 },
+    S: { name: '散弹', cd: 14, speed: 4.6, dmg: 1, color: '#7dd3fc', size: 3 },
+    L: { name: '激光', cd: 16, speed: 8.5, dmg: 2, color: '#c084fc', size: 6, pierce: true },
+    F: { name: '火球', cd: 15, speed: 3.6, dmg: 2, color: '#fb923c', size: 5, wave: true }
+  };
+
+  let g = null;
+  const keys = Object.create(null);
+  let cam = 0;
+  let dpr = 1;
+  let scale = 3;
+
+  /* 挑战模式：true = 连续闯关（打完一关自动进下一关） */
+  let campaign = false;
+  /* 待切换的下一关。不能直接在打爆核心的那一刻换关：
+     那是在遍历子弹/敌人的循环里，newGame 会把 g 整个换掉，
+     循环索引立刻错位（读到 undefined），相机和刷怪也会按旧关卡算。
+     所以只记一个待办，等这一帧全部更新跑完、下一帧开头再换。 */
+  let pendingStage = -1;
+
+  function newGame(startIdx) {
+    pendingStage = -1;
+    loadStage(startIdx == null ? stageIdx : startIdx);
+    g = {
+      state: 'title',           // title | play | dead | over | win | pause
+      t: 0,
+      score: 0,
+      lives: 30,                /* 30 命散弹版：30 条命 */
+      weapon: 'S',              /* 开局就是散弹 */
+      stageIdx: stageIdx,
+      dropIdx: 0,
+      player: null,
+      enemies: [],
+      bullets: [],
+      ebullets: [],
+      parts: [],
+      fx: [],
+      drops: [],
+      spawned: [],
+      boss: null,
+      shake: 0,
+      respawn: 0,
+      msg: '',
+      msgT: 0
+    };
+    spawnPlayer(40);
+    cam = 0;
+    syncHud();
+  }
+
+  /* 打完一关：连续闯关就排队进下一关，否则返回 false 让调用方走通关结局 */
+  function clearStage() {
+    if (campaign && stageIdx < STAGES.length - 1) {
+      pendingStage = stageIdx + 1;
+      return true;
+    }
+    return false;
+  }
+
+  function spawnPlayer(x) {
+    g.player = {
+      x: x, y: GROUND_Y - 16, vx: 0, vy: 0, w: 10, h: 16,
+      facing: 1, onGround: false, prone: false,
+      aimX: 1, aimY: 0, cd: 0, invuln: 90, alive: true
+    };
+  }
+
+  /* ==================================================================
+     六、碰撞
+     ================================================================== */
+  const hit = (a, b) => a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
+
+  /* 关底堡垒的墙身对"行走"来说是实体：站在墙前按住上+右可以斜着打，
+     不会一路走进墙里自杀（子弹仍然只认炮和核心，见 updateBullets） */
+  function bossBlocker() {
+    const b = g && g.boss;
+    return (b && !b.dead) ? b : null;
+  }
+
+  function moveEntity(e, dx, dy) {
+    const blk = bossBlocker();
+    /* 水平 */
+    e.x += dx;
+    for (let i = 0; i < SOLIDS.length; i++) {
+      const s = SOLIDS[i];
+      if (!hit(e, s)) continue;
+      if (dx > 0) e.x = s.x - e.w; else if (dx < 0) e.x = s.x + s.w;
+      e.vx = 0;
+    }
+    if (blk && hit(e, blk)) {
+      if (dx > 0) e.x = blk.x - e.w; else if (dx < 0) e.x = blk.x + blk.w;
+      e.vx = 0;
+    }
+    if (e.x < 0) { e.x = 0; e.vx = 0; }
+    if (e.x + e.w > LEVEL_W) { e.x = LEVEL_W - e.w; e.vx = 0; }
+
+    /* 垂直 */
+    const prevBottom = e.y + e.h;
+    e.y += dy;
+    e.onGround = false;
+    for (let i = 0; i < SOLIDS.length; i++) {
+      const s = SOLIDS[i];
+      if (!hit(e, s)) continue;
+      if (dy > 0) { e.y = s.y - e.h; e.vy = 0; e.onGround = true; }
+      else if (dy < 0) { e.y = s.y + s.h; e.vy = 0; }
+    }
+    if (blk && hit(e, blk)) {
+      if (dy > 0) { e.y = blk.y - e.h; e.vy = 0; e.onGround = true; }
+      else if (dy < 0) { e.y = blk.y + blk.h; e.vy = 0; }
+    }
+    /* 单向平台：只有下落且上一帧脚在平台上方才踩得住 */
+    if (dy > 0) {
+      for (let i = 0; i < PLATS.length; i++) {
+        const p = PLATS[i];
+        if (e.x + e.w <= p.x || e.x >= p.x + p.w) continue;
+        if (prevBottom <= p.y + 1 && e.y + e.h >= p.y) { e.y = p.y - e.h; e.vy = 0; e.onGround = true; }
+      }
+    }
+  }
+
+  /* 子弹/敌人落地判断用的简单查询 */
+  function solidAt(x, y) {
+    for (let i = 0; i < SOLIDS.length; i++) {
+      const s = SOLIDS[i];
+      if (x >= s.x && x < s.x + s.w && y >= s.y && y < s.y + s.h) return true;
+    }
+    return false;
+  }
+
+  /* ==================================================================
+     七、玩家
+     ================================================================== */
+  function aimVector(p) {
+    const up = keys.up, dn = keys.down;
+    let ax = 0, ay = 0;
+    if (up) ay = -1; else if (dn && !p.onGround) ay = 1;
+    if (keys.left) ax = -1; else if (keys.right) ax = 1;
+    if (ax === 0 && ay === 0) ax = p.facing;
+    if (ax === 0 && ay !== 0) return { x: 0, y: ay };          /* 正上 / 正下 */
+    if (ay === 0) return { x: ax, y: 0 };                       /* 正前 */
+    return { x: ax, y: ay };                                    /* 斜向 */
+  }
+
+  function updatePlayer() {
+    const p = g.player;
+    if (!p.alive) return;
+    if (p.invuln > 0) p.invuln--;
+
+    const wantProne = keys.down && p.onGround && !keys.up;
+    /* 改身高时脚要留在原地：否则起身那一下脚会插进地面，
+       水平碰撞会把玩家当成"卡在地里"从而瞬移到地形左边缘 */
+    const newH = wantProne ? 9 : 16;
+    if (newH !== p.h) {
+      p.y += (p.h - newH);
+      p.h = newH;
+    }
+    p.prone = wantProne;
+
+    /* 移动：卧倒时不能走 */
+    let vx = 0;
+    if (!p.prone) {
+      if (keys.left) vx -= RUN;
+      if (keys.right) vx += RUN;
+    }
+    if (vx !== 0) p.facing = vx > 0 ? 1 : -1;
+    p.vx = vx;
+
+    /* 跳跃 */
+    if (keys.jump && p.onGround && !p.prone) {
+      p.vy = JUMP_V;
+      p.onGround = false;
+      Sound.jump();
+    }
+    p.vy += GRAV;
+    if (p.vy > MAX_FALL) p.vy = MAX_FALL;
+
+    moveEntity(p, p.vx, p.vy);
+    if (p.prone && p.y + p.h > GROUND_Y) { /* 保持贴地 */ }
+
+    /* 瞄准 + 射击 */
+    const a = aimVector(p);
+    p.aimX = a.x; p.aimY = a.y;
+    if (p.cd > 0) p.cd--;
+    if (keys.fire && p.cd <= 0) { firePlayer(p); }
+
+    /* 掉进坑里 */
+    if (p.y > VH + 24) killPlayer(true);
+  }
+
+  function firePlayer(p) {
+    const w = WEAPONS[g.weapon];
+    p.cd = w.cd;
+    const ox = p.x + p.w / 2 + p.aimX * 6;
+    const oy = p.y + (p.prone ? 4 : 6) + p.aimY * 6;
+    const ang = Math.atan2(p.aimY, p.aimX);
+
+    function shot(dx, dy, extra) {
+      g.bullets.push({
+        x: ox, y: oy, vx: dx, vy: dy, w: w.size, h: w.size,
+        dmg: w.dmg, life: 110, kind: g.weapon, pierce: !!w.pierce,
+        base: ang, t: 0, hitSet: null, color: w.color
+      });
+    }
+    if (g.weapon === 'S') {
+      for (let i = -2; i <= 2; i++) {
+        const a2 = ang + i * 0.16;
+        shot(Math.cos(a2) * w.speed, Math.sin(a2) * w.speed);
+      }
+    } else {
+      shot(Math.cos(ang) * w.speed, Math.sin(ang) * w.speed);
+    }
+    Sound.shoot(g.weapon);
+  }
+
+  function killPlayer(fell) {
+    const p = g.player;
+    if (!p.alive) return;
+    p.alive = false;
+    if (!fell) Sound.die(); else Sound.die();
+    boom(p.x + p.w / 2, p.y + p.h / 2, 14, '#f87171');
+    g.shake = 10;
+    g.lives--;
+    syncHud();
+    if (g.lives <= 0) { g.state = 'over'; g.msg = 'GAME OVER'; g.msgT = 999; Sound.explode(true); return; }
+    g.state = 'dead';
+    g.respawn = 70;
+  }
+
+  /* 找一个脚下有地的落点，避免复活在坑里反复摔死 */
+  function findSafeX(from) {
+    for (let x = from; x < LEVEL_W - 24; x += 4) {
+      if (solidAt(x + 5, GROUND_Y + 6)) return x;
+      for (let i = 0; i < PLATS.length; i++) {
+        const p = PLATS[i];
+        if (x + 10 > p.x && x < p.x + p.w) return x;
+      }
+    }
+    return Math.max(8, from);
+  }
+
+  function respawnPlayer() {
+    /* 回到当前画面左侧，从上方落下，短暂无敌 */
+    const px = findSafeX(cam + 24);
+    spawnPlayer(px);
+    g.player.y = 30;
+    g.player.invuln = 110;
+    g.state = 'play';
+    syncHud();
+  }
+
+  /* ==================================================================
+     八、敌人
+     ================================================================== */
+  function spawnEnemy(type, x, gy) {
+    if (type === 'soldier') {
+      g.enemies.push({ t: 'soldier', x: x, y: GROUND_Y - 16, w: 10, h: 16, vx: -0.75, vy: 0,
+        hp: 1, onGround: false, cd: 60 + (Math.random() * 60 | 0), facing: -1, drop: DROPPERS[x] });
+    } else if (type === 'turret') {
+      g.enemies.push({ t: 'turret', x: x, y: (gy == null ? GROUND_Y - 14 : gy), w: 14, h: 14,
+        hp: 3, cd: 70 + (Math.random() * 40 | 0), drop: DROPPERS[x] });
+    } else if (type === 'flyer') {
+      g.enemies.push({ t: 'flyer', x: x, y: 40 + Math.random() * 40, w: 14, h: 10,
+        hp: 1, cd: 80, base: 0, amp: 22 + Math.random() * 14, drop: DROPPERS[x] });
+    }
+  }
+
+  /* 关底：120×120 的墙，正面上方两门凸出的炮，正面根部一个核心 */
+  const CANNON_HP = 5;
+  function spawnBoss() {
+    g.boss = {
+      x: BOSS_X, y: BOSS_Y, w: 120, h: 120,
+      hp: 60, maxHp: 60, cd2: 40,
+      dead: false, hitFlash: 0, t: 0,
+      cannons: [
+        { ox: -24, oy: 6, hp: CANNON_HP, dead: false, cd: 60 },
+        { ox: -24, oy: 44, hp: CANNON_HP, dead: false, cd: 96 }
+      ]
+    };
+    g.msg = '警告！关底堡垒'; g.msgT = 150;
+  }
+
+  function eShoot(x, y, tx, ty, speed) {
+    const a = Math.atan2(ty - y, tx - x);
+    g.ebullets.push({ x: x, y: y, vx: Math.cos(a) * speed, vy: Math.sin(a) * speed, w: 5, h: 5, life: 200 });
+  }
+
+  function updateEnemies() {
+    const p = g.player;
+    for (let i = g.enemies.length - 1; i >= 0; i--) {
+      const e = g.enemies[i];
+      /* 离屏太远就回收 */
+      if (e.x < cam - 140 || e.x > cam + VW + 260) { g.enemies.splice(i, 1); continue; }
+
+      if (e.t === 'soldier') {
+        if (p.alive) e.facing = (p.x < e.x) ? -1 : 1;
+        e.vx = 0.75 * (p.alive ? (p.x < e.x ? -1 : 1) : -1);
+        e.vy += GRAV; if (e.vy > MAX_FALL) e.vy = MAX_FALL;
+        /* 遇到坑就跳 */
+        const aheadX = e.x + (e.vx > 0 ? e.w + 6 : -6);
+        if (e.onGround && !solidAt(aheadX, e.y + e.h + 4)) e.vy = -5.4;
+        moveEntity(e, e.vx, e.vy);
+        if (--e.cd <= 0 && p.alive && Math.abs(e.y - p.y) < 40) {
+          e.cd = 90 + (Math.random() * 60 | 0);
+          eShoot(e.x + e.w / 2 + e.facing * 6, e.y + 6, p.x + p.w / 2, p.y + p.h / 2, 2.3);
+        }
+      } else if (e.t === 'turret') {
+        if (--e.cd <= 0 && p.alive) {
+          e.cd = 95 + (Math.random() * 50 | 0);
+          eShoot(e.x + e.w / 2, e.y + e.h / 2, p.x + p.w / 2, p.y + p.h / 2, 2.5);
+        }
+      } else if (e.t === 'flyer') {
+        e.base += 0.05;
+        e.x -= 0.9;
+        e.y += Math.sin(e.base) * 1.4;
+        if (--e.cd <= 0 && p.alive) {
+          e.cd = 110;
+          eShoot(e.x + e.w / 2, e.y + e.h, p.x + p.w / 2, p.y + p.h / 2, 2.1);
+        }
+      }
+
+      /* 撞到玩家 */
+      if (p.alive && p.invuln <= 0 && hit(p, e)) killPlayer(false);
+    }
+  }
+
+  /* 关底堡垒：一堵墙 + 两门旋转炮 + 中间的核心
+     打爆核心就算通关；两门炮可以单独打掉，打掉后不再开火 */
+  function bossParts(b) {
+    return {
+      /* 核心和两门炮都要凸出在墙的正面：墙身会吃掉撞上来的子弹，
+         藏在墙里面的目标等于打不到（这是之前关底打不死的真正原因） */
+      core: { x: b.x - 6, y: b.y + 88, w: 30, h: 30 },
+      cannons: b.cannons.map(function (c) {
+        return { x: b.x + c.ox, y: b.y + c.oy, w: 24, h: 24, alive: !c.dead };
+      })
+    };
+  }
+
+  function updateBoss() {
+    const b = g.boss, p = g.player;
+    if (!b || b.dead) return;
+    b.t++;
+    if (b.hitFlash > 0) b.hitFlash--;
+
+    const parts = bossParts(b);
+    const cx = parts.core.x + 12, cy = parts.core.y + 12;
+
+    /* 两门炮各自瞄准玩家点射 */
+    for (let i = 0; i < b.cannons.length; i++) {
+      const c = b.cannons[i];
+      if (c.dead) continue;
+      if (c.cd > 0) { c.cd--; continue; }
+      c.cd = 46 + (Math.random() * 26 | 0);
+      const ox = b.x + c.ox + 12, oy = b.y + c.oy + 12;
+      const a = Math.atan2(p.y + p.h / 2 - oy, p.x + p.w / 2 - ox);
+      g.ebullets.push({ x: ox, y: oy, vx: Math.cos(a) * 2.7, vy: Math.sin(a) * 2.7, w: 5, h: 5, life: 240 });
+    }
+    /* 核心定期放一圈弹幕 */
+    if (++b.cd2 >= 250) {
+      b.cd2 = 0;
+      for (let i = 0; i < 12; i++) {
+        const a = (i / 12) * Math.PI * 2;
+        g.ebullets.push({ x: cx, y: cy, vx: Math.cos(a) * 1.9, vy: Math.sin(a) * 1.9, w: 5, h: 5, life: 300 });
+      }
+      Sound.explode(false);
+    }
+    /* 整堵墙都会撞死玩家 */
+    if (p.alive && p.invuln <= 0 && hit(p, b)) killPlayer(false);
+  }
+
+  /* ==================================================================
+     九、子弹 / 粒子 / 掉落
+     ================================================================== */
+  function updateBullets() {
+    for (let i = g.bullets.length - 1; i >= 0; i--) {
+      const b = g.bullets[i];
+      if (b.kind === 'F') {   /* 火球走波浪线 */
+        b.t++;
+        const per = b.t * 0.22;
+        const nx = Math.cos(b.base), ny = Math.sin(b.base);
+        const px2 = -ny, py2 = nx;
+        b.x += nx * 3.6 + px2 * Math.sin(per) * 1.9;
+        b.y += ny * 3.6 + py2 * Math.sin(per) * 1.9;
+      } else {
+        b.x += b.vx; b.y += b.vy;
+      }
+      if (--b.life <= 0 || b.x < cam - 40 || b.x > cam + VW + 60 || b.y < -40 || b.y > VH + 40) {
+        g.bullets.splice(i, 1); continue;
+      }
+      if (solidAt(b.x, b.y)) { spark(b.x, b.y, b.color); g.bullets.splice(i, 1); continue; }
+
+      /* 打敌人 */
+      let gone = false;
+      for (let j = g.enemies.length - 1; j >= 0; j--) {
+        const e = g.enemies[j];
+        if (hit(b, e)) {
+          e.hp -= b.dmg;
+          spark(b.x, b.y, b.color);
+          if (e.hp <= 0) killEnemy(j);
+          if (!b.pierce) { gone = true; }
+          break;
+        }
+      }
+      if (gone) { g.bullets.splice(i, 1); continue; }
+      /* 打 BOSS：先判两门炮，再判核心；打在墙上只溅火星 */
+      const bs = g.boss;
+      if (bs && !bs.dead) {
+        const parts = bossParts(bs);
+        let consumed = false;
+        for (let k = 0; k < bs.cannons.length; k++) {
+          const c = bs.cannons[k];
+          if (c.dead) continue;
+          if (hit(b, parts.cannons[k])) {
+            c.hp -= b.dmg;
+            spark(b.x, b.y, C.yellow);
+            if (c.hp <= 0) {
+              c.dead = true;
+              boom(bs.x + c.ox + 12, bs.y + c.oy + 12, 12, C.orange);
+              g.score += 500;
+              Sound.explode(false);
+            }
+            consumed = true;
+            break;
+          }
+        }
+        if (!consumed && hit(b, parts.core)) {
+          bs.hp -= b.dmg;
+          bs.hitFlash = 4;
+          spark(b.x, b.y, C.yellow);
+          consumed = true;
+          if (bs.hp <= 0) {
+            bs.dead = true;
+            boom(parts.core.x + 12, parts.core.y + 12, 40, C.yellow);
+            boom(bs.x + bs.w / 2, bs.y + bs.h / 2, 30, C.orange);
+            g.shake = 26;
+            Sound.explode(true);
+            g.score += 3000;
+            Sound.win();
+            if (!clearStage()) { g.state = 'win'; g.msg = '任 务 完 成'; g.msgT = 999; }
+            syncHud();
+          }
+        } else if (!consumed && hit(b, bs)) {
+          spark(b.x, b.y, C.gray);   /* 打在装甲上，无效 */
+          consumed = true;
+        }
+        if (consumed && !b.pierce) { g.bullets.splice(i, 1); continue; }
+      }
+    }
+
+    /* 敌方子弹 */
+    const p = g.player;
+    for (let i = g.ebullets.length - 1; i >= 0; i--) {
+      const b = g.ebullets[i];
+      b.x += b.vx; b.y += b.vy;
+      if (--b.life <= 0 || b.x < cam - 60 || b.x > cam + VW + 80 || b.y < -40 || b.y > VH + 40) {
+        g.ebullets.splice(i, 1); continue;
+      }
+      if (solidAt(b.x, b.y)) { spark(b.x, b.y, '#f87171'); g.ebullets.splice(i, 1); continue; }
+      if (p.alive && p.invuln <= 0 && hit(b, p)) { g.ebullets.splice(i, 1); killPlayer(false); }
+    }
+  }
+
+  function killEnemy(idx) {
+    const e = g.enemies[idx];
+    boom(e.x + e.w / 2, e.y + e.h / 2, 8, '#fb923c');
+    Sound.explode(false);
+    g.score += (e.t === 'turret' ? 300 : 100);
+    if (e.drop) {
+      g.drops.push({ x: e.x, y: e.y, vy: -1.6, w: 16, h: 12, kind: 'S', t: 0 });
+    }
+    g.enemies.splice(idx, 1);
+    syncHud();
+  }
+
+  function updateDrops() {
+    const p = g.player;
+    for (let i = g.drops.length - 1; i >= 0; i--) {
+      const d = g.drops[i];
+      d.t++;
+      d.vy += GRAV * 0.5;
+      d.y += d.vy;
+      if (solidAt(d.x + 8, d.y + d.h)) { d.y -= 2; d.vy = -1.6; }
+      if (d.y > VH + 30) { g.drops.splice(i, 1); continue; }
+      if (p.alive && hit(p, d)) {
+        g.weapon = d.kind;
+        g.score += 200;
+        Sound.power();
+        flashMsg('散弹 S！');
+        boom(d.x + 8, d.y + 6, 10, WEAPONS[d.kind].color);
+        g.drops.splice(i, 1);
+        syncHud();
+      }
+    }
+  }
+
+  /* 爆炸：经典魂斗罗那种由小到大的扩散圆环（用点阵帧画）+ 飞散火星 */
+  function boom(x, y, n, color) {
+    g.fx.push({ x: x, y: y, t: 0, big: n >= 10 });
+    for (let i = 0; i < n; i++) {
+      const a = Math.random() * Math.PI * 2, s = 0.6 + Math.random() * 2.6;
+      g.parts.push({ x: x, y: y, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 0.6,
+        life: 16 + (Math.random() * 20 | 0), max: 36, color: color, size: 1 + (Math.random() * 2 | 0) });
+    }
+  }
+  function updateFx() {
+    for (let i = g.fx.length - 1; i >= 0; i--) {
+      if (++g.fx[i].t > 22) g.fx.splice(i, 1);
+    }
+  }
+  function spark(x, y, color) {
+    for (let i = 0; i < 4; i++) {
+      const a = Math.random() * Math.PI * 2, s = 0.5 + Math.random() * 1.8;
+      g.parts.push({ x: x, y: y, vx: Math.cos(a) * s, vy: Math.sin(a) * s,
+        life: 8 + (Math.random() * 8 | 0), max: 16, color: color, size: 1 });
+    }
+  }
+  function updateParts() {
+    for (let i = g.parts.length - 1; i >= 0; i--) {
+      const q = g.parts[i];
+      q.x += q.vx; q.y += q.vy; q.vy += 0.09; q.vx *= 0.985;
+      if (--q.life <= 0) g.parts.splice(i, 1);
+    }
+  }
+
+  /* ==================================================================
+     十、主更新
+     ================================================================== */
+  function flashMsg(s) { g.msg = s; g.msgT = 100; }
+
+  function update() {
+    if (g.state === 'title' || g.state === 'over' || g.state === 'win' || g.state === 'pause') return;
+
+    /* 连续闯关：上一帧打爆了关底核心，这一帧开头才真正换关 */
+    if (pendingStage >= 0) {
+      const idx = pendingStage;
+      pendingStage = -1;
+      const score = g.score, lives = g.lives;
+      newGame(idx);
+      g.state = 'play';
+      g.score = score;
+      g.lives = lives;
+      g.msg = STAGE.name + ' 突破！'; g.msgT = 140;
+      Sound.start();
+      syncHud();
+      return;
+    }
+
+    g.t++;
+    if (g.shake > 0) g.shake--;
+    if (g.msgT > 0) g.msgT--;
+
+    if (g.state === 'dead') {
+      if (--g.respawn <= 0) respawnPlayer();
+      updateParts();
+      return;
+    }
+
+    updatePlayer();
+    updateEnemies();
+    updateBoss();
+    updateBullets();
+    updateDrops();
+    updateParts();
+    updateFx();
+
+    /* 按相机位置投放敌人 */
+    for (let i = 0; i < SPAWNS.length; i++) {
+      const s = SPAWNS[i];
+      if (g.spawned[i]) continue;
+      if (s.x < cam + VW + 40) { g.spawned[i] = 1; spawnEnemy(s.t, s.x, s.gy); }
+    }
+    if (!g.boss && cam + VW > BOSS_X - 60) spawnBoss();
+
+    /* 相机：只往前走，回退保留一点余量 */
+    const p = g.player;
+    const want = Math.max(cam, Math.min(p.x + p.w / 2 - VW * 0.38, LEVEL_W - VW));
+    cam += (want - cam) * 0.14;
+    if (cam < 0) cam = 0;
+    if (cam > LEVEL_W - VW) cam = LEVEL_W - VW;
+  }
+
+  /* ==================================================================
+     十一、绘制（像素风）
+     配色按 FC/NES 版第一关「丛林」取：青蓝天空 + 瀑布 + 灰岩绿苔地形
+     ================================================================== */
+  /* ==== CONTRA ASSETS BEGIN ==== */
+  /* 由 assets/contra/build.mjs 从 assets/contra/assets.js 生成 —— 不要手改这一段 */
+const PAL = {
+    '.': null,
+    'k': "#000000",
+    'w': "#fcfcfc",
+    'g': "#bcbcbc",
+    'G': "#7c7c7c",
+    'x': "#3c3c3c",
+    's': "#fcd8a8",
+    'd': "#d8a878",
+    'r': "#f83800",
+    'R': "#a81000",
+    'b': "#0078f8",
+    'B': "#0000bc",
+    'n': "#00a800",
+    'N': "#58d854",
+    'D': "#005800",
+    't': "#a85400",
+    'T': "#503000",
+    'y': "#fcd800",
+    'o': "#f87858",
+    'c': "#3cbcfc",
+    'C': "#0c4c84",
+  };
+
+const SPR = {
+    'bill_stand': [
+      '................',
+      '.....TTTTTT.....',
+      '....TTTTTTTT....',
+      '...TTTTTTTTTT...',
+      '...TrrrrrrrrT...',
+      '...TssssssssT...',
+      '....skssskss....',
+      '....ssssssss....',
+      '.....ssssss.....',
+      '.....ssssss.....',
+      '...ssssssssss...',
+      '..ssssssssssss..',
+      '..ssddssssddss..',
+      '..ssssssssssss..',
+      '..ssssssssssss..',
+      '..ssdssssssdss..',
+      '..ssssssssssss..',
+      '...ssssssssss...',
+      '...bbbbbbbbbb...',
+      '...BBBBBBBBBB...',
+      '...bbb....bbb...',
+      '...bbb....bbb...',
+      '...bbb....bbb...',
+      '...bbb....bbb...',
+      '...ttt....ttt...',
+      '...ttt....ttt...',
+      '..ttttt..ttttt..',
+      '..TTTTT..TTTTT..',
+    ],
+    'bill_run1': [
+      '................',
+      '.....TTTTTT.....',
+      '....TTTTTTTT....',
+      '...TTTTTTTTTT...',
+      '...TrrrrrrrrT...',
+      '...TssssssssT...',
+      '....skssskss....',
+      '....ssssssss....',
+      '.....ssssss.....',
+      '.....ssssss.....',
+      '...ssssssssss...',
+      '..ssssssssssss..',
+      '..ssddssssddss..',
+      '..ssssssssssss..',
+      '..ssssssssssss..',
+      '..ssdssssssdss..',
+      '..ssssssssssss..',
+      '...ssssssssss...',
+      '...bbbbbbbbbb...',
+      '...BBBBBBBBBB...',
+      '..bbb.....bbb...',
+      '..bbb......bbb..',
+      '.bbb.......bbb..',
+      '.bbb.......bbb..',
+      '.ttt.......ttt..',
+      'tttt.......ttt..',
+      'ttttt......tttt.',
+      'TTTTT......TTTT.',
+    ],
+    'bill_run2': [
+      '................',
+      '.....TTTTTT.....',
+      '....TTTTTTTT....',
+      '...TTTTTTTTTT...',
+      '...TrrrrrrrrT...',
+      '...TssssssssT...',
+      '....skssskss....',
+      '....ssssssss....',
+      '.....ssssss.....',
+      '.....ssssss.....',
+      '...ssssssssss...',
+      '..ssssssssssss..',
+      '..ssddssssddss..',
+      '..ssssssssssss..',
+      '..ssssssssssss..',
+      '..ssdssssssdss..',
+      '..ssssssssssss..',
+      '...ssssssssss...',
+      '...bbbbbbbbbb...',
+      '...BBBBBBBBBB...',
+      '...bbb....bbb...',
+      '...bbb....bbb...',
+      '..bbb.....bbb...',
+      '..bbb.....bbb...',
+      '..ttt.....ttt...',
+      '..ttt.....ttt...',
+      '.tttt.....tttt..',
+      '.TTTT.....TTTT..',
+    ],
+    'bill_run3': [
+      '................',
+      '.....TTTTTT.....',
+      '....TTTTTTTT....',
+      '...TTTTTTTTTT...',
+      '...TrrrrrrrrT...',
+      '...TssssssssT...',
+      '....skssskss....',
+      '....ssssssss....',
+      '.....ssssss.....',
+      '.....ssssss.....',
+      '...ssssssssss...',
+      '..ssssssssssss..',
+      '..ssddssssddss..',
+      '..ssssssssssss..',
+      '..ssssssssssss..',
+      '..ssdssssssdss..',
+      '..ssssssssssss..',
+      '...ssssssssss...',
+      '...bbbbbbbbbb...',
+      '...BBBBBBBBBB...',
+      '...bbb....bbb...',
+      '...bbb...bbb....',
+      '..bbb...bbb.....',
+      '..bbb...bbb.....',
+      '..ttt...ttt.....',
+      '..ttt..tttt.....',
+      '.tttt...TTTT....',
+      '.TTTT...........',
+    ],
+    'bill_jump': [
+      '................',
+      '.....TTTTTT.....',
+      '....TTTTTTTT....',
+      '...TTTTTTTTTT...',
+      '...TrrrrrrrrT...',
+      '...TssssssssT...',
+      '....skssskss....',
+      '....ssssssss....',
+      '.....ssssss.....',
+      '.....ssssss.....',
+      '...ssssssssss...',
+      '..ssssssssssss..',
+      '..ssddssssddss..',
+      '..ssssssssssss..',
+      '..ssssssssssss..',
+      '..ssdssssssdss..',
+      '..ssssssssssss..',
+      '...ssssssssss...',
+      '...bbbbbbbbbb...',
+      '...BBBBBBBBBB...',
+      '...bbb....bbb...',
+      '..bbb......bbb..',
+      '..bbb......bbb..',
+      '..ttt......ttt..',
+      '.tttt......tttt.',
+      '.TTTT......TTTT.',
+      '................',
+      '................',
+    ],
+    'bill_prone': [
+      '......................',
+      '..........TTTTTT......',
+      '.........TTTTTTTT.....',
+      '....TrrrrrrrrrTsss....',
+      '...sssssssssskssss....',
+      '...ssssssssssssssss...',
+      '...ssddssssssssssss...',
+      '...ssssssssssssssss...',
+      '...bbbbbbbbbbbbbbbb...',
+      '...BBBBBBBBBBBBtttt...',
+      '...TTTTTTTTTTTTTTTT...',
+      '......................',
+    ],
+    'soldier_stand': [
+      '................',
+      '.....GGGGGG.....',
+      '....GGGGGGGG....',
+      '...GGGGGGGGGG...',
+      '...GrrrrrrrrG...',
+      '...GssssssssG...',
+      '....skssskss....',
+      '....ssssssss....',
+      '.....ssssss.....',
+      '.....wwwwww.....',
+      '...wwwwwwwwww...',
+      '..wwwwwwwwwwww..',
+      '..wwGGwwwwGGww..',
+      '..wwwwwwwwwwww..',
+      '..wwwwwwwwwwww..',
+      '..wwGGwwwwGGww..',
+      '..wwwwwwwwwwww..',
+      '...wwwwwwwwww...',
+      '...GGGGGGGGGG...',
+      '...wwwwwwwwww...',
+      '...wwww..wwww...',
+      '...wwww..wwww...',
+      '...wwww..wwww...',
+      '...wwww..wwww...',
+      '...kkkk..kkkk...',
+      '...kkkk..kkkk...',
+      '..kkkkk..kkkkk..',
+      '..kkkkk..kkkkk..',
+    ],
+    'soldier_run1': [
+      '................',
+      '.....GGGGGG.....',
+      '....GGGGGGGG....',
+      '...GGGGGGGGGG...',
+      '...GrrrrrrrrG...',
+      '...GssssssssG...',
+      '....skssskss....',
+      '....ssssssss....',
+      '.....ssssss.....',
+      '.....wwwwww.....',
+      '...wwwwwwwwww...',
+      '..wwwwwwwwwwww..',
+      '..wwGGwwwwGGww..',
+      '..wwwwwwwwwwww..',
+      '..wwwwwwwwwwww..',
+      '..wwGGwwwwGGww..',
+      '..wwwwwwwwwwww..',
+      '...wwwwwwwwww...',
+      '...GGGGGGGGGG...',
+      '...wwwwwwwwww...',
+      '..wwww....wwww..',
+      '..wwww.....wwww.',
+      '.wwww.......wwww',
+      '.wwww.......wwww',
+      '.kkkk.......kkkk',
+      'kkkkk.......kkkk',
+      'kkkkk........kkk',
+      'kkkk.........kkk',
+    ],
+    'soldier_run2': [
+      '................',
+      '.....GGGGGG.....',
+      '....GGGGGGGG....',
+      '...GGGGGGGGGG...',
+      '...GrrrrrrrrG...',
+      '...GssssssssG...',
+      '....skssskss....',
+      '....ssssssss....',
+      '.....ssssss.....',
+      '.....wwwwww.....',
+      '...wwwwwwwwww...',
+      '..wwwwwwwwwwww..',
+      '..wwGGwwwwGGww..',
+      '..wwwwwwwwwwww..',
+      '..wwwwwwwwwwww..',
+      '..wwGGwwwwGGww..',
+      '..wwwwwwwwwwww..',
+      '...wwwwwwwwww...',
+      '...GGGGGGGGGG...',
+      '...wwwwwwwwww...',
+      '...wwww..wwww...',
+      '...wwww...wwww..',
+      '...wwww....wwww.',
+      '...wwww....wwww.',
+      '...kkkk....kkkk.',
+      '...kkkk....kkkk.',
+      '..kkkkk....kkkkk',
+      '..kkkk......kkkk',
+    ],
+    'explo1': [
+      '........................',
+      '........................',
+      '........................',
+      '........................',
+      '........................',
+      '........................',
+      '........................',
+      '........................',
+      '........................',
+      '..........ww............',
+      '.........wyyw...........',
+      '........wyyyyw..........',
+      '........wyyyyw..........',
+      '.........wyyw...........',
+      '..........ww............',
+      '........................',
+      '........................',
+      '........................',
+      '........................',
+      '........................',
+      '........................',
+      '........................',
+      '........................',
+      '........................',
+    ],
+    'explo2': [
+      '........................',
+      '........................',
+      '........................',
+      '........................',
+      '........................',
+      '........................',
+      '........................',
+      '.........oooo...........',
+      '........oyyyyo..........',
+      '.......oyyyyyyo.........',
+      '......oyywwwwyyo........',
+      '......oyywwwwyyo........',
+      '......oyywwwwyyo........',
+      '......oyywwwwyyo........',
+      '.......oyyyyyyo.........',
+      '........oyyyyo..........',
+      '.........oooo...........',
+      '........................',
+      '........................',
+      '........................',
+      '........................',
+      '........................',
+      '........................',
+      '........................',
+    ],
+    'explo3': [
+      '........................',
+      '........................',
+      '........................',
+      '........................',
+      '........oooo............',
+      '......oorrrroo..........',
+      '.....orrr..rrro.........',
+      '....orr......rro........',
+      '...orr........rro.......',
+      '...or..........ro.......',
+      '..orr..........rro......',
+      '..or............ro......',
+      '..or............ro......',
+      '..orr..........rro......',
+      '...or..........ro.......',
+      '...orr........rro.......',
+      '....orr......rro........',
+      '.....orrr..rrro.........',
+      '......oorrrroo..........',
+      '........oooo............',
+      '........................',
+      '........................',
+      '........................',
+      '........................',
+    ],
+    'muzzle': [
+      '....yyyy....',
+      '...yywwyy...',
+      '..yywwwwyy..',
+      '.yywwwwwwyy.',
+      '.ywwwwwwwwy.',
+      '.ywwwwwwwwy.',
+      '.ywwwwwwwwy.',
+      '.ywwwwwwwwy.',
+      '.yywwwwwwyy.',
+      '..yywwwwyy..',
+      '...yywwyy...',
+      '....yyyy....',
+    ],
+    'pod': [
+      '..wwwwwwwwwwww..',
+      '.wggggggggggggw.',
+      'wggkkkkkkkkkkggw',
+      'wgkkkkkkkkkkkkgw',
+      'wgkkkyyyyyykkkgw',
+      'wgkkkyyyyyykkkgw',
+      'wgkkkyyyyyykkkgw',
+      'wgkkkyyyyyykkkgw',
+      'wgkkkkkkkkkkkkgw',
+      'wggkkkkkkkkkkggw',
+      '.wggggggggggggw.',
+      '..wwwwwwwwwwww..',
+    ],
+    'turret': [
+      '..GGGGGGGGGGGG..',
+      '.GGggggggggggGG.',
+      'GGggggggggggggGG',
+      'GggggggggggggggG',
+      'GgggkkkkkkkkgggG',
+      'GggkkkyyyykkkggG',
+      'GggkkkyyyykkkggG',
+      'GggkkkyyyykkkggG',
+      'GggkkkyyyykkkggG',
+      'GgggkkkkkkkkgggG',
+      'GggggggggggggggG',
+      'GGggggggggggggGG',
+      '.GGggggggggggGG.',
+      '..GGGGGGGGGGGG..',
+      '..xxxxxxxxxxxx..',
+      '..xxxxxxxxxxxx..',
+    ],
+    'cannon': [
+      '........GGGGGGGG........',
+      '......GGggggggggGG......',
+      '.....GggggggggggggG.....',
+      '....GggggggggggggggG....',
+      '...GggggkkkkkkkkggggG...',
+      '...GgggkkkkkkkkkkgggG...',
+      '..GgggkkkkyyyykkkkgggG..',
+      '..GgggkkkkyyyykkkkgggG..',
+      '..GgggkkkkyyyykkkkgggG..',
+      '..GgggkkkkyyyykkkkgggG..',
+      '..GgggkkkkkkkkkkkkgggG..',
+      '..GggggkkkkkkkkkkggggG..',
+      '...GggggkkkkkkkkggggG...',
+      '...GggggggggggggggggG...',
+      '....GggggggggggggggG....',
+      '.....GggggggggggggG.....',
+      '......GGggggggggGG......',
+      '........GGGGGGGG........',
+      '........GGGGGGGG........',
+      '........GGGGGGGG........',
+      '........GGGGGGGG........',
+      '........GGGGGGGG........',
+      '........xxxxxxxx........',
+      '........xxxxxxxx........',
+    ],
+    'core': [
+      '.....RRRRRRRRRRRRRR.....',
+      '...RRrrrrrrrrrrrrrrRR...',
+      '..RrrrrrrrrrrrrrrrrrrR..',
+      '.RrrrrrrrrrrrrrrrrrrrrR.',
+      'RrrrrroooooooooooorrrrrR',
+      'RrrrrooyyyyyyyyyyoorrrrR',
+      'RrrrooyywwwwwwwwyyoorrrR',
+      'RrrrooywwwwwwwwwwyoorrrR',
+      'RrrrooywwwwwwwwwwyoorrrR',
+      'RrrrooywwwwwwwwwwyoorrrR',
+      'RrrrooywwwwwwwwwwyoorrrR',
+      'RrrrooyywwwwwwwwyyoorrrR',
+      'RrrrrooyyyyyyyyyyoorrrrR',
+      'RrrrrroooooooooooorrrrrR',
+      '.RrrrrrrrrrrrrrrrrrrrrR.',
+      '..RrrrrrrrrrrrrrrrrrrR..',
+      '...RRrrrrrrrrrrrrrrRR...',
+      '.....RRRRRRRRRRRRRR.....',
+      '........................',
+      '........................',
+      '........................',
+      '........................',
+      '........................',
+      '........................',
+    ],
+  };
+
+const TILE = {
+    'rock': [
+      'GGGGGGGGGGGGGGGG',
+      'GggggggggggggggG',
+      'GgxxgggggggxxggG',
+      'GgxxgggggggxxggG',
+      'GgggggxxgggggggG',
+      'GgggggxxgggggggG',
+      'GggxxggggggxxggG',
+      'GggxxggggggxxggG',
+      'GggggggggggxxggG',
+      'GgggggxxgggggggG',
+      'GgxxggxxgggggggG',
+      'GgxxggggggxxgggG',
+      'GggggggggggxxggG',
+      'GggggxxggggggggG',
+      'GggggxxggggggggG',
+      'GGGGGGGGGGGGGGGG',
+    ],
+    'top': [
+      'NNNNNNNNNNNNNNNN',
+      'nnnnnnnnnnnnnnnn',
+      'DDDDDDDDDDDDDDDD',
+      'GGGGGGGGGGGGGGGG',
+      'GggggggggggggggG',
+      'GgxxgggggggxxggG',
+      'GgxxgggggggxxggG',
+      'GgggggxxgggggggG',
+      'GgggggxxgggggggG',
+      'GggxxggggggxxggG',
+      'GggxxggggggxxggG',
+      'GggggggggggxxggG',
+      'GgggggxxgggggggG',
+      'GgxxggxxgggggggG',
+      'GgxxgggggggxxggG',
+      'GGGGGGGGGGGGGGGG',
+    ],
+    'plat': [
+      'gggggggggggggggg',
+      'GGGGGGGGGGGGGGGG',
+      'GxxGxxGxxGxxGxxG',
+      'GxxGxxGxxGxxGxxG',
+      'GggggggggggggggG',
+      'GGGGGGGGGGGGGGGG',
+      'xxxxxxxxxxxxxxxx',
+      'xxxxxxxxxxxxxxxx',
+    ],
+    'bridge': [
+      'tttttttttttttttt',
+      'tTtTtTtTtTtTtTtT',
+      'tttttttttttttttt',
+      'TtTtTtTtTtTtTtTt',
+      'tttttttttttttttt',
+      'tTtTtTtTtTtTtTtT',
+      'TTTTTTTTTTTTTTTT',
+      'TTTTTTTTTTTTTTTT',
+    ],
+    'fall': [
+      'ccCCccccCCccccCC',
+      'cCCCccCCCccCCCcc',
+      'CCccccCCccccCCcc',
+      'ccccCCccccCCcccc',
+      'cCCccccCCccccCCc',
+      'CCccCCCccCCCccCC',
+      'cccccccccccccccc',
+      'CCccccCCccccCCcc',
+      'cCCCccCCCccCCCcc',
+      'CCccccCCccccCCcc',
+      'ccccCCccccCCcccc',
+      'cCCccccCCccccCCc',
+      'CCccCCCccCCCccCC',
+      'cccccccccccccccc',
+      'CCccccCCccccCCcc',
+      'cCCCccCCCccCCCcc',
+    ],
+    'snowTop': [
+      'wwwwwwwwwwwwwwww',
+      'wwwwwwwwwwwwwwww',
+      'gggggggggggggggg',
+      'GGGGGGGGGGGGGGGG',
+      'GggggggggggggggG',
+      'GgxxgggggggxxggG',
+      'GgxxgggggggxxggG',
+      'GgggggxxgggggggG',
+      'GgggggxxgggggggG',
+      'GggxxggggggxxggG',
+      'GggxxggggggxxggG',
+      'GggggggggggxxggG',
+      'GgggggxxgggggggG',
+      'GgxxggxxgggggggG',
+      'GgxxgggggggxxggG',
+      'GGGGGGGGGGGGGGGG',
+    ],
+    'icePlat': [
+      'cccccccccccccccc',
+      'cccccccccccccccc',
+      'CCCCCCCCCCCCCCCC',
+      'cCcCcCcCcCcCcCcC',
+      'CCCCCCCCCCCCCCCC',
+      'bbbbbbbbbbbbbbbb',
+      'BBBBBBBBBBBBBBBB',
+      'BBBBBBBBBBBBBBBB',
+    ],
+    'metalTop': [
+      'gggggggggggggggg',
+      'GGGGGGGGGGGGGGGG',
+      'xxxxxxxxxxxxxxxx',
+      'xkkxkkxkkxkkxkkx',
+      'xkkxkkxkkxkkxkkx',
+      'xxxxxxxxxxxxxxxx',
+      'xGGxxGGxxGGxxGGx',
+      'xGGxxGGxxGGxxGGx',
+      'xxxxxxxxxxxxxxxx',
+      'xxkkxxkkxxkkxxkx',
+      'xxkkxxkkxxkkxxkx',
+      'xxxxxxxxxxxxxxxx',
+      'xGGxxGGxxGGxxGGx',
+      'xGGxxGGxxGGxxGGx',
+      'xxxxxxxxxxxxxxxx',
+      'kkkkkkkkkkkkkkkk',
+    ],
+    'metalRock': [
+      'GGGGGGGGGGGGGGGG',
+      'xxxxxxxxxxxxxxxx',
+      'xGGxxGGxxGGxxGGx',
+      'xGGxxGGxxGGxxGGx',
+      'xxxxxxxxxxxxxxxx',
+      'xxkkxxkkxxkkxxkx',
+      'xxkkxxkkxxkkxxkx',
+      'xxxxxxxxxxxxxxxx',
+      'xGGxxGGxxGGxxGGx',
+      'xGGxxGGxxGGxxGGx',
+      'xxxxxxxxxxxxxxxx',
+      'xxkkxxkkxxkkxxkx',
+      'xxkkxxkkxxkkxxkx',
+      'xxxxxxxxxxxxxxxx',
+      'xGGxxGGxxGGxxGGx',
+      'kkkkkkkkkkkkkkkk',
+    ],
+  };
+  /* ==== CONTRA ASSETS END ==== */
+
+  const C = {
+    /* 天空 / 远景 */
+    sky1: '#08122c', sky2: '#123a68', sky3: '#2c74a4',
+    cliff: '#1c3c58', cliffD: '#12283c',
+    fall1: '#5ce0ff', fall2: '#2ca8e0', fall3: '#0c6c9c',
+    water: '#0c4c84', waterL: '#3cbcfc',
+    /* 丛林 */
+    tree: '#0c3018', leaf: '#0c4820', leafD: '#061c0c',
+    /* 地形：灰岩 + 绿苔 */
+    rock: '#7c7c7c', rockL: '#bcbcbc', rockD: '#4c4c4c', rockXD: '#2c2c2c',
+    mossL: '#58d854', moss: '#00a800', mossD: '#005800',
+    /* 金属平台 */
+    steel: '#bcbcbc', steelD: '#7c7c7c', steelXD: '#3c3c3c',
+    /* 角色（NES 调色板） */
+    skin: '#fcd8a8', skinD: '#d8a878',
+    band: '#f83800', bandD: '#a81000',
+    pants: '#0078f8', pantsD: '#0000bc',
+    boot: '#a85400', bootD: '#503000',
+    hair: '#503000', hairD: '#281800',
+    enemy: '#fcfcfc', enemyD: '#bcbcbc', enemyHelm: '#7c7c7c', enemyTrim: '#f83800',
+    white: '#fcfcfc', black: '#000000', yellow: '#fcd800', orange: '#f87858'
+  };
+
+  function px(x, y, w, h, c) {
+    ctx.fillStyle = c;
+    ctx.fillRect(Math.round(x), Math.round(y), Math.round(w), Math.round(h));
+  }
+
+  /* 把一张字符点阵画到画布上（同色横向合并成一条 fillRect，快很多）
+     sc 只支持整数倍，保证像素块大小一致 */
+  function drawMap(map, name, sx, sy, flip, alpha, sc) {
+    const rows = map[name];
+    if (!rows) return;
+    const k = sc || 1;
+    const w = rows[0].length, h = rows.length;
+    const x0 = Math.round(sx), y0 = Math.round(sy);
+    if (alpha != null && alpha < 1) ctx.globalAlpha = alpha;
+    for (let y = 0; y < h; y++) {
+      const row = rows[y];
+      let x = 0;
+      while (x < w) {
+        const ch = row[x];
+        const col = PAL[ch];
+        if (!col) { x++; continue; }
+        let n = 1;
+        while (x + n < w && row[x + n] === ch) n++;
+        ctx.fillStyle = col;
+        ctx.fillRect(flip ? x0 + (w - x - n) * k : x0 + x * k, y0 + y * k, n * k, k);
+        x += n;
+      }
+    }
+    if (alpha != null && alpha < 1) ctx.globalAlpha = 1;
+  }
+  const drawSprite = (n, x, y, flip, a, sc) => drawMap(SPR, n, x, y, flip, a, sc);
+  const drawTile = (n, x, y) => drawMap(TILE, n, x, y, false);
+
+  /* 爆炸帧 */
+  function drawFx() {
+    for (let i = 0; i < g.fx.length; i++) {
+      const f = g.fx[i];
+      const name = f.t < 5 ? 'explo1' : (f.t < 12 ? 'explo2' : 'explo3');
+      const sc = f.big ? 2 : 1;
+      const half = 12 * sc;
+      const a = f.t > 16 ? Math.max(0, 1 - (f.t - 16) / 6) : 1;
+      drawSprite(name, f.x - half, f.y - half, false, a, sc);
+    }
+  }
+
+  /* --- 背景：三关各有各的景 --- */
+  function skyGradient() {
+    const grd = ctx.createLinearGradient(0, 0, 0, GROUND_Y);
+    grd.addColorStop(0, STAGE.sky[0]);
+    grd.addColorStop(0.5, STAGE.sky[1]);
+    grd.addColorStop(1, STAGE.sky[2]);
+    ctx.fillStyle = grd;
+    ctx.fillRect(0, 0, VW, VH);
+  }
+
+  /* 第一关：丛林（悬崖 + 瀑布 + 河面 + 棕榈树 + 灌木） */
+  function bgJungle() {
+    const o1 = -cam * 0.12;
+    const flow = (g.t >> 1) % 16;
+    for (let i = -1; i < 6; i++) {
+      const bx = o1 + i * 186;
+      px(bx, 34, 74, GROUND_Y - 34, C.cliff);
+      px(bx + 108, 58, 56, GROUND_Y - 58, C.cliff);
+      px(bx, 34, 74, 3, C.cliffD);
+      px(bx, 34, 4, GROUND_Y - 34, C.cliffD);
+      for (let k = 40; k < GROUND_Y; k += 16) {
+        const dy = k + flow;
+        if (dy < 40 || dy > GROUND_Y) continue;
+        drawTile('fall', bx + 74, dy);
+      }
+      px(bx + 70, 36, 28, 5, C.fall1);
+      px(bx + 74, 40, 20, 3, C.fall2);
+    }
+    px(0, GROUND_Y - 20, VW, 20, C.water);
+    for (let i = 0; i < 44; i++) {
+      const wx = (((i * 47) - cam * 0.45) % VW + VW) % VW;
+      px(wx, GROUND_Y - 16 + (i % 4) * 5, 13, 2, i % 3 === 0 ? C.waterL : C.fall2);
+    }
+    const o2 = -cam * 0.3;
+    for (let i = -1; i < 16; i++) {
+      const bx = o2 + i * 62;
+      const top = 104;
+      for (let k = 0; k < GROUND_Y - top; k++) {
+        px(bx + 14 + Math.round(Math.sin(k * 0.055) * 3), GROUND_Y - k, 4, 1, k % 6 === 0 ? C.hairD : C.hair);
+      }
+      for (let s = -1; s <= 1; s += 2) {
+        for (let k = 1; k < 24; k++) {
+          const fx = bx + 16 + s * k;
+          const fy = top + Math.round(k * k * 0.045) - 4;
+          px(fx, fy, 3, 2, C.leaf);
+          px(fx, fy - 2, 3, 1, C.leafD);
+        }
+      }
+      px(bx + 8, top - 6, 16, 7, C.leaf);
+      px(bx + 11, top - 9, 10, 4, C.leafD);
+      px(bx + 13, top - 11, 6, 3, C.leaf);
+    }
+    for (let i = -1; i < 24; i++) {
+      const bx = ((i * 46) - cam * 0.62) % (VW + 60);
+      const x2 = bx < -40 ? bx + VW + 60 : bx;
+      px(x2, GROUND_Y - 9, 34, 9, C.leafD);
+      px(x2 + 5, GROUND_Y - 13, 22, 6, C.leafD);
+      px(x2 + 9, GROUND_Y - 16, 13, 5, C.leafD);
+    }
+  }
+
+  /* 第二关：雪原（雪山 + 松林 + 飘雪） */
+  function bgSnow() {
+    /* 远山：白色雪峰 */
+    const o1 = -cam * 0.1;
+    for (let i = -1; i < 7; i++) {
+      const bx = o1 + i * 150;
+      ctx.fillStyle = '#3a5a80';
+      ctx.beginPath();
+      ctx.moveTo(bx, GROUND_Y);
+      ctx.lineTo(bx + 75, 52);
+      ctx.lineTo(bx + 150, GROUND_Y);
+      ctx.closePath(); ctx.fill();
+      /* 雪顶 */
+      ctx.fillStyle = '#dce8f4';
+      ctx.beginPath();
+      ctx.moveTo(bx + 75, 52);
+      ctx.lineTo(bx + 96, 84);
+      ctx.lineTo(bx + 80, 78);
+      ctx.lineTo(bx + 70, 88);
+      ctx.lineTo(bx + 54, 84);
+      ctx.closePath(); ctx.fill();
+    }
+    /* 中景松林 */
+    const o2 = -cam * 0.3;
+    for (let i = -1; i < 20; i++) {
+      const bx = o2 + i * 54;
+      px(bx + 10, GROUND_Y - 64, 5, 64, '#3a2410');
+      for (let k = 0; k < 4; k++) {
+        const w = 34 - k * 7, yy = GROUND_Y - 20 - k * 15;
+        ctx.fillStyle = k === 3 ? '#1c5238' : '#14402c';
+        ctx.beginPath();
+        ctx.moveTo(bx + 12, yy - 22);
+        ctx.lineTo(bx + 12 + w / 2, yy);
+        ctx.lineTo(bx + 12 - w / 2, yy);
+        ctx.closePath(); ctx.fill();
+        px(bx + 4 + w / 2 - 4, yy - 20, w - 8, 2, '#e8f0f8');
+      }
+    }
+    /* 地面雪堆 */
+    for (let i = -1; i < 30; i++) {
+      const bx = ((i * 42) - cam * 0.6) % (VW + 60);
+      const x2 = bx < -40 ? bx + VW + 60 : bx;
+      px(x2, GROUND_Y - 6, 30, 6, '#dfe9f4');
+      px(x2 + 5, GROUND_Y - 9, 18, 4, '#ffffff');
+    }
+    /* 飘雪 */
+    for (let i = 0; i < 46; i++) {
+      const sx = ((i * 71 + (g.t >> 1) * ((i % 3) + 1) * 0.4) - cam * 0.5) % (VW + 20);
+      const sy = (i * 37 + (g.t >> 1) * (1 + (i % 3) * 0.5)) % GROUND_Y;
+      px(sx < 0 ? sx + VW + 20 : sx, sy, i % 5 === 0 ? 2 : 1, 1, '#ffffff');
+    }
+  }
+
+  /* 第三关：敌军基地（管道 + 塔架 + 警示灯） */
+  function bgBase() {
+    /* 远景塔架 */
+    const o1 = -cam * 0.14;
+    for (let i = -1; i < 8; i++) {
+      const bx = o1 + i * 130;
+      px(bx, 30, 46, GROUND_Y - 30, '#2a1a34');
+      px(bx + 5, 30, 4, GROUND_Y - 30, '#3e2848');
+      for (let k = 44; k < GROUND_Y; k += 22) px(bx + 4, k, 38, 4, '#1a1020');
+      px(bx + 62, 56, 30, GROUND_Y - 56, '#241630');
+      for (let k = 70; k < GROUND_Y; k += 26) px(bx + 64, k, 26, 3, '#150c1c');
+      /* 警示灯一闪一闪 */
+      if ((g.t >> 4) % 2 === 0) px(bx + 21, 24, 4, 4, '#f83800');
+    }
+    /* 横跨的管道 */
+    const o2 = -cam * 0.34;
+    for (let i = -1; i < 12; i++) {
+      const bx = o2 + i * 96;
+      px(bx, 110, 96, 6, '#4a3050');
+      px(bx, 110, 96, 2, '#6a4870');
+      for (let k = 0; k < 96; k += 24) px(bx + k, 108, 6, 10, '#33203c');
+    }
+    /* 近景格栅 */
+    for (let i = -1; i < 26; i++) {
+      const bx = ((i * 40) - cam * 0.62) % (VW + 50);
+      const x2 = bx < -40 ? bx + VW + 50 : bx;
+      px(x2, GROUND_Y - 10, 28, 10, '#1a1020');
+      px(x2 + 4, GROUND_Y - 14, 16, 5, '#241630');
+      if ((g.t >> 3) % 3 === 0) px(x2 + 10, GROUND_Y - 13, 3, 3, '#fcd800');
+    }
+  }
+
+  function drawBg() {
+    skyGradient();
+    if (STAGE.bg === 'snow') bgSnow();
+    else if (STAGE.bg === 'base') bgBase();
+    else bgJungle();
+  }
+
+  /* 当前关卡的图块风格 */
+  const tileSet = () => STAGE.tiles === 'snow' ? { top: 'snowTop', fill: 'rock', plat: 'icePlat' }
+    : STAGE.tiles === 'metal' ? { top: 'metalTop', fill: 'metalRock', plat: 'plat' }
+    : { top: 'top', fill: 'rock', plat: 'plat' };
+
+  /* --- 地形：按关卡换图块 --- */
+  function drawTerrain() {
+    const ts = tileSet();
+    for (let i = 0; i < SOLIDS.length; i++) {
+      const s = SOLIDS[i];
+      const x = Math.round(s.x - cam), y = s.y;
+      if (x > VW || x + s.w < 0) continue;
+      for (let ty = y; ty < y + s.h; ty += 16) {
+        for (let tx = 0; tx < s.w; tx += 16) {
+          const dx = x + tx;
+          if (dx > VW || dx + 16 < 0) continue;
+          drawTile(ty === y ? ts.top : ts.fill, dx, ty);
+        }
+      }
+    }
+    for (let i = 0; i < PLATS.length; i++) {
+      const p = PLATS[i];
+      const x = Math.round(p.x - cam);
+      if (x > VW || x + p.w < 0) continue;
+      for (let tx = 0; tx < p.w; tx += 16) {
+        const dx = x + tx;
+        if (dx > VW || dx + 16 < 0) continue;
+        drawTile(ts.plat, dx, p.y);
+      }
+    }
+  }
+
+  /* --- 玩家：点阵精灵 + 程序化计算的手臂/枪 --- */
+  function drawPlayer() {
+    const p = g.player;
+    if (!p.alive) return;
+    const blink = p.invuln > 0 && (g.t >> 2) % 2 === 0;
+
+    const x = Math.round(p.x - cam), y = Math.round(p.y);
+    const f = p.facing;
+
+    /* 精灵比判定框大：脚对齐判定框底部，水平居中 */
+    if (p.prone) {
+      const sy = y + p.h - 12;
+      drawSprite('bill_prone', x + p.w / 2 - 11, sy, f < 0, blink ? 0.35 : 1);
+    } else {
+      const air = !p.onGround;
+      const running = p.onGround && p.vx !== 0;
+      const ph = (g.t >> 2) % 3;
+      const name = air ? 'bill_jump'
+        : (running ? ['bill_run1', 'bill_run2', 'bill_run3'][ph] : 'bill_stand');
+      const sy = y + p.h - 28;
+      drawSprite(name, x + p.w / 2 - 8, sy, f < 0, blink ? 0.35 : 1);
+    }
+
+    /* 手臂 + 步枪：按瞄准方向逐格画，保证斜向也是像素块 */
+    const ax = p.aimX, ay = p.aimY;
+    const cx = x + 5, cy = y + (p.prone ? 4 : 8);
+    const sx = cx + f * 2, sy2 = cy;
+    for (let i = 1; i <= 3; i++) px(sx + ax * i * 2 - 1, sy2 + ay * i * 2 - 1, 3, 3, C.skin);
+
+    const gx = sx + ax * 7, gy2 = sy2 + ay * 7;
+    for (let i = 0; i < 7; i++) {
+      px(gx + ax * i - 1.5, gy2 + ay * i - 1.5, 4, 4, i < 2 ? C.bootD : C.enemyHelm);
+      if (i === 2 || i === 5) px(gx + ax * i - 1.5, gy2 + ay * i - 1.5, 4, 1, C.black);
+    }
+    /* 枪口焰：用点阵图 */
+    const w = WEAPONS[g.weapon];
+    if (p.cd > w.cd - 3) {
+      drawSprite('muzzle', gx + ax * 9 - 6, gy2 + ay * 9 - 6, false, 1);
+    }
+  }
+
+  /* --- 敌人 --- */
+  function drawEnemies() {
+    for (let i = 0; i < g.enemies.length; i++) {
+      const e = g.enemies[i];
+      const x = Math.round(e.x - cam), y = Math.round(e.y);
+      if (x > VW + 20 || x + e.w < -20) continue;
+
+      if (e.t === 'soldier') {
+        /* 白军装 + 灰头盔 + 红盔沿（FC 版小兵） */
+        const f = e.vx > 0 ? 1 : -1;
+        const moving = Math.abs(e.vx) > 0.05 && e.onGround;
+        const ph = (g.t >> 2) % 4;
+        const name = moving ? (ph < 2 ? 'soldier_run1' : 'soldier_run2') : 'soldier_stand';
+        drawSprite(name, x + e.w / 2 - 8, y + e.h - 24, f < 0);
+        /* 手里的枪随朝向 */
+        px(f > 0 ? x + e.w + 1 : x - 5, y + 8, 5, 2, C.enemyHelm);
+      } else if (e.t === 'turret') {
+        drawSprite('turret', x - 1, y - 1);
+        /* 快开火时炮口发亮 */
+        if (e.cd < 22) {
+          px(x + 4, y + 5, 6, 6, C.yellow);
+          px(x + 5, y + 6, 4, 4, C.white);
+        }
+      } else if (e.t === 'flyer') {
+        drawSprite('flyer', x - 1, y);
+        /* 尾焰闪烁 */
+        if ((g.t >> 1) % 2 === 0) px(x + 2, y + 11, 3, 3, C.orange);
+        px(x - 3, y + 4, 3, 2, C.gray);
+      }
+    }
+  }
+
+  /* 关底：石墙 + 两门旋转炮 + 中心核心 */
+  function drawBoss() {
+    const b = g.boss;
+    if (!b) return;
+    const x = Math.round(b.x - cam), y = b.y;
+    if (x > VW + 40 || x + b.w < -40) return;
+
+    /* 墙身：用地形图块铺，看起来就是堡垒的一部分 */
+    for (let ty = y; ty < y + b.h; ty += 16) {
+      for (let tx = 0; tx < b.w; tx += 16) drawTile('rock', x + tx, ty);
+    }
+    px(x, y, b.w, 4, '#8d9199');
+    px(x, y + b.h - 4, b.w, 4, '#1c1c1c');
+    /* 装甲立柱 */
+    for (let i = 0; i < 5; i++) px(x + 6 + i * 24, y + 30, 10, 40, '#474d56');
+
+    /* 两门炮（打掉后画成残骸） */
+    for (let i = 0; i < b.cannons.length; i++) {
+      const c = b.cannons[i];
+      if (c.dead) {
+        px(x + c.ox + 2, y + c.oy + 6, 20, 18, '#22262c');
+        px(x + c.ox + 5, y + c.oy + 9, 14, 12, '#10121a');
+      } else {
+        drawSprite('cannon', x + c.ox, y + c.oy);
+        if (c.cd < 12) { px(x + c.ox + 8, y + c.oy + 8, 8, 8, C.yellow); px(x + c.ox + 10, y + c.oy + 10, 4, 4, C.white); }
+      }
+    }
+
+    /* 核心：外面套一个凸出来的凹舱口框，看着就是"打这里" */
+    const parts = bossParts(b);
+    const cx = Math.round(parts.core.x - cam), cy = parts.core.y;
+    px(cx - 5, cy - 5, 40, 40, '#5a6068');
+    px(cx - 3, cy - 3, 36, 36, '#1b1f26');
+    px(cx - 5, cy - 5, 40, 3, '#8d9199');
+    px(cx - 5, cy + 35, 40, 3, '#1c1c1c');
+    drawSprite('core', cx + 3, cy + 3, false, b.hitFlash > 0 ? 1 : (0.75 + 0.25 * Math.sin(b.t * 0.16)));
+
+    /* 血条 */
+    const bw = 110, hp = Math.max(0, b.hp / b.maxHp);
+    px(VW / 2 - bw / 2 - 1, 13, bw + 2, 9, '#10121a');
+    px(VW / 2 - bw / 2, 14, bw, 7, '#3c1010');
+    px(VW / 2 - bw / 2, 14, bw * hp, 7, hp > 0.35 ? '#f83800' : '#fcd800');
+    /* 两门炮的小血条 */
+    for (let i = 0; i < b.cannons.length; i++) {
+      const c = b.cannons[i];
+      const bx = 12 + i * 46, by = 26;
+      px(bx - 1, by - 1, 42, 7, '#10121a');
+      px(bx, by, 40 * (c.dead ? 0 : Math.max(0, c.hp / CANNON_HP)), 5, c.dead ? '#3c3c3c' : '#7c7c7c');
+    }
+  }
+
+  /* --- 子弹 / 掉落 / 粒子 --- */
+  function drawBullets() {
+    for (let i = 0; i < g.bullets.length; i++) {
+      const b = g.bullets[i];
+      const x = Math.round(b.x - cam), y = Math.round(b.y);
+      if (b.kind === 'L') { px(x - 4, y - 1.5, 9, 3, '#c084fc'); px(x - 2, y - 1, 5, 2, '#f0e6ff'); }
+      else if (b.kind === 'F') { px(x - 3, y - 3, 6, 6, '#fb923c'); px(x - 1.5, y - 1.5, 3, 3, '#fff3a0'); }
+      else { px(x - 2, y - 1.5, 5, 3, b.color || '#ffe66d'); px(x - 1, y - 1, 3, 2, '#ffffff'); }
+    }
+    for (let i = 0; i < g.ebullets.length; i++) {
+      const b = g.ebullets[i];
+      const x = Math.round(b.x - cam), y = Math.round(b.y);
+      px(x - 3, y - 3, 6, 6, '#f87171');
+      px(x - 1.5, y - 1.5, 3, 3, '#ffe4e6');
+    }
+    for (let i = 0; i < g.drops.length; i++) {
+      const d = g.drops[i];
+      const x = Math.round(d.x - cam), y = Math.round(d.y);
+      const bob = Math.round(Math.sin(d.t * 0.16) * 2);
+      drawSprite('pod', x, y + bob);
+      ctx.fillStyle = '#fcd800';
+      ctx.font = 'bold 8px monospace';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(d.kind, x + 8, y + 6 + bob);
+    }
+    for (let i = 0; i < g.parts.length; i++) {
+      const q = g.parts[i];
+      const a = Math.max(0, q.life / q.max);
+      ctx.globalAlpha = a > 0.6 ? 1 : a + 0.35;
+      px(q.x - cam, q.y, q.size, q.size, q.color);
+      ctx.globalAlpha = 1;
+    }
+  }
+
+  /* --- HUD（画在画面里，像街机） --- */
+  function drawHud() {
+    ctx.font = 'bold 10px monospace';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+    /* 生命 */
+    for (let i = 0; i < Math.max(0, g.lives - 1); i++) {
+      const x = 8 + i * 10, y = 7;
+      px(x, y, 7, 3, C.band);
+      px(x, y + 3, 7, 5, C.skin);
+    }
+    /* 武器 */
+    ctx.fillStyle = '#fff3a0';
+    ctx.fillText('W:' + g.weapon, 8, 20);
+    /* 得分 */
+    ctx.textAlign = 'right';
+    ctx.fillStyle = '#e8eefb';
+    ctx.fillText(String(g.score).padStart(6, '0'), VW - 8, 8);
+    /* 进度 */
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#8fa2bb';
+    ctx.fillText(Math.min(100, Math.round((g.player.x / (BOSS_X + 60)) * 100)) + '%', VW / 2, 8);
+  }
+
+  /* 标题画面上的关卡按钮（虚拟坐标），点击和绘制共用 */
+  const TITLE_BTNS = [];
+  function titleLayout() {
+    TITLE_BTNS.length = 0;
+    const bw = 92, bh = 40, gap = 12;
+    const total = STAGES.length * bw + (STAGES.length - 1) * gap;
+    const x0 = (VW - total) / 2;
+    for (let i = 0; i < STAGES.length; i++) {
+      TITLE_BTNS.push({ x: x0 + i * (bw + gap), y: 104, w: bw, h: bh, idx: i });
+    }
+    TITLE_BTNS.push({ x: (VW - 240) / 2, y: 154, w: 240, h: 26, idx: -1 });
+  }
+  titleLayout();
+
+  function drawTitle() {
+    ctx.fillStyle = 'rgba(4,8,16,.8)';
+    ctx.fillRect(0, 0, VW, VH);
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    ctx.font = 'bold 34px monospace';
+    ctx.fillStyle = '#000000';
+    ctx.fillText('魂 斗 罗', VW / 2 + 2, 42);
+    ctx.fillStyle = '#f83800';
+    ctx.fillText('魂 斗 罗', VW / 2, 40);
+    ctx.font = 'bold 11px monospace';
+    ctx.fillStyle = '#fcd800';
+    ctx.fillText('C O N T R A', VW / 2, 64);
+    ctx.fillStyle = '#58d854';
+    ctx.fillText('3 0 命 散 弹 版', VW / 2, 80);
+
+    for (let i = 0; i < TITLE_BTNS.length; i++) {
+      const b = TITLE_BTNS[i];
+      const on = (b.idx === -1) ? campaign : (!campaign && b.idx === stageIdx);
+      ctx.fillStyle = on ? '#f83800' : 'rgba(20,30,50,.85)';
+      ctx.fillRect(b.x, b.y, b.w, b.h);
+      ctx.strokeStyle = on ? '#fcd800' : '#7c8ea6';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(b.x + 1, b.y + 1, b.w - 2, b.h - 2);
+      ctx.fillStyle = on ? '#ffffff' : '#c8d8e8';
+      if (b.idx === -1) {
+        ctx.font = 'bold 12px monospace';
+        ctx.fillText('连 续 闯 关  ( 1 → 2 → 3 )', b.x + b.w / 2, b.y + b.h / 2 + 1);
+      } else {
+        ctx.font = 'bold 20px monospace';
+        ctx.fillText(String(b.idx + 1), b.x + b.w / 2, b.y + 14);
+        ctx.font = 'bold 11px monospace';
+        ctx.fillText(stageShort(b.idx), b.x + b.w / 2, b.y + 30);
+      }
+    }
+
+    ctx.font = 'bold 11px monospace';
+    ctx.fillStyle = '#fcfcfc';
+    ctx.fillText('点上面的关卡开始，或按 Enter 从第一关开始', VW / 2, 194);
+    ctx.fillStyle = '#8fa2bb';
+    ctx.fillText('← → 移动   ↑ ↓ 瞄准   Z 射击   X 跳跃', VW / 2, 208);
+  }
+
+  function drawCenterMsg() {
+    if (g.state === 'title') { drawTitle(); return; }
+    if (g.msgT > 0 && g.msg) {
+      ctx.textAlign = 'center';
+      ctx.font = 'bold 14px monospace';
+      ctx.fillStyle = g.msg.indexOf('完成') !== -1 || g.msg.indexOf('GAME') !== -1 ? '#f87171' : '#fbbf24';
+      ctx.fillText(g.msg, VW / 2, 42);
+    }
+    if (g.state === 'pause') {
+      ctx.fillStyle = 'rgba(6,10,18,.7)';
+      ctx.fillRect(0, 0, VW, VH);
+      ctx.textAlign = 'center'; ctx.font = 'bold 22px monospace'; ctx.fillStyle = '#e8eefb';
+      ctx.fillText('暂 停', VW / 2, VH / 2);
+    }
+    if (g.state === 'over' || g.state === 'win') {
+      ctx.fillStyle = 'rgba(6,10,18,.74)';
+      ctx.fillRect(0, 0, VW, VH);
+      ctx.textAlign = 'center';
+      ctx.font = 'bold 24px monospace';
+      ctx.fillStyle = g.state === 'win' ? '#fbbf24' : '#f87171';
+      ctx.fillText(g.state === 'win' ? '任 务 完 成' : 'GAME OVER', VW / 2, VH / 2 - 16);
+      ctx.font = 'bold 12px monospace';
+      ctx.fillStyle = '#e8eefb';
+      ctx.fillText('得分  ' + g.score, VW / 2, VH / 2 + 14);
+      ctx.fillStyle = '#8fa2bb';
+      ctx.fillText('按 R 再来一局', VW / 2, VH / 2 + 36);
+    }
+  }
+
+  /* ==================================================================
+     十二、渲染入口
+     ================================================================== */
+  const cv = document.getElementById('cv');
+  const ctx = cv.getContext('2d');
+
+  function render() {
+    ctx.setTransform(scale * dpr, 0, 0, scale * dpr, 0, 0);
+    ctx.imageSmoothingEnabled = false;
+    const sx = g.shake > 0 ? (Math.random() - 0.5) * g.shake * 0.6 : 0;
+    const sy = g.shake > 0 ? (Math.random() - 0.5) * g.shake * 0.6 : 0;
+    ctx.save();
+    ctx.translate(sx, sy);
+    ctx.clearRect(-8, -8, VW + 16, VH + 16);
+    drawBg();
+    drawTerrain();
+    drawBoss();
+    drawEnemies();
+    drawPlayer();
+    drawBullets();
+    drawFx();
+    ctx.restore();
+
+    drawHud();
+    drawCenterMsg();
+  }
+
+  /* ==================================================================
+     十三、尺寸
+     画面铺满视口：整数倍时像素绝对均匀，全屏 1920x1080 正好 5 倍
+     ================================================================== */
+  const stage = document.getElementById('stage');
+  let fitMode = 'int';
+  function layout() {
+    dpr = Math.min(window.devicePixelRatio || 1, 3);
+    const aw = stage.clientWidth || 900;
+    const ah = stage.clientHeight || 500;
+    let s = Math.min(aw / VW, ah / VH);
+    if (fitMode === 'int' && s >= 1) s = Math.floor(s);
+    scale = Math.max(0.2, s);
+    const w = Math.round(VW * scale), h = Math.round(VH * scale);
+    cv.style.width = w + 'px';
+    cv.style.height = h + 'px';
+    cv.width = Math.round(w * dpr);
+    cv.height = Math.round(h * dpr);
+    render();
+  }
+
+  /* ==================================================================
+     十四、输入
+     ================================================================== */
+  const KEYMAP = {
+    ArrowLeft: 'left', ArrowRight: 'right', ArrowUp: 'up', ArrowDown: 'down',
+    a: 'left', d: 'right', w: 'up', s: 'down',
+    z: 'fire', j: 'fire', x: 'jump', k: 'jump', ' ': 'jump'
+  };
+
+  /* 标题画面上选关：idx = 0/1/2 直接进第几关，-1 = 连续闯关 */
+  function titlePick(idx) {
+    if (idx === -1) { campaign = true; elStageSel.value = 'c'; }
+    else { campaign = false; elStageSel.value = String(idx); }
+    pref.set('contra.stage', elStageSel.value);
+    newGame(idx === -1 ? 0 : idx);
+    g.state = 'play';
+    Sound.start();
+    flashMsg(STAGE.name + ' 开始！');
+    render();
+  }
+
+  /* 画布坐标 -> 虚拟坐标（384x216） */
+  function canvasToVirtual(ev) {
+    const r = cv.getBoundingClientRect();
+    const x = (ev.clientX - r.left) / (r.width || 1) * VW;
+    const y = (ev.clientY - r.top) / (r.height || 1) * VH;
+    return { x: x, y: y };
+  }
+  function titleHit(vx, vy) {
+    for (let i = 0; i < TITLE_BTNS.length; i++) {
+      const b = TITLE_BTNS[i];
+      if (vx >= b.x && vx <= b.x + b.w && vy >= b.y && vy <= b.y + b.h) return b.idx;
+    }
+    return null;
+  }
+
+  function startOrResume() {
+    if (g.state === 'title') {
+      if (campaign) newGame(0); else newGame(stageIdx);
+      g.state = 'play';
+      Sound.start();
+      flashMsg(STAGE.name + ' 开始！');
+    }
+    else if (g.state === 'pause') { g.state = 'play'; }
+    else if (g.state === 'over' || g.state === 'win') { newGame(campaign ? 0 : stageIdx); g.state = 'play'; Sound.start(); }
+    syncHud();
+  }
+
+  window.addEventListener('keydown', function (ev) {
+    const k = ev.key;
+    if (k === 'm' || k === 'M') { toggleSound(); return; }
+    if (k === 'f' || k === 'F') { ev.preventDefault(); toggleFull(); return; }
+    if (k === 'r' || k === 'R') { newGame(); g.state = 'play'; Sound.start(); return; }
+    if (k === 'Enter') { ev.preventDefault(); startOrResume(); return; }
+    /* 标题画面按 1/2/3 直选关卡，0 或 C 连续闯关 */
+    if (g && g.state === 'title' && (k === '1' || k === '2' || k === '3')) {
+      ev.preventDefault();
+      const idx = Number(k) - 1;
+      if (STAGES[idx]) { Sound.click(); titlePick(idx); }
+      return;
+    }
+    if (g && g.state === 'title' && (k === '0' || k === 'c' || k === 'C')) {
+      ev.preventDefault(); Sound.click(); titlePick(-1); return;
+    }
+    if (k === 'p' || k === 'P') { ev.preventDefault(); togglePause(); return; }
+    const m = KEYMAP[k] || KEYMAP[k.toLowerCase()];
+    if (m) { ev.preventDefault(); keys[m] = true; }
+  });
+  window.addEventListener('keyup', function (ev) {
+    const k = ev.key;
+    const m = KEYMAP[k] || KEYMAP[k.toLowerCase()];
+    if (m) keys[m] = false;
+  });
+  window.addEventListener('blur', function () { for (const k in keys) keys[k] = false; });
+
+  cv.addEventListener('pointerdown', function (ev) {
+    ev.preventDefault();
+    if (g.state === 'title') {
+      const v = canvasToVirtual(ev);
+      const idx = titleHit(v.x, v.y);
+      if (idx !== null) { Sound.click(); titlePick(idx); }
+      else startOrResume();
+      return;
+    }
+    if (g.state === 'over' || g.state === 'win') startOrResume();
+    else togglePause();
+  });
+
+  document.querySelector('.pad').addEventListener('click', function (ev) {
+    const b = ev.target.closest('button[data-k]');
+    if (!b) return;
+    if (g.state === 'title' || g.state === 'over' || g.state === 'win') startOrResume();
+    const k = b.dataset.k;
+    keys[k] = true;
+    setTimeout(function () { keys[k] = false; }, 140);
+    b.blur();
+  });
+
+  function togglePause() {
+    if (g.state === 'play') g.state = 'pause';
+    else if (g.state === 'pause') g.state = 'play';
+    render();
+  }
+
+  /* ==================================================================
+     十五、HUD / 按钮
+     ================================================================== */
+  const elScore = document.getElementById('hScore'), elLives = document.getElementById('hLives');
+  const elWeapon = document.getElementById('hWeapon'), elProg = document.getElementById('hProg');
+  const btnPause = document.getElementById('pause'), btnRestart = document.getElementById('restart');
+  const btnSound = document.getElementById('sound'), elTheme = document.getElementById('theme');
+  const elStage = document.getElementById('hStage'), elStageSel = document.getElementById('stageSel');
+
+  function syncHud() {
+    if (!g) return;
+    elScore.textContent = g.score;
+    elLives.textContent = Math.max(0, g.lives);
+    elWeapon.textContent = WEAPONS[g.weapon].name;
+    elStage.textContent = stageShort(stageIdx);
+    elProg.textContent = Math.min(100, Math.round((g.player.x / (BOSS_X + 60)) * 100)) + '%';
+  }
+
+  function renderSoundButton() {
+    btnSound.textContent = Sound.enabled ? '🔊 音效' : '🔇 静音';
+    btnSound.classList.toggle('sound-off', !Sound.enabled);
+    const pct = Math.round(Sound.volume * 100);
+    if (volRange) { volRange.value = String(pct); volNum.textContent = String(pct); }
+  }
+  function toggleSound() { Sound.set(!Sound.enabled); renderSoundButton(); if (Sound.enabled) Sound.click(); }
+  btnSound.addEventListener('click', toggleSound);
+
+  const volRange = document.getElementById('volRange'), volNum = document.getElementById('volNum');
+  if (volRange) {
+    volRange.addEventListener('input', function () {
+      const v = Number(volRange.value);
+      volNum.textContent = String(v);
+      Sound.setVolume(v / 100);
+      btnSound.textContent = Sound.enabled ? '🔊 音效' : '🔇 静音';
+      btnSound.classList.toggle('sound-off', !Sound.enabled);
+    });
+    /* 拖完再响一声，方便试听当前音量 */
+    volRange.addEventListener('change', function () { Sound.click(); });
+  }
+  btnPause.addEventListener('click', function () {
+    Sound.click();
+    if (g.state === 'title' || g.state === 'over' || g.state === 'win') startOrResume();
+    else togglePause();
+    btnPause.blur();
+  });
+  btnRestart.addEventListener('click', function () { Sound.click(); newGame(); g.state = 'play'; Sound.start(); btnRestart.blur(); });
+
+  /* --- 关卡选择：三关各选，或者连续闯关 --- */
+  elStageSel.innerHTML = STAGES.map(function (s, i) {
+    return '<option value="' + i + '">' + s.name + '</option>';
+  }).join('') + '<option value="c">连续闯关（一→二→三）</option>';
+  elStageSel.value = pref.get('contra.stage', '0');
+  if (elStageSel.value !== 'c' && !STAGES[Number(elStageSel.value)]) elStageSel.value = '0';
+  elStageSel.addEventListener('change', function () {
+    const v = elStageSel.value;
+    pref.set('contra.stage', v);
+    if (v === 'c') { campaign = true; newGame(0); }
+    else { campaign = false; newGame(Number(v)); }
+    g.state = 'play';
+    Sound.start();
+    elStageSel.blur();
+  });
+
+  /* 按初始设置摆好（标题画面也要显示对应的关卡） */
+  if (elStageSel.value === 'c') { campaign = true; loadStage(0); }
+  else { campaign = false; loadStage(Number(elStageSel.value)); }
+
+  elTheme.innerHTML = THEME_LIST.map(function (t) {
+    return '<option value="' + t.key + '">' + t.name + '</option>';
+  }).join('');
+  elTheme.value = pref.get('contra.theme', 'midnight');
+  if (!THEMES[elTheme.value]) elTheme.value = 'midnight';
+  applyTheme(elTheme.value);
+  elTheme.addEventListener('change', function () { applyTheme(elTheme.value); pref.set('contra.theme', elTheme.value); });
+
+  /* --- 缩放模式 --- */
+  const elFit = document.getElementById('fit');
+  elFit.value = pref.get('contra.fit', 'int');
+  if (elFit.value !== 'fill') elFit.value = 'int';
+  fitMode = elFit.value === 'fill' ? 'fill' : 'int';
+  elFit.addEventListener('change', function () {
+    fitMode = elFit.value === 'fill' ? 'fill' : 'int';
+    pref.set('contra.fit', elFit.value);
+    layout();
+  });
+
+  /* --- 全屏（F11 之外的独立全屏按钮：全屏后正好 5 倍铺满 1920x1080） --- */
+  const btnFull = document.getElementById('full');
+  const isFull = () => !!(document.fullscreenElement || document.webkitFullscreenElement);
+  function toggleFull() {
+    const el = document.documentElement;
+    if (!isFull()) {
+      if (el.requestFullscreen) el.requestFullscreen();
+      else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+    } else {
+      if (document.exitFullscreen) document.exitFullscreen();
+      else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+    }
+  }
+  btnFull.addEventListener('click', function () { Sound.click(); toggleFull(); btnFull.blur(); });
+  ['fullscreenchange', 'webkitfullscreenchange'].forEach(function (ev) {
+    document.addEventListener(ev, function () {
+      btnFull.textContent = isFull() ? '⛶ 退出' : '⛶ 全屏';
+      setTimeout(layout, 90);
+      setTimeout(layout, 320);
+    });
+  });
+
+  /* --- 顶栏和提示自动淡出，画面不被打扰 --- */
+  const topbar = document.getElementById('topbar');
+  const hintEl = document.getElementById('hint');
+  let hideTimer = 0;
+  function pokeUI() {
+    topbar.classList.remove('hide');
+    hintEl.classList.remove('hide');
+    if (hideTimer) clearTimeout(hideTimer);
+    hideTimer = setTimeout(function () {
+      if (g && (g.state === 'play' || g.state === 'dead')) {
+        topbar.classList.add('hide'); hintEl.classList.add('hide');
+      }
+    }, 2800);
+  }
+  window.addEventListener('mousemove', pokeUI);
+  window.addEventListener('pointerdown', pokeUI);
+  pokeUI();
+
+  function unlockAudio() {
+    Sound.unlock();
+    window.removeEventListener('pointerdown', unlockAudio, true);
+    window.removeEventListener('keydown', unlockAudio, true);
+  }
+  window.addEventListener('pointerdown', unlockAudio, true);
+  window.addEventListener('keydown', unlockAudio, true);
+
+  /* ==================================================================
+     十六、主循环（固定步长 60Hz）
+     ================================================================== */
+  let acc = 0, last = 0;
+  const STEP = 1000 / 60;
+
+  function frame(now) {
+    requestAnimationFrame(frame);
+    if (!last) last = now;
+    let dt = now - last;
+    last = now;
+    if (dt > 250) dt = 250;
+    acc += dt;
+    let guard = 0;
+    while (acc >= STEP && guard++ < 5) { acc -= STEP; update(); }
+    syncHud();
+    render();
+  }
+
+  /* ==================================================================
+     十七、启动
+     ================================================================== */
+  renderSoundButton();
+  newGame();
+  layout();
+  if (window.ResizeObserver) new ResizeObserver(layout).observe(stage);
+  else window.addEventListener('resize', layout);
+  requestAnimationFrame(frame);
+})();
+</script>
+
+<script>
+/* ===== 专注/全屏模式：独立于游戏本体 ===== */
+(function () {
+  var fab = document.getElementById('focusFab');
+  function setLabel(on) {
+    if (!fab) return;
+    fab.innerHTML = on ? '⛶ 退出专注' : '⛶ 专注模式';
+    fab.title = on ? '恢复标题（Shift+F）' : '藏起标题，让画面占满窗口（Shift+F）';
+  }
+  function refit() { try { window.dispatchEvent(new Event('resize')); } catch (e) {} }
+  function toggleFocus() {
+    var on = document.body.classList.toggle('focus');
+    setLabel(on);
+    refit();                       /* 画布类游戏按新尺寸重新适配 */
+    setTimeout(refit, 60);         /* 布局落定后再补一次 */
+    return on;
+  }
+  if (fab) fab.addEventListener('click', toggleFocus);
+  window.addEventListener('keydown', function (e) {
+    var t = (e.target && e.target.tagName) || '';
+    if (t === 'INPUT' || t === 'SELECT' || t === 'TEXTAREA') return;
+    if ((e.key === 'F' || e.key === 'f') && e.shiftKey) {
+      e.preventDefault();
+      e.stopPropagation();
+      toggleFocus();
+    }
+  }, true);
+})();
+</script>
+</body>
+</html>

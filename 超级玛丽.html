@@ -1,0 +1,1921 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>超级玛丽 · Super Mario</title>
+<style>
+  :root{
+    --bg:#0a1020;
+    --glow-1:#1c2f4f;
+    --glow-2:#241c4a;
+    --panel:rgba(23,33,54,.78);
+    --panel-brd:rgba(148,163,184,.20);
+    --text:#e8eefb;
+    --muted:#8fa2bb;
+    --accent:#38bdf8;
+    --accent-2:#f5b942;
+    --danger:#f87171;
+    --felt-1:#17335c;
+    --felt-2:#0a1a33;
+    --tile-back-1:#3a5a8f;
+    --tile-back-2:#1d3355;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{min-height:100%}
+  body{
+    margin:0;min-height:100vh;padding:12px 16px 14px;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+    color:var(--text);
+    background:
+      radial-gradient(900px 620px at 50% -15%, var(--glow-1) 0%, transparent 60%),
+      radial-gradient(700px 500px at 90% 110%, var(--glow-2) 0%, transparent 55%),
+      var(--bg);
+    display:flex;justify-content:center;
+  }
+  .app{width:100%;max-width:none;height:calc(100vh - 26px);display:flex;flex-direction:column;gap:10px}
+
+  /* ================= 三栏满屏布局（和象棋 / 麻将 / 跳一跳同一套） ================= */
+  main{
+    flex:1 1 auto;min-height:0;
+    display:grid;
+    grid-template-columns:clamp(230px,16vw,320px) minmax(0,1fr) clamp(230px,16vw,320px);
+    gap:14px;align-items:stretch;
+  }
+  .side{display:flex;flex-direction:column;gap:12px;min-height:0;overflow-y:auto;padding-right:3px}
+  .side::-webkit-scrollbar{width:7px}
+  .side::-webkit-scrollbar-thumb{background:var(--line,var(--panel-brd));border-radius:4px}
+  .side .sec{margin:0;flex:none}
+  .board-col{min-width:0;min-height:0;display:flex;flex-direction:column;gap:10px}
+  .board-card{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;padding:10px;position:relative}
+  #boardWrap{position:relative;display:flex;align-items:center;justify-content:center;max-width:100%;max-height:100%}
+  #board{display:block;border-radius:12px;touch-action:none}
+
+  /* 触屏 / 鼠标都能用的三个按钮 */
+  .touch-bar{display:flex;gap:10px;justify-content:center}
+  .touch-bar button{
+    min-width:96px;font-size:16px;font-weight:800;padding:10px 18px;
+    background:linear-gradient(180deg,var(--panel2,var(--panel)),var(--panel));
+  }
+  .touch-bar button.on{background:linear-gradient(180deg,#e5bd6b,#c99a35);color:#241a05}
+
+  /* 卡片 / 小节标题 / 字段：全站同一套 */
+  .card{
+    background:linear-gradient(180deg,var(--panel2,var(--panel)),var(--panel));
+    border:1px solid var(--line,var(--panel-brd));border-radius:14px;
+    box-shadow:0 18px 40px -22px rgba(0,0,0,.9), inset 0 1px 0 rgba(255,255,255,.04);
+  }
+  .sec{padding:10px 12px}
+  .sec h2{
+    margin:0 0 9px;font-size:13px;font-weight:800;letter-spacing:.08em;color:var(--text);
+    display:flex;align-items:center;gap:7px;
+  }
+  .sec h2::before{content:'';width:3px;height:12px;border-radius:2px;
+    background:linear-gradient(180deg,var(--accent-2),var(--accent))}
+  .field{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:7px;font-size:13px}
+  .field:last-child{margin-bottom:0}
+  .field .v{font-size:15px;font-weight:700;color:var(--text);font-variant-numeric:tabular-nums}
+  .field .v.hot{color:var(--accent-2)}
+  .field .hint{font-size:11.5px;color:var(--muted)}
+  .btns{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .btns .wide{grid-column:1/-1}
+  .btns button{white-space:nowrap;font-size:12.5px;padding:7px 8px}
+  .statsbar{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 10px;font-size:12.5px;color:var(--muted)}
+  .statsbar b{font-size:15px;color:var(--text);font-variant-numeric:tabular-nums}
+  .statsbar .sb-win{color:#4ade80}
+  .statsbar .sb-lose{color:#f87171}
+  .statsbar .sb-note{width:100%;font-size:11px;opacity:.65}
+  .seg{display:flex;border:1px solid var(--line,var(--panel-brd));border-radius:9px;overflow:hidden}
+  .seg button{border:0;border-radius:0;padding:6px 10px;font-size:12.5px;background:transparent}
+  .seg button.on{background:linear-gradient(180deg,#e5bd6b,#c99a35);color:#241a05;font-weight:700}
+  .field.volbox{display:flex;align-items:center;gap:8px}
+  .field.volbox input[type=range]{flex:1 1 auto;min-width:0}
+  .field select{
+    appearance:none;background:var(--panel2,var(--panel));color:var(--text);border:1px solid var(--line,var(--panel-brd));
+    border-radius:9px;padding:6px 22px 6px 9px;font-size:12.5px;font-family:inherit;cursor:pointer;
+    background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);
+    background-position:calc(100% - 12px) 51%,calc(100% - 7px) 51%;
+    background-size:5px 5px,5px 5px;background-repeat:no-repeat;
+  }
+  .field select:focus{outline:none;border-color:rgba(245,185,66,.6)}
+
+  header{text-align:center}
+  h1{
+    margin:0;font-size:clamp(21px,1.6vw,30px);letter-spacing:.3em;font-weight:700;text-indent:.3em;
+    background:linear-gradient(92deg,#fde68a,#f5b942 45%,#a5b4fc);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+  }
+  header p{margin:5px 0 0;font-size:12px;color:var(--muted);letter-spacing:.08em}
+
+  button{
+    font-family:inherit;font-size:13px;font-weight:600;color:var(--text);
+    background:var(--panel2,var(--panel));
+    border:1px solid var(--panel-brd);border-radius:9px;
+    padding:7px 14px;cursor:pointer;
+    transition:transform .12s ease,filter .12s ease,border-color .12s ease;
+  }
+  button:hover:not(:disabled){filter:brightness(1.28);border-color:rgba(245,185,66,.55)}
+  button:active:not(:disabled){transform:translateY(1px)}
+  button:disabled{opacity:.38;cursor:not-allowed}
+  button.primary{background:linear-gradient(180deg,#d99a1f,#a86f0c);border-color:rgba(253,230,138,.55);color:#2a1c00}
+
+  .turnbar{width:100%;display:flex;align-items:center;gap:10px;justify-content:space-between;padding:10px 13px;font-size:13px}
+  .turn-left{display:flex;align-items:center;gap:9px;min-width:0}
+  .dot{width:9px;height:9px;border-radius:50%;background:var(--muted);flex:none}
+  .dot.you{background:#4ade80;box-shadow:0 0 0 4px rgba(74,222,128,.16)}
+  .dot.bad{background:var(--danger);box-shadow:0 0 0 4px rgba(248,113,113,.18)}
+  .dot.win{background:var(--accent-2);box-shadow:0 0 0 4px rgba(245,185,66,.20)}
+  .dot.live{animation:pulse 1.1s ease-in-out infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.45}}
+  .thinking{font-size:12px;color:var(--muted);white-space:nowrap}
+  .badge{font-size:11px;font-weight:800;letter-spacing:.06em;padding:2px 8px;border-radius:999px;
+    background:rgba(245,185,66,.18);color:var(--accent-2);border:1px solid rgba(245,185,66,.42);white-space:nowrap;display:none}
+  .badge.on{display:inline-block}
+
+  .mask{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;
+    background:rgba(4,8,14,.66);backdrop-filter:blur(5px);padding:16px}
+  .mask[hidden]{display:none}
+  .rules{max-width:min(94vw,600px);max-height:86vh;overflow:auto;padding:20px 24px 18px;border-radius:16px;
+    background:var(--panel);border:1px solid var(--panel-brd);box-shadow:0 20px 60px rgba(0,0,0,.6)}
+  .rules h3{margin:0 0 12px;font-size:17px;letter-spacing:.08em;
+    background:linear-gradient(92deg,#fde68a,#f5b942 45%,#a5b4fc);
+    -webkit-background-clip:text;background-clip:text;color:transparent}
+  .rules ol{margin:0;padding-left:20px;font-size:13px;line-height:1.95;color:var(--text)}
+  .rules li{margin-bottom:7px}
+  .rules b{color:var(--accent-2)}
+  .rules-foot{margin-top:14px;display:flex;justify-content:flex-end}
+  .result{display:flex;flex-direction:column;align-items:center;gap:6px;padding:20px 28px;border-radius:16px;
+    background:rgba(23,33,54,.95);border:1px solid rgba(245,185,66,.4);box-shadow:0 14px 40px rgba(0,0,0,.55);text-align:center}
+  .result-title{font-size:21px;font-weight:800;letter-spacing:.06em}
+  .result-title.win{color:#fbbf24}
+  .result-title.lose{color:var(--danger)}
+  .result-score{font-size:34px;font-weight:800;font-variant-numeric:tabular-nums;color:var(--text);line-height:1.1}
+  .result-sub{font-size:12.5px;color:var(--muted);line-height:1.7}
+  .result-sub b{color:var(--accent-2)}
+
+  footer{text-align:center;font-size:11px;color:#5b6b83;line-height:1.8}
+  kbd{background:var(--panel2,var(--panel));border:1px solid var(--panel-brd);border-bottom-width:2px;
+    border-radius:5px;padding:1px 5px;font-size:11px;font-family:inherit;color:var(--muted)}
+
+  .volbox input[type=range]{
+    -webkit-appearance:none;appearance:none;width:110px;height:4px;border-radius:3px;
+    background:linear-gradient(90deg,var(--accent),rgba(148,163,184,.30));cursor:pointer;outline:none;
+  }
+  .volbox input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none;appearance:none;width:13px;height:13px;border-radius:50%;
+    background:#fff;border:2px solid var(--accent);cursor:pointer;
+  }
+  .volbox .vn{font-variant-numeric:tabular-nums;min-width:22px;text-align:right}
+
+  @media (max-width:980px){
+    main{grid-template-columns:1fr;height:auto;min-height:0}
+    .app{height:auto;min-height:0}
+    .side{overflow:visible;padding-right:0}
+    .board-card{min-height:min(58vh,420px)}
+  }
+  @media (max-width:560px){
+    .btns{grid-template-columns:1fr}
+    .touch-bar button{min-width:0;flex:1}
+  }
+
+/* ===== 专注/全屏模式：藏起标题和两侧面板，中间区域吃满窗口（Shift+F 或点右上角按钮） ===== */
+body.focus header,body.focus aside,body.focus .side-col,body.focus main > *:not(.board-col){display:none}
+body.focus main{display:block !important;grid-template-columns:minmax(0,1fr) !important;
+  height:auto !important;min-height:0 !important;max-height:none !important}
+body.focus .app{max-width:none !important;width:100% !important;padding:6px 10px 10px !important;
+  height:auto !important;min-height:calc(100vh - 26px)}
+body.focus .board-col{min-height:0 !important;width:100% !important}
+body.focus canvas{max-width:100% !important;max-height:calc(100vh - 96px) !important}
+.focus-fab{position:fixed;top:9px;right:11px;z-index:80;display:flex;align-items:center;gap:6px;
+  padding:6px 12px;border-radius:999px;font:inherit;font-size:12.5px;font-weight:700;cursor:pointer;
+  color:#e8eefb;background:rgba(15,23,42,.74);border:1px solid rgba(148,163,184,.32);
+  -webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
+  opacity:.6;transition:opacity .15s,transform .15s}
+.focus-fab:hover{opacity:1;transform:translateY(-1px)}
+body.focus .focus-fab{opacity:.92}
+</style>
+</head>
+<body>
+<button class="focus-fab" id="focusFab" title="隐藏标题和两侧面板，让中间占满窗口（Shift+F）">⛶ 专注模式</button>
+<div class="app">
+  <header>
+    <h1>超级玛丽</h1>
+    <p>SUPER MARIO · 顶砖块 · 踩蘑菇 · 冲向旗杆</p>
+  </header>
+
+  <main>
+    <div class="side left">
+      <section class="sec card">
+        <h2>对局设置</h2>
+        <label class="field">
+          <span>关卡</span>
+          <select id="levelSel"></select>
+        </label>
+        <div class="field">
+          <span>难度</span>
+          <div class="seg" id="diffSeg">
+            <button data-diff="easy">简单</button>
+            <button data-diff="normal" class="on">普通</button>
+            <button data-diff="hard">困难</button>
+          </div>
+        </div>
+        <div class="field">
+          <span>生命</span>
+          <div class="seg" id="livesSeg">
+            <button data-lives="3" class="on">3</button>
+            <button data-lives="5">5</button>
+            <button data-lives="9">9</button>
+          </div>
+        </div>
+        <div class="field" title="一次能看到多宽的一段路。调远能提前看到坑和怪，但画面里的东西会变小">
+          <span>视野</span>
+          <div class="seg" id="viewSeg">
+            <button data-view="near">近</button>
+            <button data-view="mid" class="on">标准</button>
+            <button data-view="far">远</button>
+          </div>
+        </div>
+        <label class="field">
+          <span>主题</span>
+          <select id="theme"></select>
+        </label>
+        <label class="field volbox" title="音效音量">
+          <span>音量</span>
+          <input type="range" id="volRange" min="0" max="100" step="1" value="68">
+          <span class="vn" id="volNum">68</span>
+        </label>
+        <div class="field">
+          <span>音效</span>
+          <div class="seg" id="soundSeg">
+            <button data-vol="off">关</button>
+            <button data-vol="low">小</button>
+            <button data-vol="mid" class="on">中</button>
+            <button data-vol="high">大</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="sec card">
+        <h2>操作说明</h2>
+        <div class="field"><span class="hint">← → 或 A D 移动</span></div>
+        <div class="field"><span class="hint">空格 / ↑ / W 跳（按住跳更高）</span></div>
+        <div class="field"><span class="hint">踩怪的头 = 消灭它，从侧面碰 = 受伤</span></div>
+        <div class="field"><span class="hint">顶到「?」出金币或蘑菇</span></div>
+      </section>
+    </div>
+
+    <div class="board-col">
+      <div class="board-card card">
+        <div id="boardWrap">
+          <canvas id="board" width="960" height="540"></canvas>
+        </div>
+      </div>
+      <div class="touch-bar">
+        <button id="tLeft" title="往左走（键盘 ← / A）">◀ 左</button>
+        <button id="tRight" title="往右走（键盘 → / D）">右 ▶</button>
+        <button id="tJump" title="跳（键盘 空格 / ↑ / W，按住跳更高）">跳</button>
+      </div>
+      <div class="turnbar card">
+        <div class="turn-left">
+          <span class="dot you live" id="turnDot"></span>
+          <span id="turnText">按 → 开始跑，空格跳过坑</span>
+          <span class="badge" id="flagBadge">过 关！</span>
+        </div>
+        <span class="thinking" id="tipText">点「规则」看三分钟上手</span>
+      </div>
+    </div>
+
+    <div class="side right">
+      <section class="sec card">
+        <h2>对局信息</h2>
+        <div class="field"><span>得分</span><span class="v hot" id="scoreNow">0</span></div>
+        <div class="field"><span>金币</span><span class="v" id="coinNow">0</span></div>
+        <div class="field"><span>生命</span><span class="v" id="lifeNow">3</span></div>
+        <div class="field"><span>关卡</span><span class="v" id="levelNow">1 / 12</span></div>
+        <div class="field"><span>剩余时间</span><span class="v" id="timeNow">300</span></div>
+      </section>
+
+      <section class="sec card">
+        <h2>本次战绩</h2>
+        <div class="statsbar">
+          <span>总 <b id="stTotal">0</b></span>
+          <span>胜 <b id="stWin" class="sb-win">0</b></span>
+          <span>负 <b id="stLose" class="sb-lose">0</b></span>
+          <span>和 <b id="stDraw">0</b></span>
+          <span class="sb-note">一条命打到第 12 关通关算胜；只算本次打开页面后的对局，刷新即清零</span>
+        </div>
+      </section>
+
+      <section class="sec card">
+        <h2>操作</h2>
+        <div class="btns">
+          <button id="restart" class="primary wide">重新开始（R）</button>
+          <button id="prevLevel">上一关</button>
+          <button id="nextLevel">下一关</button>
+          <button id="rules">规则（H）</button>
+          <button id="sound">音效开关（M）</button>
+        </div>
+      </section>
+
+      <section class="sec card">
+        <details>
+          <summary style="cursor:pointer;font-size:13px">玩法速查</summary>
+          <ul style="margin:8px 0 0;padding-left:20px;font-size:12.5px;line-height:1.9;color:var(--muted)">
+            <li>跑到旗杆就过关，<b style="color:var(--accent-2)">12 关全部打通算通关</b>。</li>
+            <li>踩怪的头能消灭它，从侧面碰会受伤；吃蘑菇变大后能挨一下。</li>
+            <li>顶「?」块出金币或蘑菇，变大后能顶碎砖块。</li>
+            <li>掉进坑里、被怪碰到（小个子时）或时间用完都会掉一条命。</li>
+          </ul>
+        </details>
+      </section>
+    </div>
+  </main>
+
+  <footer>
+    <kbd>←</kbd><kbd>→</kbd> / <kbd>A</kbd><kbd>D</kbd> 移动 · <kbd>空格</kbd>/<kbd>↑</kbd> 跳（按住更高） ·
+    <kbd>R</kbd> 重新开始 · <kbd>H</kbd> 规则 · <kbd>M</kbd> 音效 · <kbd>P</kbd> 暂停 · <kbd>Enter</kbd> 关掉结算框继续
+  </footer>
+
+  <div class="mask" id="rulesMask" hidden>
+    <div class="rules">
+      <h3>超级玛丽怎么玩</h3>
+      <ol>
+        <li><b>目标</b>：从左边出发，跑到关卡尽头的<b>旗杆</b>。12 关全部通过就算通关。</li>
+        <li><b>移动</b>：<kbd>←</kbd><kbd>→</kbd>（或 <kbd>A</kbd><kbd>D</kbd>、屏幕上的「左 / 右」）跑动；<b>松开就跑不动</b>，会自动停下。</li>
+        <li><b>跳</b>：<kbd>空格</kbd> / <kbd>↑</kbd> / <kbd>W</kbd>（或「跳」按钮）。<b>按住不放跳得更高</b>，轻点一下只是小跳 —— 跨坑、上台阶全靠这个。</li>
+        <li><b>踩怪</b>：从<b>上方</b>落到怪头上就能踩扁它（还能借力再弹一下）；从<b>侧面</b>撞上去会受伤。</li>
+        <li><b>蘑菇</b>：顶「?」块有时会蹦出蘑菇，吃了会<b>变大</b>；变大后再被怪碰到只会变小，不会掉命。变大后还能<b>顶碎砖块</b>。</li>
+        <li><b>金币</b>：「?」块和空中的金币都能吃，每枚 100 分。</li>
+        <li><b>掉命</b>：掉进坑里、小个子被怪碰到、时间用完都会掉一条命；命用完本局结束。</li>
+        <li><b>存档</b>：主题 / 难度 / 生命 / 视野 / 音量 / 音效会记住；<b>战绩只在内存里</b>，刷新即清零。</li>
+      </ol>
+      <div class="rules-foot"><button class="primary" id="rulesClose">知道了，出发</button></div>
+    </div>
+  </div>
+
+  <div class="mask" id="ovMask" hidden>
+    <div class="result">
+      <div class="result-title win" id="ovTitle">通关了！</div>
+      <div class="result-score" id="ovScore">0 分</div>
+      <div class="result-sub" id="ovSub"></div>
+      <button class="primary" id="ovBtn" style="margin-top:10px">再来一局（Enter / R）</button>
+    </div>
+  </div>
+</div>
+
+<script id="core">
+/* ==================================================================
+   超级玛丽 · 核心逻辑（纯逻辑，不碰 DOM，可以在 Node 里直接跑）
+   世界坐标：像素，x 往右、y 往下。地面在第 16 行（TILE=30 → 顶面 y=480）。
+   关卡是"地面铺满 + 按段（chunk）挖坑/盖东西"拼出来的，
+   每一段的坑宽和高台都受难度约束，保证都在跳跃能到的范围内。
+   ================================================================== */
+
+const TILE = 30, ROWS = 18, GROUND_ROW = 16;
+const VIEW_H = ROWS * TILE;             /* 540：竖向正好一屏 */
+const VIEW_W_DEF = 780, VIEW_W_MIN = 600, VIEW_W_MAX = 1000;
+const VIEWS = { near: 600, mid: 780, far: 1000 };
+const VIEW_DEF = 'mid';
+
+/* 物理：轻点一小跳、按住一大跳（经典手感） */
+const GRAV = 2400, GRAV_HOLD = 1500, MAX_FALL = 820;
+const RUN_ACC = 1500, AIR_ACC = 1150, RUN_MAX = 292, FRICTION = 2100;
+const JUMP_V = -660, STOMP_V = -430;
+const SMALL_W = 20, SMALL_H = 28, BIG_W = 22, BIG_H = 44;
+const COYOTE = 0.09;                    /* 刚离开地面还能补跳的一小段时间 */
+
+const ENEMY_W = 26, ENEMY_H = 26, ENEMY_V = 62;
+const MOB_W = 24, MOB_H = 24, MOB_V = 92;
+const INVULN_T = 1.7;                   /* 变小后的无敌时间 */
+const DIE_T = 1.5, CLEAR_T = 1.5;
+const TIME_RATE = 2.6;                  /* 时间单位 / 秒 */
+const LEVEL_COUNT = 12;
+const LEVEL_NAMES = ['起步', '水管区', '砖块阵', '小坑连跳', '蘑菇林', '高台', '怪群', '双坑',
+                     '阶梯关', '金币拱', '长跑道', '最后一关'];
+const SCORE_COIN = 100, SCORE_STOMP = 100, SCORE_BRICK = 50, SCORE_GROW = 1000, SCORE_CLEAR = 1000;
+
+const DIFFS = {
+  easy:   { key: 'easy',   name: '简单', pitMax: 3, enemyMul: 0.75, timeMul: 1.25, width: 0.85 },
+  normal: { key: 'normal', name: '普通', pitMax: 4, enemyMul: 1.0,  timeMul: 1.0,  width: 1.0 },
+  hard:   { key: 'hard',   name: '困难', pitMax: 4, enemyMul: 1.35, timeMul: 0.85, width: 1.15 }
+};
+const DIFF_DEF = 'normal';
+function diffOf(k) { return DIFFS[k] || DIFFS[DIFF_DEF]; }
+
+function mulberry32(a) {
+  return function () {
+    a |= 0; a = a + 0x6D2B79F5 | 0;
+    let t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+
+/* ---------- 方块类型 ---------- */
+function solidChar(c) { return c === '#' || c === 'B' || c === '?' || c === 'M' || c === 'p' || c === '='; }
+function coinChar(c) { return c === 'o'; }
+
+/* ---------- 关卡拼装 ---------- */
+function newBuilder(width) {
+  const grid = [];
+  for (let y = 0; y < ROWS; y++) grid.push(new Array(width).fill('.'));
+  const b = {
+    grid: grid, W: width, g: GROUND_ROW, enemies: [], items: [], flag: null,
+    set: function (tx, ty, c) {
+      if (tx >= 0 && tx < width && ty >= 0 && ty < ROWS) grid[ty][tx] = c;
+    },
+    get: function (tx, ty) {
+      if (tx < 0 || tx >= width || ty < 0 || ty >= ROWS) return '.';
+      return grid[ty][tx];
+    },
+    /* 铺一段实心地面（含下面两层） */
+    ground: function (tx0, tx1) {
+      for (let tx = tx0; tx <= tx1; tx++) { b.set(tx, GROUND_ROW, '#'); b.set(tx, GROUND_ROW + 1, '#'); }
+    },
+    /* 挖一个坑 */
+    pit: function (tx0, tx1) {
+      for (let tx = tx0; tx <= tx1; tx++) { b.set(tx, GROUND_ROW, '.'); b.set(tx, GROUND_ROW + 1, '.'); }
+    },
+    row: function (tx0, tx1, ty, c) { for (let tx = tx0; tx <= tx1; tx++) b.set(tx, ty, c); },
+    coins: function (tx0, tx1, ty) { for (let tx = tx0; tx <= tx1; tx++) b.set(tx, ty, 'o'); },
+    /* 水管：2 列宽、h 格高（含管口） */
+    pipe: function (tx, h) {
+      for (let ty = GROUND_ROW - h; ty < GROUND_ROW; ty++) { b.set(tx, ty, 'p'); b.set(tx + 1, ty, 'p'); }
+    },
+    step: function (tx, h) {                  /* 一级台阶：从地面往上 h 格 */
+      for (let ty = GROUND_ROW - h; ty < GROUND_ROW; ty++) b.set(tx, ty, '#');
+    },
+    enemy: function (tx, ty) { b.enemies.push({ tx: tx, ty: ty === undefined ? GROUND_ROW - 1 : ty }); },
+    item: function (tx, ty, kind) { b.items.push({ tx: tx, ty: ty, kind: kind }); }
+  };
+  return b;
+}
+
+/* 每段（chunk）：w = 宽度，minT = 从第几关开始出现，build 往地块里画 */
+const CHUNKS = {
+  flat: { w: 14, minT: 0, build: function (b, x, rng, D) {
+    b.coins(x + 4, x + 7, GROUND_ROW - 2);
+    b.enemy(x + 10);
+  } },
+  pit: { w: 16, minT: 1, build: function (b, x, rng, D) {
+    const pw = 2 + Math.floor(rng() * (D.pitMax - 1));      /* 2 ~ pitMax 格 */
+    const px = x + 6;
+    b.pit(px, px + pw - 1);
+    b.coins(px, px + pw - 1, GROUND_ROW - 3);
+  } },
+  pipe: { w: 16, minT: 1, build: function (b, x, rng, D) {
+    const h = 2 + (rng() < 0.4 ? 1 : 0);
+    b.pipe(x + 7, h);
+    b.coins(x + 4, x + 5, GROUND_ROW - 3);
+    if (rng() < 0.8) b.enemy(x + 12);
+  } },
+  stairs: { w: 18, minT: 2, build: function (b, x, rng, D) {
+    b.step(x + 6, 1); b.step(x + 7, 2); b.step(x + 8, 3);
+    b.step(x + 9, 2); b.step(x + 10, 1);
+    b.coins(x + 7, x + 9, GROUND_ROW - 5);
+    if (rng() < 0.7) b.enemy(x + 13);
+  } },
+  bricks: { w: 16, minT: 2, build: function (b, x, rng, D) {    const y = GROUND_ROW - 4;
+    b.row(x + 4, x + 9, y, 'B');
+    b.set(x + 6, y, '?');
+    b.set(x + 8, y, rng() < 0.55 ? 'M' : '?');
+    b.coins(x + 4, x + 5, y - 2);
+    b.enemy(x + 12);
+  } },
+  enemies: { w: 20, minT: 3, build: function (b, x, rng, D) {
+    /* 怪之间隔开 7 格：不要两只迎面走到一起，玩家会同时被两只夹住 */
+    const n = Math.max(2, Math.round(3 * D.enemyMul));
+    for (let i = 0; i < n; i++) b.enemy(x + 3 + i * 7);
+    b.coins(x + 6, x + 9, GROUND_ROW - 3);
+  } },
+  tower: { w: 16, minT: 4, build: function (b, x, rng, D) {
+    b.step(x + 6, 2); b.step(x + 7, 2);
+    b.step(x + 10, 3); b.step(x + 11, 3);
+    b.coins(x + 6, x + 7, GROUND_ROW - 4);
+    b.coins(x + 10, x + 11, GROUND_ROW - 5);
+    if (rng() < 0.6) b.enemy(x + 13);
+  } },
+  gapstack: { w: 20, minT: 5, build: function (b, x, rng, D) {
+    const w1 = 2 + Math.floor(rng() * 2), w2 = 2 + Math.floor(rng() * 2);
+    b.pit(x + 3, x + 3 + w1 - 1);
+    b.row(x + 8, x + 11, GROUND_ROW - 3, '#');          /* 中间一块悬空平台 */
+    b.coins(x + 8, x + 11, GROUND_ROW - 5);
+    b.pit(x + 14, x + 14 + w2 - 1);
+    /* 悬空平台上不放怪：玩家跳上来的瞬间撞到就太亏了 */
+  } },
+  coinarc: { w: 14, minT: 1, build: function (b, x, rng, D) {
+    for (let i = 0; i < 5; i++) {
+      const ty = GROUND_ROW - 2 - (i === 2 ? 3 : (i === 1 || i === 3 ? 2 : 1));
+      b.set(x + 5 + i, ty, 'o');
+    }
+    b.enemy(x + 11);
+  } },
+  runway: { w: 20, minT: 6, build: function (b, x, rng, D) {
+    b.enemy(x + 6); b.enemy(x + 13);
+    b.coins(x + 8, x + 11, GROUND_ROW - 2);
+  } }
+};
+const CHUNK_ORDER = ['flat', 'coinarc', 'pit', 'pipe', 'stairs', 'bricks', 'enemies', 'tower', 'gapstack', 'runway'];
+
+/* 按关卡挑段：越后面越难（第 1~2 关就有坑和水管，砖块/问号从第 3 关开始） */
+function pickChunks(n, D, rng) {
+  const tier = n <= 2 ? 0 : (n <= 5 ? 1 : (n <= 8 ? 2 : 3));
+  const minT = [1, 2, 3, 6][tier];
+  const pool = CHUNK_ORDER.filter(function (k) { return CHUNKS[k].minT <= minT; });
+  const count = Math.max(6, Math.min(12, 5 + Math.round(n * 0.6 * D.width)));
+  const out = [];
+  const last = { k: '' };
+  for (let i = 0; i < count; i++) {
+    /* 别连着来两段一样的；第 1 段给个平地热热身 */
+    let k = pool[Math.floor(rng() * pool.length)];
+    if (k === last.k) k = pool[(pool.indexOf(k) + 1) % pool.length];
+    if (i === 0 && minT >= 1) k = 'flat';
+    out.push(k);
+    last.k = k;
+  }
+  /* 至少留一个坑（3 关以后） */
+  if (n >= 3 && out.indexOf('pit') < 0 && out.indexOf('gapstack') < 0) out[out.length - 2] = 'pit';
+  return out;
+}
+
+/* 生成一关 */
+function buildLevel(n, diffKey, seed) {
+  const D = diffOf(diffKey);
+  const rng = mulberry32(((seed >>> 0) ^ (n * 7919)) >>> 0);
+  const chunks = pickChunks(n, D, rng);
+  const width = 10 + chunks.reduce(function (s, k) { return s + CHUNKS[k].w; }, 0) + 14;
+  const b = newBuilder(width);
+  b.ground(0, width - 1);                       /* 先铺满地面 */
+  b.coins(3, 5, GROUND_ROW - 2);
+  let x = 10;
+  chunks.forEach(function (k) { CHUNKS[k].build(b, x, rng, D); x += CHUNKS[k].w; });
+  /* 怪的"公平性"过筛：坑沿 2 格内不刷、悬空平台上不刷、彼此至少隔 6 格。
+     这条规则是给玩家的保证 —— 跳过坑落地的那一下不该正好撞上怪。 */
+  const pits = [];
+  let run = 0;
+  for (let tx = 0; tx < width; tx++) {
+    if (!solidChar(b.grid[GROUND_ROW][tx])) { if (!run) pits.push({ a: tx, b: tx }); else pits[pits.length - 1].b = tx; run = 1; }
+    else run = 0;
+  }
+  const nearPit = function (tx) {
+    return pits.some(function (p) { return tx >= p.a - 2 && tx <= p.b + 2; });
+  };
+  const kept = [];
+  b.enemies.sort(function (p, q) { return p.tx - q.tx; });
+  b.enemies.forEach(function (e) {
+    if (e.ty !== GROUND_ROW - 1) return;                 /* 只留地面上的怪 */
+    if (nearPit(e.tx)) return;                           /* 坑沿附近不刷 */
+    if (!solidChar(b.grid[GROUND_ROW][e.tx])) return;    /* 脚下要是实地 */
+    if (kept.some(function (k) { return Math.abs(k.tx - e.tx) < 6; })) return;
+    kept.push(e);
+  });
+  b.enemies = kept;
+  /* 坑的正上方不放实体块：否则玩家跳过去会顶头、又掉回坑里（这种"陷阱"不该有） */
+  pits.forEach(function (p) {
+    for (let tx = p.a; tx <= p.b; tx++) {
+      for (let ty = GROUND_ROW - 6; ty < GROUND_ROW; ty++) {
+        const c = b.grid[ty][tx];
+        if (c === '#' || c === 'B' || c === '?' || c === 'M' || c === 'p' || c === '=') b.grid[ty][tx] = '.';
+      }
+    }
+  });
+  /* 终点：一段平地 + 旗杆 */
+  const flagTx = width - 7;
+  for (let ty = GROUND_ROW - 1; ty >= GROUND_ROW - 9; ty--) b.set(flagTx, ty, 'F');
+  b.set(flagTx, GROUND_ROW - 10, 'X');          /* 旗子 */
+  b.coins(flagTx - 5, flagTx - 3, GROUND_ROW - 3);
+  const time = Math.round((190 + width * 0.55) * D.timeMul);
+  return {
+    n: n, name: (n + ' · ' + LEVEL_NAMES[(n - 1) % LEVEL_NAMES.length]), width: width,
+    grid: b.grid, enemies: b.enemies, items: b.items,
+    flagTx: flagTx, flagTop: GROUND_ROW - 10,
+    spawn: { x: 2 * TILE, y: GROUND_ROW * TILE - SMALL_H },
+    time: time,
+    sky: ['day', 'dusk', 'night', 'cave'][(n - 1) % 4]
+  };
+}
+function skipNothing() { return -99; }          /* pit(-99,0) 不碰任何格子，纯占位 */
+
+/* ---------- 状态 ---------- */
+function newRun(levelN, diffKey, lives, seed) {
+  const st = {
+    levelN: Math.max(1, Math.min(LEVEL_COUNT, levelN | 0 || 1)),
+    diff: diffKey, seed: (seed === undefined || seed === null) ? (Date.now() & 0x7fffffff) : (seed | 0),
+    lives: lives === undefined ? 3 : Math.max(1, lives | 0),
+    score: 0, coins: 0, t: 0,
+    viewW: VIEW_W_DEF, camX: 0,
+    state: 'play', deadT: 0, clearT: 0,
+    over: false, win: false, cleared: [], deaths: 0, stomps: 0,
+    events: [], pops: [],
+    lv: null, grid: null, w: 0, enemies: [], items: [], player: null,
+    time: 0, timeMax: 0
+  };
+  buildInto(st);
+  return st;
+}
+
+/* 把当前关铺进状态（丢命重来时也用这个） */
+function buildInto(st) {
+  const lv = buildLevel(st.levelN, st.diff, st.seed);
+  st.lv = lv; st.w = lv.width;
+  st.grid = lv.grid.map(function (row) { return row.slice(); });
+  st.time = st.timeMax = lv.time;
+  st.enemies = lv.enemies.map(function (e) {
+    return { x: e.tx * TILE + (TILE - ENEMY_W) / 2, y: e.ty * TILE + (TILE - ENEMY_H),
+             w: ENEMY_W, h: ENEMY_H, vx: -ENEMY_V, vy: 0, alive: true, squash: 0, onGround: false,
+             homeX: e.tx * TILE + (TILE - ENEMY_W) / 2 };
+  });
+  st.items = lv.items.map(function (i) {
+    return { x: i.tx * TILE + (TILE - MOB_W) / 2, y: i.ty * TILE + (TILE - MOB_H), w: MOB_W, h: MOB_H,
+             vx: MOB_V, vy: 0, kind: i.kind, alive: true };
+  });
+  st.player = {
+    x: lv.spawn.x, y: lv.spawn.y, w: SMALL_W, h: SMALL_H, vx: 0, vy: 0,
+    grounded: false, jumpHeld: false, coyote: 0, big: false, invuln: 0,
+    facing: 1, animT: 0, runT: 0
+  };
+  st.state = 'play'; st.deadT = 0; st.clearT = 0;
+  st.events.length = 0; st.pops.length = 0;
+  st.camX = 0;
+}
+
+function emit(st, o) { st.events.push(o); }
+function addScore(st, v) { st.score += v; }
+
+function tileAt(st, tx, ty) {
+  if (ty < 0 || ty >= ROWS) return '.';
+  if (tx < 0 || tx >= st.w) return '#';        /* 关卡左右两边当墙 */
+  return st.grid[ty][tx];
+}
+function solidAt(st, tx, ty) { return solidChar(tileAt(st, tx, ty)); }
+function rectTiles(st, r) {
+  return {
+    x0: Math.floor(r.x / TILE), x1: Math.floor((r.x + r.w - 0.001) / TILE),
+    y0: Math.floor(r.y / TILE), y1: Math.floor((r.y + r.h - 0.001) / TILE)
+  };
+}
+function overlap(a, b) {
+  return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
+}
+
+/* ---------- 顶砖块 ---------- */
+function bumpTile(st, tx, ty) {
+  const c = tileAt(st, tx, ty);
+  if (c === '?' || c === 'M') {
+    st.grid[ty][tx] = '=';
+    if (c === 'M') {
+      st.items.push({ x: tx * TILE + (TILE - MOB_W) / 2, y: (ty - 1) * TILE + (TILE - MOB_H),
+                      w: MOB_W, h: MOB_H, vx: MOB_V, vy: 0, kind: 'mushroom', alive: true, born: 0 });
+      emit(st, { t: 'bump', tx: tx, ty: ty, kind: 'mushroom' });
+    } else {
+      st.coins++; addScore(st, SCORE_COIN);
+      emit(st, { t: 'coin', tx: tx, ty: ty, from: 'block' });
+    }
+  } else if (c === 'B') {
+    if (st.player.big) {
+      st.grid[ty][tx] = '.';
+      addScore(st, SCORE_BRICK);
+      emit(st, { t: 'break', tx: tx, ty: ty });
+    } else {
+      emit(st, { t: 'bump', tx: tx, ty: ty, kind: 'brick' });
+    }
+  } else if (c === 'p' || c === '#' || c === '=') {
+    emit(st, { t: 'bump', tx: tx, ty: ty, kind: 'solid' });
+  }
+}
+
+/* ---------- 受伤 / 死亡 / 过关 ---------- */
+function hurt(st) {
+  const p = st.player;
+  if (p.invuln > 0 || st.state !== 'play') return;
+  if (p.big) {
+    p.big = false; p.h = SMALL_H; p.w = SMALL_W; p.y += (BIG_H - SMALL_H);
+    p.invuln = INVULN_T;
+    emit(st, { t: 'shrink' });
+  } else {
+    kill(st, 'enemy');
+  }
+}
+function kill(st, cause) {
+  if (st.state !== 'play') return;
+  st.state = 'dying'; st.deadT = 0;
+  const p = st.player;
+  p.vy = -470; p.vx = 0;
+  emit(st, { t: 'die', cause: cause });
+}
+function loseLife(st) {
+  st.lives--; st.deaths++;
+  if (st.lives <= 0) { finish(st, false); return; }
+  buildInto(st);
+  emit(st, { t: 'respawn', lives: st.lives });
+}
+function clearLevel(st) {
+  if (st.state !== 'play') return;
+  st.state = 'clear'; st.clearT = 0;
+  addScore(st, SCORE_CLEAR + Math.floor(st.time) * 5);
+  emit(st, { t: 'clear', levelN: st.levelN, score: st.score });
+}
+function nextLevel(st) {
+  if (st.levelN >= LEVEL_COUNT) { finish(st, true); return false; }
+  st.levelN++;
+  st.cleared.push(st.levelN - 1);
+  buildInto(st);
+  return true;
+}
+function finish(st, win) {
+  st.state = 'over'; st.over = true; st.win = !!win;
+  emit(st, { t: 'over', win: st.win, score: st.score, coins: st.coins, levelN: st.levelN, deaths: st.deaths });
+}
+
+/* ---------- 一帧 ---------- */
+function stepRun(st, dt, input) {
+  dt = Math.max(0, Math.min(0.033, dt || 0));
+  input = input || {};
+  st.t += dt;
+  const p = st.player;
+
+  if (st.state === 'dying') {
+    st.deadT += dt;
+    p.vy += GRAV * dt; p.y += p.vy * dt;
+    if (st.deadT >= DIE_T) loseLife(st);
+    return st.events;
+  }
+  if (st.state === 'clear') {
+    st.clearT += dt;
+    p.vx = 0;
+    p.vy += GRAV * dt;
+    moveY(st, dt, true);
+    if (st.clearT >= CLEAR_T) {
+      if (!nextLevel(st)) return st.events;
+    }
+    updateCamera(st);
+    return st.events;
+  }
+  if (st.state === 'over') return st.events;
+
+  /* ---- 时间 ---- */
+  st.time -= TIME_RATE * dt;
+  if (st.time <= 0) { st.time = 0; kill(st, 'time'); return st.events; }
+
+  /* ---- 左右移动 ---- */
+  const dir = (input.right ? 1 : 0) - (input.left ? 1 : 0);
+  const acc = p.grounded ? RUN_ACC : AIR_ACC;
+  if (dir !== 0) {
+    p.vx += dir * acc * dt;
+    p.vx = Math.max(-RUN_MAX, Math.min(RUN_MAX, p.vx));
+    p.facing = dir;
+  } else if (p.grounded) {
+    const f = FRICTION * dt;
+    if (Math.abs(p.vx) <= f) p.vx = 0; else p.vx -= Math.sign(p.vx) * f;
+  }
+  /* ---- 跳 ---- */
+  if (p.grounded) p.coyote = COYOTE; else p.coyote = Math.max(0, p.coyote - dt);
+  if (input.jump) {
+    if (!p.jumpHeld && p.coyote > 0) {
+      p.vy = JUMP_V; p.jumpHeld = true; p.grounded = false; p.coyote = 0;
+      emit(st, { t: 'jump' });
+    }
+  } else {
+    p.jumpHeld = false;
+  }
+  /* ---- 重力 ---- */
+  const g = (p.jumpHeld && p.vy < 0) ? GRAV_HOLD : GRAV;
+  p.vy = Math.min(MAX_FALL, p.vy + g * dt);
+  /* ---- 走 ---- */
+  moveX(st, dt);
+  moveY(st, dt, false);
+  if (p.invuln > 0) p.invuln = Math.max(0, p.invuln - dt);
+  p.animT += dt;
+  if (Math.abs(p.vx) > 20 && p.grounded) p.runT += dt * (0.6 + Math.abs(p.vx) / RUN_MAX); else p.runT = 0;
+
+  /* ---- 吃金币 / 碰旗杆 ---- */
+  const rt = rectTiles(st, p);
+  for (let ty = rt.y0; ty <= rt.y1; ty++) {
+    for (let tx = rt.x0; tx <= rt.x1; tx++) {
+      const c = tileAt(st, tx, ty);
+      if (c === 'o') { st.grid[ty][tx] = '.'; st.coins++; addScore(st, SCORE_COIN); emit(st, { t: 'coin', tx: tx, ty: ty }); }
+      else if (c === 'F') { clearLevel(st); return st.events; }
+    }
+  }
+
+  stepEnemies(st, dt);
+  stepItems(st, dt);
+
+  /* ---- 掉出关卡 ---- */
+  if (p.y > VIEW_H + 40) kill(st, 'pit');
+
+  updateCamera(st);
+  return st.events;
+}
+
+function moveX(st, dt) {
+  const p = st.player;
+  p.x += p.vx * dt;
+  const ty0 = Math.floor(p.y / TILE), ty1 = Math.floor((p.y + p.h - 0.001) / TILE);
+  if (p.vx > 0) {
+    const tx = Math.floor((p.x + p.w - 0.001) / TILE);
+    for (let ty = ty0; ty <= ty1; ty++) if (solidAt(st, tx, ty)) { p.x = tx * TILE - p.w; p.vx = 0; break; }
+  } else if (p.vx < 0) {
+    const tx = Math.floor(p.x / TILE);
+    for (let ty = ty0; ty <= ty1; ty++) if (solidAt(st, tx, ty)) { p.x = (tx + 1) * TILE; p.vx = 0; break; }
+  }
+  if (p.x < 0) { p.x = 0; p.vx = 0; }
+  const maxX = st.w * TILE - p.w;
+  if (p.x > maxX) { p.x = maxX; p.vx = 0; }
+}
+
+function moveY(st, dt, noBump) {
+  const p = st.player;
+  p.y += p.vy * dt;
+  const tx0 = Math.floor(p.x / TILE), tx1 = Math.floor((p.x + p.w - 0.001) / TILE);
+  if (p.vy >= 0) {
+    const ty = Math.floor((p.y + p.h - 0.001) / TILE);
+    for (let tx = tx0; tx <= tx1; tx++) {
+      if (solidAt(st, tx, ty)) {
+        p.y = ty * TILE - p.h;
+        if (p.vy > 60) emit(st, { t: 'land', vy: p.vy });
+        p.vy = 0; p.grounded = true;
+        return;
+      }
+    }
+    p.grounded = false;
+  } else {
+    const ty = Math.floor(p.y / TILE);
+    let hit = null, bestD = 1e9;
+    const cx = p.x + p.w / 2;
+    for (let tx = tx0; tx <= tx1; tx++) {
+      if (solidAt(st, tx, ty)) {
+        const d = Math.abs((tx + 0.5) * TILE - cx);
+        if (d < bestD) { bestD = d; hit = { tx: tx, ty: ty }; }
+      }
+    }
+    if (hit) {
+      p.y = (hit.ty + 1) * TILE;
+      p.vy = 0;
+      if (!noBump) bumpTile(st, hit.tx, hit.ty);
+      else p.jumpHeld = true;
+    }
+    p.grounded = false;
+  }
+}
+
+/* ---------- 敌人 ---------- */
+function stepEnemies(st, dt) {
+  const p = st.player;
+  for (const e of st.enemies) {
+    if (!e.alive) continue;
+    if (e.squash > 0) { e.squash -= dt; if (e.squash <= 0) e.alive = false; continue; }
+    /* 只在玩家附近推进，远处的怪先冻着（省算力也更稳定） */
+    if (Math.abs(e.x - p.x) > st.viewW * 1.2) continue;
+    e.vy = Math.min(MAX_FALL, e.vy + GRAV * dt);
+    e.x += e.vx * dt;
+    const ty0 = Math.floor(e.y / TILE), ty1 = Math.floor((e.y + e.h - 0.001) / TILE);
+    if (e.vx > 0) {
+      const tx = Math.floor((e.x + e.w - 0.001) / TILE);
+      for (let ty = ty0; ty <= ty1; ty++) if (solidAt(st, tx, ty)) { e.x = tx * TILE - e.w; e.vx = -Math.abs(e.vx); break; }
+    } else {
+      const tx = Math.floor(e.x / TILE);
+      for (let ty = ty0; ty <= ty1; ty++) if (solidAt(st, tx, ty)) { e.x = (tx + 1) * TILE; e.vx = Math.abs(e.vx); break; }
+    }
+    e.y += e.vy * dt;
+    const tx0 = Math.floor(e.x / TILE), tx1 = Math.floor((e.x + e.w - 0.001) / TILE);
+    if (e.vy >= 0) {
+      const ty = Math.floor((e.y + e.h - 0.001) / TILE);
+      for (let tx = tx0; tx <= tx1; tx++) if (solidAt(st, tx, ty)) { e.y = ty * TILE - e.h; e.vy = 0; break; }
+    }
+    if (e.y > VIEW_H + 60) { e.alive = false; continue; }
+    /* 在出生点附近来回巡逻（±2 格）：别让它们满关乱走、聚成一堆 */
+    const home = (e.homeX === undefined ? e.x : e.homeX);
+    if (e.x > home + 2 * TILE) e.vx = -Math.abs(e.vx);
+    else if (e.x < home - 2 * TILE) e.vx = Math.abs(e.vx);
+    /* 和玩家相撞 */
+    if (st.state === 'play' && overlap(p, e)) {
+      /* 只要"脚踩在怪头顶那一块"就算踩（不强制正在下落）：
+         踩完弹起来、顶点附近碰到第二只怪时，玩家只会觉得"我踩到它了" */
+      const stomping = (p.y + p.h) - e.y < 18 && p.vy > -60;
+      if (stomping) {
+        e.squash = 0.45; e.vx = 0; st.stomps++;
+        addScore(st, SCORE_STOMP);
+        p.vy = STOMP_V; p.jumpHeld = false;
+        emit(st, { t: 'stomp', x: e.x, y: e.y });
+      } else {
+        hurt(st);
+      }
+    }
+  }
+}
+
+/* ---------- 蘑菇 ---------- */
+function stepItems(st, dt) {
+  const p = st.player;
+  for (const m of st.items) {
+    if (!m.alive) continue;
+    m.vy = Math.min(MAX_FALL, m.vy + GRAV * dt);
+    m.x += m.vx * dt;
+    const ty0 = Math.floor(m.y / TILE), ty1 = Math.floor((m.y + m.h - 0.001) / TILE);
+    if (m.vx > 0) {
+      const tx = Math.floor((m.x + m.w - 0.001) / TILE);
+      for (let ty = ty0; ty <= ty1; ty++) if (solidAt(st, tx, ty)) { m.x = tx * TILE - m.w; m.vx = -Math.abs(m.vx); break; }
+    } else {
+      const tx = Math.floor(m.x / TILE);
+      for (let ty = ty0; ty <= ty1; ty++) if (solidAt(st, tx, ty)) { m.x = (tx + 1) * TILE; m.vx = Math.abs(m.vx); break; }
+    }
+    m.y += m.vy * dt;
+    const tx0 = Math.floor(m.x / TILE), tx1 = Math.floor((m.x + m.w - 0.001) / TILE);
+    if (m.vy >= 0) {
+      const ty = Math.floor((m.y + m.h - 0.001) / TILE);
+      for (let tx = tx0; tx <= tx1; tx++) if (solidAt(st, tx, ty)) { m.y = ty * TILE - m.h; m.vy = 0; break; }
+    }
+    if (m.y > VIEW_H + 60) { m.alive = false; continue; }
+    if (st.state === 'play' && overlap(p, m)) {
+      m.alive = false;
+      if (!p.big) {
+        p.big = true; p.w = BIG_W; p.h = BIG_H; p.y -= (BIG_H - SMALL_H);
+        pushOutOfSolids(st);
+        addScore(st, SCORE_GROW);
+        emit(st, { t: 'grow' });
+      } else {
+        addScore(st, SCORE_GROW);
+        emit(st, { t: 'grow', again: true });
+      }
+    }
+  }
+}
+
+function skipNothing() { return -99; }          /* 保留：给"不想挖坑"的地方占位用 */
+
+/* 变大时别卡进地板/天花板里 */
+function pushOutOfSolids(st) {
+  const p = st.player;
+  for (let guard = 0; guard < 12; guard++) {
+    const rt = rectTiles(st, p);
+    let moved = false;
+    for (let ty = rt.y0; ty <= rt.y1 && !moved; ty++) {
+      for (let tx = rt.x0; tx <= rt.x1; tx++) {
+        if (!solidAt(st, tx, ty)) continue;
+        const tileMid = (ty + 0.5) * TILE, pMid = p.y + p.h / 2;
+        if (tileMid < pMid) p.y = (ty + 1) * TILE;      /* 挡在头顶 → 往下让 */
+        else p.y = ty * TILE - p.h;                    /* 卡在脚下 → 站上去 */
+        moved = true; break;
+      }
+    }
+    if (!moved) return;
+  }
+}
+
+function updateCamera(st) {
+  const p = st.player;
+  const maxX = Math.max(0, st.w * TILE - st.viewW);
+  let target = p.x + p.w / 2 - st.viewW * 0.42;
+  st.camX = Math.max(0, Math.min(maxX, target));
+}
+
+/* ---------- 给 UI / 测试用的小工具 ---------- */
+function levelInfo(n, diffKey, seed) {
+  const lv = buildLevel(n, diffKey, seed);
+  let pits = 0, coins = 0, blocks = 0, enemies = lv.enemies.length, maxPit = 0, run = 0;
+  for (let tx = 0; tx < lv.width; tx++) {
+    const solid = solidChar(lv.grid[GROUND_ROW][tx]);
+    if (!solid) { run++; } else { if (run) { pits++; maxPit = Math.max(maxPit, run); } run = 0; }
+  }
+  if (run) { pits++; maxPit = Math.max(maxPit, run); }
+  for (let ty = 0; ty < ROWS; ty++) {
+    for (let tx = 0; tx < lv.width; tx++) {
+      const c = lv.grid[ty][tx];
+      if (c === 'o') coins++;
+      else if (c === '?' || c === 'M' || c === 'B') blocks++;
+    }
+  }
+  return { width: lv.width, time: lv.time, pits: pits, maxPit: maxPit, coins: coins, blocks: blocks,
+           enemies: enemies, flagTx: lv.flagTx, sky: lv.sky };
+}
+
+/* 跳跃能到多远 / 多高（理论上限，测试和关卡生成都靠它保证"跳得过去"） */
+function jumpReach() {
+  const riseT = Math.abs(JUMP_V) / GRAV_HOLD;
+  const hMax = (JUMP_V * JUMP_V) / (2 * GRAV_HOLD);
+  const fallT = Math.sqrt(2 * hMax / GRAV);
+  return { hMax: hMax, airT: riseT + fallT, dist: RUN_MAX * (riseT + fallT) };
+}
+
+</script>
+
+<script id="ui">
+(function () {
+  'use strict';
+  const $ = function (id) { return document.getElementById(id); };
+  const clamp = function (v, a, b) { return Math.max(a, Math.min(b, v)); };
+  const round = Math.round;
+
+  /* ==================================================================
+     本次会话战绩：只在内存里，一条命打到第 12 关通关算胜
+     ================================================================== */
+  const stats = { total: 0, win: 0, lose: 0, draw: 0 };
+  let statsCounted = false;
+  function renderStats() {
+    $('stTotal').textContent = stats.total; $('stWin').textContent = stats.win;
+    $('stLose').textContent = stats.lose; $('stDraw').textContent = stats.draw;
+  }
+  function recordResult(r) {
+    if (statsCounted) return;
+    statsCounted = true;
+    stats.total++;
+    if (r === 'win') stats.win++; else if (r === 'lose') stats.lose++; else stats.draw++;
+    renderStats();
+  }
+
+  /* ==================================================================
+     主题：一行一套配色（和其他游戏同一套 26 个字段）
+     ================================================================== */
+  const THEME_KEYS = ['key','name','bg','glow1','glow2','panel','brd','text','muted','accent','accent2','danger',
+                      'felt1','felt2','back1','back2','wood1','wood2','wood3','wline','wframe','board1','board2','grid','panel2','line'];
+  const THEME_ROWS = [
+    'midnight|午夜蓝|#0a1020|#1c2f4f|#241c4a|rgba(23,33,54,.78)|rgba(148,163,184,.20)|#e8eefb|#8fa2bb|#38bdf8|#f5b942|#f87171|#17335c|#0a1a33|#3a5a8f|#1d3355|#f2d5a0|#e7c088|#d6a45f|rgba(88,55,20,.75)|rgba(70,42,14,.90)|#0d1526|#080e1a|rgba(148,163,184,.09)|#16233a|#25364e',
+    'emerald|翡翠|#06120e|#0f3d2e|#14261c|rgba(14,37,29,.78)|rgba(110,231,183,.18)|#e4f5ec|#7fa595|#34d399|#fbbf24|#fb7185|#124a37|#072018|#2f7d5f|#1a4736|#ecd9ac|#ddc48c|#c8a869|rgba(74,56,24,.72)|rgba(60,44,16,.90)|#0a1a14|#061009|rgba(148,220,190,.10)|#0f2a20|#1c4a3a',
+    'rosewood|紫檀|#17100b|#4a2415|#2b1620|rgba(46,26,19,.78)|rgba(214,160,110,.22)|#f8ece3|#b69884|#f59e0b|#60a5fa|#ef4444|#5c2a1c|#2e1410|#8f4a35|#4a2018|#e8c39a|#d9ab7c|#c08d5e|rgba(80,44,24,.78)|rgba(64,34,16,.92)|#140d09|#0c0705|rgba(230,190,150,.10)|#33201a|#4a3126',
+    'obsidian|曜金|#08080a|#2c2614|#1a1a22|rgba(22,22,26,.82)|rgba(234,179,8,.20)|#f6f2e6|#a49c86|#eab308|#22d3ee|#f87171|#2a2a30|#141418|#4a4a52|#232328|#e6d9b8|#d4c194|#bda871|rgba(70,58,32,.75)|rgba(54,44,22,.92)|#0c0c10|#050507|rgba(234,200,120,.08)|#17171c|#2e2e34',
+    'sakura|樱雪|#fdf6f7|#ffe3ec|#fff1e6|rgba(255,255,255,.86)|rgba(190,120,145,.24)|#3a2b31|#8a7078|#e0526f|#7c6bd6|#dc2626|#e9bfc9|#d69fae|#c98a9c|#a06374|#fbe8e6|#f3d5d2|#e6bdb9|rgba(150,96,96,.55)|rgba(140,86,86,.80)|#eef1f7|#e2e7f0|rgba(120,140,170,.18)|#ffffff|rgba(190,120,145,.30)',
+    'frost|霜白|#f2f6fb|#dbeafe|#e6e6ff|rgba(255,255,255,.88)|rgba(100,116,139,.20)|#1e293b|#64748b|#2563eb|#0891b2|#dc2626|#c9d8ea|#aec2da|#7f9ec4|#4e6d92|#e8eef6|#d7e1ee|#c2cfe0|rgba(80,100,130,.50)|rgba(66,84,110,.78)|#eef2f8|#e2e8f2|rgba(120,140,170,.18)|#ffffff|rgba(100,116,139,.22)'
+  ];
+  const THEMES = {}, THEME_LIST = [];
+  THEME_ROWS.forEach(function (row) {
+    const p = row.split('|'), t = {};
+    for (let i = 0; i < THEME_KEYS.length; i++) t[THEME_KEYS[i]] = p[i];
+    THEMES[t.key] = t; THEME_LIST.push(t);
+  });
+  const THEME_CSS = { bg:'--bg', glow1:'--glow-1', glow2:'--glow-2', panel:'--panel', brd:'--panel-brd',
+                      text:'--text', muted:'--muted', accent:'--accent', accent2:'--accent-2', danger:'--danger',
+                      felt1:'--felt-1', felt2:'--felt-2', back1:'--tile-back-1', back2:'--tile-back-2',
+                      panel2:'--panel2', line:'--line' };
+  let theme = THEMES.midnight;
+  function applyTheme(key) {
+    theme = THEMES[key] || THEMES.midnight;
+    const s = document.documentElement.style;
+    for (const k in THEME_CSS) s.setProperty(THEME_CSS[k], theme[k]);
+  }
+
+  const pref = {
+    get: function (k, d) { try { const v = localStorage.getItem(k); return v === null ? d : v; } catch (e) { return d; } },
+    set: function (k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+  };
+
+  /* ==================================================================
+     音效：WebAudio 合成 + 四档音量
+     ================================================================== */
+  const Sfx = (function () {
+    const VOLS = { off: 0, low: 0.32, mid: 0.68, high: 1.0 };
+    let ctx = null, master = null, noise = null, level = 'mid';
+    let vol = VOLS.mid;
+    try {
+      const sv = localStorage.getItem('mario.vol');
+      if (sv !== null) { const v = Number(sv); if (v >= 0 && v <= 1 && v > 0) vol = v; }
+    } catch (e) {}
+    try { const lv = localStorage.getItem('mario.sound'); if (lv && VOLS[lv] !== undefined) level = lv; } catch (e) {}
+
+    function setVolume(v) {
+      vol = clamp(Number(v) || 0, 0, 1);
+      if (master) master.gain.value = vol;
+      return vol;
+    }
+    function ensure() {
+      if (vol <= 0) return false;
+      try {
+        if (!ctx) {
+          const AC = window.AudioContext || window.webkitAudioContext;
+          if (!AC) return false;
+          ctx = new AC();
+          master = ctx.createGain();
+          master.gain.value = vol;
+          master.connect(ctx.destination);
+          const len = Math.max(1, Math.floor(ctx.sampleRate * 0.12));
+          noise = ctx.createBuffer(1, len, ctx.sampleRate);
+          const d = noise.getChannelData(0);
+          for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 2.4);
+        }
+        if (ctx.state === 'suspended') ctx.resume();
+        return true;
+      } catch (e) { return false; }
+    }
+    function bus() { const g = ctx.createGain(); g.connect(master); return g; }
+    function tone(o) {
+      if (!ensure()) return;
+      const t = ctx.currentTime + (o.delay || 0);
+      const osc = ctx.createOscillator(), g = ctx.createGain();
+      osc.type = o.type || 'square';
+      osc.frequency.setValueAtTime(o.freq, t);
+      if (o.slideTo) osc.frequency.exponentialRampToValueAtTime(Math.max(30, o.slideTo), t + (o.dur || 0.15));
+      const peak = o.gain === undefined ? 0.16 : o.gain;
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(Math.max(0.0002, peak), t + (o.atk || 0.006));
+      g.gain.exponentialRampToValueAtTime(0.0001, t + (o.dur || 0.15));
+      osc.connect(g); g.connect(bus());
+      osc.start(t); osc.stop(t + (o.dur || 0.15) + 0.03);
+    }
+    function fizz(o) {
+      if (!ensure()) return;
+      const t = ctx.currentTime + (o.delay || 0);
+      const src = ctx.createBufferSource(); src.buffer = noise;
+      const bp = ctx.createBiquadFilter();
+      bp.type = o.type || 'bandpass';
+      bp.frequency.setValueAtTime(o.bright, t);
+      if (o.slideTo) bp.frequency.exponentialRampToValueAtTime(Math.max(60, o.slideTo), t + (o.dur || 0.14));
+      bp.Q.value = o.q === undefined ? 0.9 : o.q;
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(Math.max(0.0002, o.gain === undefined ? 0.2 : o.gain), t);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + (o.dur || 0.14));
+      src.connect(bp); bp.connect(g); g.connect(bus());
+      src.start(t); src.stop(t + (o.dur || 0.14) + 0.03);
+    }
+    function seq(notes, type, gain, gap) {
+      notes.forEach(function (f, i) { tone({ freq: f, dur: 0.16, type: type || 'square', gain: gain || 0.15, delay: i * (gap || 0.075) }); });
+    }
+    return {
+      jump: function () { tone({ freq: 320, dur: 0.16, type: 'square', gain: 0.13, slideTo: 760 }); },
+      land: function () { fizz({ bright: 700, slideTo: 200, dur: 0.08, gain: 0.10 }); tone({ freq: 180, dur: 0.09, type: 'sine', gain: 0.12, slideTo: 120 }); },
+      coin: function () { tone({ freq: 988, dur: 0.07, type: 'square', gain: 0.13 }); tone({ freq: 1319, dur: 0.16, type: 'square', gain: 0.13, delay: 0.07 }); },
+      stomp: function () { fizz({ bright: 1400, slideTo: 300, dur: 0.1, gain: 0.16 }); tone({ freq: 500, dur: 0.12, type: 'square', gain: 0.12, slideTo: 200 }); },
+      bump: function () { fizz({ bright: 400, slideTo: 160, dur: 0.12, gain: 0.18, q: 1.4 }); tone({ freq: 150, dur: 0.1, type: 'sine', gain: 0.14, slideTo: 90 }); },
+      brick: function () { fizz({ bright: 1800, slideTo: 500, dur: 0.18, gain: 0.2, q: 0.7 }); tone({ freq: 220, dur: 0.14, type: 'square', gain: 0.1, slideTo: 90 }); },
+      mushroom: function () { seq([523, 659, 784], 'triangle', 0.13); },
+      grow: function () { seq([523, 659, 784, 1047, 1319], 'square', 0.13); },
+      shrink: function () { seq([784, 587, 440, 330], 'square', 0.12, 0.07); },
+      die: function () { seq([659, 622, 587, 494, 392, 330, 262], 'square', 0.15, 0.11); },
+      clear: function () { seq([523, 659, 784, 1047, 1319, 1568], 'square', 0.15, 0.11); },
+      best: function () { seq([784, 988, 1175, 1568], 'triangle', 0.14, 0.1); },
+      over: function (win) {
+        if (win) seq([523, 659, 784, 1047, 784, 1047, 1319], 'square', 0.15, 0.13);
+        else seq([392, 330, 262, 196], 'triangle', 0.16, 0.16);
+      },
+      get volume() { return vol; },
+      set volume(v) { return setVolume(v); },
+      setVolume: setVolume,
+      get level() { return level; },
+      setLevel: function (lv) {
+        if (VOLS[lv] === undefined) lv = 'mid';
+        level = lv;
+        if (lv === 'off') { setVolume(0); return 'off'; }
+        const pct = clamp(Number(pref.get('mario.volpct', '68')), 0, 100);
+        setVolume(pct / 100);
+        return lv;
+      },
+      get enabled() { return vol > 0; },
+      unlock: function () { ensure(); },
+      ensure: ensure
+    };
+  })();
+
+  /* ==================================================================
+     画布：逻辑坐标 = VIEW_W(视野) × 540
+     ================================================================== */
+  const canvas = $('board');
+  const ctx2d = canvas.getContext('2d');
+  let cssW = 960, cssH = 540, dpr = 1;
+  let viewKey = VIEWS[pref.get('mario.view', VIEW_DEF)] ? pref.get('mario.view', VIEW_DEF) : VIEW_DEF;
+  function viewW() { return VIEWS[viewKey] || VIEW_W_DEF; }
+
+  function layout() {
+    const wrap = $('boardWrap'), card = wrap.parentElement;
+    const availW = Math.max(240, card.clientWidth - 20);
+    const availH = Math.max(150, card.clientHeight - 20);
+    const aspect = viewW() / VIEW_H;
+    let w = availW, h = w / aspect;
+    if (h > availH) { h = availH; w = h * aspect; }
+    cssW = round(w); cssH = round(h);
+    dpr = Math.min(2, window.devicePixelRatio || 1);
+    canvas.style.width = cssW + 'px';
+    canvas.style.height = cssH + 'px';
+    canvas.width = round(cssW * dpr);
+    canvas.height = round(cssH * dpr);
+    render(0);
+  }
+
+  /* ==================================================================
+     状态
+     ================================================================== */
+  let levelN = clamp(parseInt(pref.get('mario.level', '1'), 10) || 1, 1, LEVEL_COUNT);
+  let diff = DIFFS[pref.get('mario.diff', DIFF_DEF)] ? pref.get('mario.diff', DIFF_DEF) : DIFF_DEF;
+  let lives = [3, 5, 9].indexOf(parseInt(pref.get('mario.lives', '3'), 10)) >= 0 ? parseInt(pref.get('mario.lives', '3'), 10) : 3;
+  let best = parseInt(pref.get('mario.top', '0'), 10) || 0;
+  let st = newRun(levelN, diff, lives);
+  let input = { left: false, right: false, jump: false };
+  let paused = false, overlayShown = false;
+  let parts = [], pops = [], acc = 0, lastFrame = 0, lastJumpSound = -1;
+
+  function startGame(seed) {
+    st = newRun(levelN, diff, lives, seed);
+    st.viewW = viewW();
+    statsCounted = false;
+    input.left = input.right = input.jump = false;
+    overlayShown = false; paused = false;
+    parts = []; pops = []; acc = 0;
+    $('ovMask').hidden = true;
+    updatePanel();
+    render(0);
+    return st;
+  }
+  function setLevel(n, keepScore) {
+    levelN = ((n - 1) % LEVEL_COUNT + LEVEL_COUNT) % LEVEL_COUNT + 1;
+    pref.set('mario.level', String(levelN));
+    $('levelSel').value = String(levelN);
+    const keep = keepScore ? { score: st.score, coins: st.coins, lives: st.lives } : null;
+    startGame();
+    if (keep) { st.score = keep.score; st.coins = keep.coins; st.lives = keep.lives; updatePanel(); }
+    return levelN;
+  }
+
+  /* ==================================================================
+     渲染
+     ================================================================== */
+  function skyPair(sky) {
+    const t = theme;
+    if (sky === 'dusk') return [t.glow2, t.glow1];
+    if (sky === 'night') return [t.bg, t.glow2];
+    if (sky === 'cave') return [t.felt2, t.bg];
+    return [t.glow1, t.bg];
+  }
+  function drawSky(sky, camX) {
+    const pair = skyPair(sky);
+    const g = ctx2d.createLinearGradient(0, 0, 0, VIEW_H);
+    g.addColorStop(0, pair[0]);
+    g.addColorStop(0.55, pair[1]);
+    g.addColorStop(1, theme.bg);
+    ctx2d.fillStyle = g;
+    ctx2d.fillRect(0, 0, viewW(), VIEW_H);
+    /* 一团柔光当太阳 */
+    const rg = ctx2d.createRadialGradient(viewW() * 0.78, 96, 8, viewW() * 0.78, 96, 200);
+    rg.addColorStop(0, 'rgba(255,244,205,0.30)');
+    rg.addColorStop(1, 'rgba(255,244,205,0)');
+    ctx2d.fillStyle = rg;
+    ctx2d.fillRect(0, 0, viewW(), VIEW_H);
+    /* 远山（视差 0.25） */
+    const base = 430;
+    ctx2d.fillStyle = theme.felt2;
+    ctx2d.globalAlpha = 0.75;
+    for (let i = -1; i < 7; i++) {
+      const cx = i * 320 - (camX * 0.25) % 320;
+      ctx2d.beginPath();
+      ctx2d.moveTo(cx - 150, base);
+      ctx2d.quadraticCurveTo(cx, base - 132, cx + 150, base);
+      ctx2d.closePath();
+      ctx2d.fill();
+    }
+    ctx2d.globalAlpha = 1;
+    /* 云（视差 0.4） */
+    ctx2d.fillStyle = 'rgba(255,255,255,0.16)';
+    for (let i = -1; i < 9; i++) {
+      const cx = i * 260 - (camX * 0.4) % 260;
+      const cy = 70 + (i % 3) * 46;
+      ctx2d.beginPath();
+      ctx2d.ellipse(cx, cy, 40, 15, 0, 0, Math.PI * 2);
+      ctx2d.ellipse(cx + 30, cy + 5, 28, 12, 0, 0, Math.PI * 2);
+      ctx2d.ellipse(cx - 28, cy + 6, 24, 10, 0, 0, Math.PI * 2);
+      ctx2d.fill();
+    }
+  }
+  function tileColors(c) {
+    const t = theme;
+    if (c === '#') return { top: t.wood2 || '#e7c088', body: t.wood3 || '#d6a45f', line: t.wline || 'rgba(88,55,20,.5)' };
+    if (c === 'B') return { top: t.wood3 || '#d6a45f', body: t.wood2 || '#e7c088', line: t.wline || 'rgba(88,55,20,.5)' };
+    if (c === '?' || c === 'M') return { top: t.accent2, body: t.accent2, line: 'rgba(0,0,0,.35)' };
+    if (c === '=') return { top: t.board2 || t.felt2, body: t.board1 || t.felt2, line: 'rgba(0,0,0,.35)' };
+    if (c === 'p') return { top: t.felt1, body: t.felt2, line: 'rgba(255,255,255,.22)' };
+    return { top: 'rgba(0,0,0,0)', body: 'rgba(0,0,0,0)', line: 'rgba(0,0,0,0)' };
+  }
+  function drawTile(c, x, y, ts, tx, ty, t) {
+    const col = tileColors(c);
+    if (c === '#' || c === 'B') {
+      ctx2d.fillStyle = col.body;
+      ctx2d.fillRect(x, y, ts, ts);
+      ctx2d.fillStyle = col.top;
+      ctx2d.fillRect(x, y, ts, ts * 0.30);
+      ctx2d.strokeStyle = col.line;
+      ctx2d.lineWidth = 1;
+      ctx2d.strokeRect(x + 0.5, y + 0.5, ts - 1, ts - 1);
+      if (c === 'B') {                       /* 砖缝 */
+        ctx2d.beginPath();
+        ctx2d.moveTo(x, y + ts * 0.5); ctx2d.lineTo(x + ts, y + ts * 0.5);
+        ctx2d.moveTo(x + ts * 0.5, y); ctx2d.lineTo(x + ts * 0.5, y + ts * 0.5);
+        ctx2d.moveTo(x + ts * 0.25, y + ts * 0.5); ctx2d.lineTo(x + ts * 0.25, y + ts);
+        ctx2d.moveTo(x + ts * 0.75, y + ts * 0.5); ctx2d.lineTo(x + ts * 0.75, y + ts);
+        ctx2d.strokeStyle = col.line;
+        ctx2d.stroke();
+      }
+    } else if (c === '?' || c === 'M') {
+      const glow = 0.5 + 0.5 * Math.sin(t * 6 + tx);
+      ctx2d.fillStyle = col.body;
+      ctx2d.fillRect(x, y, ts, ts);
+      ctx2d.fillStyle = 'rgba(255,255,255,' + (0.10 + 0.16 * glow) + ')';
+      ctx2d.fillRect(x + 2, y + 2, ts - 4, ts - 4);
+      ctx2d.strokeStyle = 'rgba(60,40,0,.55)';
+      ctx2d.lineWidth = 1.4;
+      ctx2d.strokeRect(x + 1, y + 1, ts - 2, ts - 2);
+      ctx2d.fillStyle = '#3a2a06';
+      ctx2d.font = '800 ' + round(ts * 0.66) + 'px system-ui,sans-serif';
+      ctx2d.textAlign = 'center';
+      ctx2d.fillText('?', x + ts / 2, y + ts * 0.72);
+      ctx2d.textAlign = 'start';
+    } else if (c === '=') {
+      ctx2d.fillStyle = col.body;
+      ctx2d.fillRect(x, y, ts, ts);
+      ctx2d.strokeStyle = col.line;
+      ctx2d.strokeRect(x + 1.5, y + 1.5, ts - 3, ts - 3);
+    } else if (c === 'p') {
+      const topMost = tileAt(st, tx, ty - 1) !== 'p';
+      ctx2d.fillStyle = col.body;
+      ctx2d.fillRect(x, y, ts, ts);
+      ctx2d.fillStyle = col.top;
+      ctx2d.fillRect(x + 2, y, ts * 0.34, ts);
+      ctx2d.fillStyle = 'rgba(0,0,0,.30)';
+      ctx2d.fillRect(x + ts * 0.7, y, ts * 0.3, ts);
+      if (topMost) {                          /* 管口 */
+        ctx2d.fillStyle = col.body;
+        ctx2d.fillRect(x - 1, y, ts + 2, ts * 0.34);
+        ctx2d.fillStyle = col.top;
+        ctx2d.fillRect(x + 1, y + 2, ts * 0.3, ts * 0.3);
+        ctx2d.strokeStyle = 'rgba(0,0,0,.35)';
+        ctx2d.strokeRect(x - 0.5, y + 0.5, ts + 1, ts * 0.34);
+      }
+    } else if (c === 'o') {
+      const k = Math.abs(Math.cos(t * 3 + tx * 0.7));
+      const cw = ts * 0.30 * (0.25 + 0.75 * k);
+      ctx2d.fillStyle = theme.accent2;
+      ctx2d.beginPath();
+      ctx2d.ellipse(x + ts / 2, y + ts / 2, cw, ts * 0.30, 0, 0, Math.PI * 2);
+      ctx2d.fill();
+      ctx2d.fillStyle = 'rgba(255,255,255,.55)';
+      ctx2d.beginPath();
+      ctx2d.ellipse(x + ts / 2 - cw * 0.25, y + ts / 2 - ts * 0.08, cw * 0.28, ts * 0.10, 0, 0, Math.PI * 2);
+      ctx2d.fill();
+    } else if (c === 'F' || c === 'X') {
+      ctx2d.fillStyle = 'rgba(220,230,245,.85)';
+      ctx2d.fillRect(x + ts * 0.42, y, ts * 0.16, ts);
+      if (c === 'X') {
+        ctx2d.fillStyle = theme.accent2;
+        ctx2d.beginPath();
+        ctx2d.moveTo(x + ts * 0.55, y + 2);
+        ctx2d.lineTo(x + ts * 1.5, y + ts * 0.34);
+        ctx2d.lineTo(x + ts * 0.55, y + ts * 0.62);
+        ctx2d.closePath();
+        ctx2d.fill();
+      }
+    }
+  }
+  function drawWorld() {
+    const ts = TILE, camX = st.camX, W = viewW();
+    const tx0 = Math.max(0, Math.floor(camX / ts) - 1);
+    const tx1 = Math.min(st.w - 1, Math.ceil((camX + W) / ts));
+    for (let ty = 0; ty < ROWS; ty++) {
+      for (let tx = tx0; tx <= tx1; tx++) {
+        const c = tileAt(st, tx, ty);
+        if (c === '.') continue;
+        drawTile(c, round(tx * ts - camX), round(ty * ts), ts, tx, ty, st.t);
+      }
+    }
+  }
+  function drawGoomba(e, camX) {
+    const x = round(e.x - camX), y = round(e.y);
+    if (e.squash > 0) {
+      ctx2d.fillStyle = theme.wood1 || '#8a5a2b';
+      ctx2d.beginPath();
+      ctx2d.ellipse(x + e.w / 2, y + e.h - 4, e.w * 0.55, 5, 0, 0, Math.PI * 2);
+      ctx2d.fill();
+      return;
+    }
+    const wob = Math.sin(st.t * 8) * 1.6;
+    ctx2d.fillStyle = theme.wood1 || '#8a5a2b';
+    ctx2d.beginPath();
+    ctx2d.ellipse(x + e.w / 2, y + e.h * 0.52, e.w * 0.52, e.h * 0.48, 0, Math.PI, 0);
+    ctx2d.fill();
+    ctx2d.fillRect(x + 2, y + e.h * 0.5, e.w - 4, e.h * 0.42);
+    ctx2d.fillStyle = '#f6efe3';
+    ctx2d.fillRect(x + 4, y + e.h * 0.40, 6, 7);
+    ctx2d.fillRect(x + e.w - 10, y + e.h * 0.40, 6, 7);
+    ctx2d.fillStyle = '#241a12';
+    ctx2d.fillRect(x + 6, y + e.h * 0.44, 3, 5);
+    ctx2d.fillRect(x + e.w - 9, y + e.h * 0.44, 3, 5);
+    ctx2d.fillStyle = '#2c1c0e';
+    ctx2d.fillRect(x + 1 + wob, y + e.h - 5, 10, 5);
+    ctx2d.fillRect(x + e.w - 11 - wob, y + e.h - 5, 10, 5);
+  }
+  function drawMushroom(m, camX) {
+    const x = round(m.x - camX), y = round(m.y);
+    ctx2d.fillStyle = theme.danger;
+    ctx2d.beginPath();
+    ctx2d.ellipse(x + m.w / 2, y + m.h * 0.48, m.w * 0.55, m.h * 0.48, 0, Math.PI, 0);
+    ctx2d.fill();
+    ctx2d.fillStyle = 'rgba(255,255,255,.9)';
+    ctx2d.beginPath();
+    ctx2d.arc(x + m.w * 0.34, y + m.h * 0.30, 3.4, 0, Math.PI * 2);
+    ctx2d.arc(x + m.w * 0.68, y + m.h * 0.34, 2.6, 0, Math.PI * 2);
+    ctx2d.fill();
+    ctx2d.fillStyle = '#f6efe3';
+    ctx2d.fillRect(x + m.w * 0.26, y + m.h * 0.5, m.w * 0.48, m.h * 0.5);
+  }
+  function drawMario(camX) {
+    const p = st.player;
+    const flick = p.invuln > 0 && Math.floor(st.t * 18) % 2 === 0;
+    if (flick) return;
+    const x = round(p.x - camX), y = round(p.y), w = p.w, h = p.h;
+    const cap = theme.danger, body = theme.accent, skin = '#f3c9a0', shoe = theme.wood1 || '#6b4423';
+    const s = h / 28;                                   /* 小个子为基准缩放 */
+    const dead = st.state === 'dying';
+    const air = !p.grounded && !dead;
+    const running = Math.abs(p.vx) > 20 && p.grounded && !dead;
+    const step = running ? (Math.floor(p.runT * 8) % 2) : 0;
+    /* 帽子 */
+    ctx2d.fillStyle = cap;
+    ctx2d.fillRect(x + w * 0.08, y, w * 0.84, 6 * s);
+    ctx2d.fillRect(x + (p.facing > 0 ? w * 0.40 : 0), y + 3 * s, w * 0.60, 3.2 * s);
+    /* 脸 */
+    ctx2d.fillStyle = skin;
+    ctx2d.fillRect(x + w * 0.14, y + 6 * s, w * 0.72, 7 * s);
+    /* 眼睛 + 胡子 */
+    ctx2d.fillStyle = '#241a12';
+    ctx2d.fillRect(x + (p.facing > 0 ? w * 0.56 : w * 0.30), y + 7.5 * s, 2.6 * s, 3 * s);
+    ctx2d.fillRect(x + w * 0.20, y + 11 * s, w * 0.60, 2.4 * s);
+    /* 身体（背带裤） */
+    ctx2d.fillStyle = body;
+    ctx2d.fillRect(x + w * 0.12, y + 13 * s, w * 0.76, 9 * s);
+    /* 手臂 */
+    ctx2d.fillStyle = skin;
+    if (air || dead) {
+      ctx2d.fillRect(x - 2 * s, y + 11 * s, 5 * s, 7 * s);
+      ctx2d.fillRect(x + w - 3 * s, y + 11 * s, 5 * s, 7 * s);
+    } else {
+      ctx2d.fillRect(x - 1 * s, y + 15 * s, 4 * s, 5 * s);
+      ctx2d.fillRect(x + w - 3 * s, y + 15 * s, 4 * s, 5 * s);
+    }
+    /* 腿 / 鞋 */
+    ctx2d.fillStyle = body;
+    if (air || dead) {
+      ctx2d.fillRect(x + w * 0.10, y + 21 * s, w * 0.36, 5 * s);
+      ctx2d.fillRect(x + w * 0.56, y + 21 * s, w * 0.36, 5 * s);
+    } else if (step) {
+      ctx2d.fillRect(x + w * 0.18, y + 21 * s, w * 0.30, 6 * s);
+      ctx2d.fillRect(x + w * 0.54, y + 21 * s, w * 0.34, 4 * s);
+    } else {
+      ctx2d.fillRect(x + w * 0.12, y + 21 * s, w * 0.34, 5 * s);
+      ctx2d.fillRect(x + w * 0.54, y + 21 * s, w * 0.34, 5 * s);
+    }
+    ctx2d.fillStyle = shoe;
+    ctx2d.fillRect(x + w * 0.04, y + h - 5 * s, w * 0.44, 5 * s);
+    ctx2d.fillRect(x + w * 0.52, y + h - 5 * s, w * 0.44, 5 * s);
+  }
+  function spawnParts(x, y, n, color, spread) {
+    for (let i = 0; i < n; i++) {
+      const a = Math.random() * Math.PI * 2, sp = (0.4 + Math.random()) * (spread || 90);
+      parts.push({ x: x, y: y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 60, life: 1, color: color, size: 2 + Math.random() * 2.6 });
+    }
+  }
+  function addPop(text, x, y, color) {
+    for (let i = pops.length - 1; i >= 0; i--) if (pops[i].text === text) pops.splice(i, 1);
+    pops.push({ text: text, x: x, y: y, life: 1, color: color || theme.text });
+    if (pops.length > 4) pops.shift();
+  }
+  function stepFx(dt) {
+    for (let i = parts.length - 1; i >= 0; i--) {
+      const p = parts[i];
+      p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 620 * dt; p.life -= dt * 1.5;
+      if (p.life <= 0) parts.splice(i, 1);
+    }
+    for (let i = pops.length - 1; i >= 0; i--) {
+      const p = pops[i];
+      p.y -= dt * 42; p.life -= dt * 0.9;
+      if (p.life <= 0) pops.splice(i, 1);
+    }
+  }
+  function drawFx(camX, dt) {
+    for (const p of parts) {
+      ctx2d.globalAlpha = clamp(p.life, 0, 1) * 0.95;
+      ctx2d.fillStyle = p.color;
+      ctx2d.fillRect(round(p.x - camX), round(p.y), p.size, p.size);
+    }
+    ctx2d.globalAlpha = 1;
+    ctx2d.textAlign = 'center';
+    for (const p of pops) {
+      ctx2d.globalAlpha = clamp(p.life * 1.4, 0, 1);
+      ctx2d.font = '800 17px system-ui,sans-serif';
+      ctx2d.lineWidth = 3;
+      ctx2d.strokeStyle = 'rgba(4,8,16,.8)';
+      ctx2d.strokeText(p.text, round(p.x - camX), round(p.y));
+      ctx2d.fillStyle = p.color;
+      ctx2d.fillText(p.text, round(p.x - camX), round(p.y));
+    }
+    ctx2d.globalAlpha = 1;
+    ctx2d.textAlign = 'start';
+  }
+  function drawHud() {
+    const W = viewW();
+    ctx2d.fillStyle = 'rgba(6,10,20,.42)';
+    ctx2d.fillRect(0, 0, W, 40);
+    ctx2d.font = '800 17px system-ui,sans-serif';
+    ctx2d.fillStyle = theme.text;
+    ctx2d.fillText('得分 ' + st.score, 16, 26);
+    ctx2d.fillStyle = theme.accent2;
+    ctx2d.fillText('金币 ×' + st.coins, W * 0.38, 26);
+    ctx2d.fillStyle = theme.text;
+    ctx2d.fillText('第 ' + st.levelN + ' / ' + LEVEL_COUNT + ' 关', W * 0.60, 26);
+    ctx2d.fillStyle = st.time < 60 ? theme.danger : theme.text;
+    ctx2d.fillText('时间 ' + Math.ceil(st.time), W - 130, 26);
+    /* 生命 */
+    for (let i = 0; i < Math.min(st.lives, 9); i++) {
+      ctx2d.fillStyle = theme.danger;
+      ctx2d.beginPath();
+      ctx2d.arc(16 + i * 15, 48, 5, 0, Math.PI * 2);
+      ctx2d.fill();
+    }
+  }
+  function render(dt) {
+    const W = viewW();
+    ctx2d.setTransform(1, 0, 0, 1, 0, 0);
+    ctx2d.clearRect(0, 0, canvas.width, canvas.height);
+    const s = (cssW || W) / W * dpr;
+    ctx2d.setTransform(s, 0, 0, s, 0, 0);
+    const camX = st.camX;
+    drawSky(st.lv.sky, camX);
+    drawWorld();
+    for (const e of st.enemies) if (e.alive && Math.abs(e.x - camX - W / 2) < W) drawGoomba(e, camX);
+    for (const m of st.items) if (m.alive) drawMushroom(m, camX);
+    drawMario(camX);
+    drawFx(camX, dt || 0);
+    drawHud();
+    if (st.state === 'clear') {
+      ctx2d.fillStyle = 'rgba(6,10,20,.35)';
+      ctx2d.fillRect(0, 0, W, VIEW_H);
+      ctx2d.textAlign = 'center';
+      ctx2d.font = '800 44px system-ui,sans-serif';
+      ctx2d.fillStyle = theme.accent2;
+      ctx2d.strokeStyle = 'rgba(4,8,16,.8)';
+      ctx2d.lineWidth = 5;
+      const msg = st.levelN >= LEVEL_COUNT ? '最后一关通过！' : '过 关！';
+      ctx2d.strokeText(msg, W / 2, VIEW_H / 2);
+      ctx2d.fillText(msg, W / 2, VIEW_H / 2);
+      ctx2d.textAlign = 'start';
+    }
+  }
+
+  /* ==================================================================
+     事件 → 音效 / 粒子 / 飘字
+     ================================================================== */
+  function handleEvents(events) {
+    const camX = st.camX, ts = TILE;
+    for (const e of events) {
+      if (e.t === 'jump') Sfx.jump();
+      else if (e.t === 'land') { if (e.vy > 300) Sfx.land(); }
+      else if (e.t === 'coin') {
+        Sfx.coin();
+        addPop('+100', (e.tx + 0.5) * ts, e.ty * ts - 6, theme.accent2);
+        spawnParts((e.tx + 0.5) * ts, e.ty * ts + 6, 5, theme.accent2, 70);
+      } else if (e.t === 'stomp') {
+        Sfx.stomp();
+        addPop('+100', e.x + 13, e.y - 4, theme.text);
+        spawnParts(e.x + 13, e.y + 8, 8, theme.wood2, 90);
+      } else if (e.t === 'bump') {
+        if (e.kind === 'solid' || e.kind === 'brick') Sfx.bump();
+      } else if (e.t === 'break') {
+        Sfx.brick();
+        addPop('+50', (e.tx + 0.5) * ts, e.ty * ts, theme.wood2);
+        spawnParts((e.tx + 0.5) * ts, (e.ty + 0.5) * ts, 10, theme.wood2, 130);
+      } else if (e.t === 'grow') {
+        Sfx.grow();
+        addPop(st.player.big ? '变大！' : '又是蘑菇 +1000', st.player.x + 10, st.player.y - 10, theme.accent2);
+        spawnParts(st.player.x + 10, st.player.y + 20, 14, theme.accent2, 120);
+      } else if (e.t === 'shrink') {
+        Sfx.shrink();
+        addPop('变小了', st.player.x + 10, st.player.y - 10, theme.danger);
+      } else if (e.t === 'die') {
+        Sfx.die();
+      } else if (e.t === 'respawn') {
+        input.left = input.right = input.jump = false;
+      } else if (e.t === 'clear') {
+        Sfx.clear();
+        if (st.score > best) { best = st.score; pref.set('mario.top', String(best)); setTimeout(function () { Sfx.best(); }, 700); }
+      } else if (e.t === 'over') {
+        finishRun(e);
+      }
+      if (e.t === 'bump' && e.kind === 'mushroom') Sfx.mushroom();
+    }
+  }
+  function finishRun(e) {
+    recordResult(e.win ? 'win' : 'lose');
+    if (e.score > best) { best = e.score; pref.set('mario.top', String(best)); }
+    Sfx.over(e.win);
+    showResult(e);
+  }
+
+  /* ==================================================================
+     面板 / 结算
+     ================================================================== */
+  const STATE_TEXT = {
+    play: '跑起来，空格跳过坑',
+    dying: '掉命了…',
+    clear: '过关！',
+    over: '本局结束'
+  };
+  function updatePanel() {
+    $('scoreNow').textContent = st.score;
+    $('coinNow').textContent = st.coins;
+    $('lifeNow').textContent = st.lives;
+    $('levelNow').textContent = st.levelN + ' / ' + LEVEL_COUNT;
+    $('timeNow').textContent = Math.ceil(st.time);
+    $('turnText').textContent = paused ? '已暂停（P 继续）' : (STATE_TEXT[st.state] || '');
+    const dot = $('turnDot');
+    dot.className = 'dot ' + (st.over ? (st.win ? 'win' : 'bad') : (st.state === 'play' ? 'you' : (st.state === 'clear' ? 'win' : 'bad'))) +
+      (st.state === 'play' && !paused ? ' live' : '');
+    const badge = $('flagBadge');
+    badge.className = 'badge' + (st.state === 'clear' ? ' on' : '');
+    $('tipText').textContent = LEVEL_NAMES[(st.levelN - 1) % LEVEL_NAMES.length] +
+      ' · ' + DIFFS[diff].name + ' · ' + (VIEWS[viewKey] === 1200 ? '视野远' : (VIEWS[viewKey] === 720 ? '视野近' : '视野标准'));
+  }
+  function showResult(e) {
+    overlayShown = true;
+    $('ovTitle').textContent = e.win ? '通关了！' : '本局结束';
+    $('ovTitle').className = 'result-title ' + (e.win ? 'win' : 'lose');
+    $('ovScore').textContent = e.score + ' 分';
+    $('ovSub').innerHTML =
+      '打到第 <b>' + e.levelN + '</b> 关 · 金币 ' + e.coins + ' 枚 · 掉命 ' + e.deaths + ' 次' +
+      '<br>最高分 ' + best + ' · 本局算' + (e.win ? '<b>胜</b>' : '负') + '（一条命打到第 ' + LEVEL_COUNT + ' 关通关才算胜）';
+    $('ovMask').hidden = false;
+  }
+  function hideResult() { $('ovMask').hidden = true; overlayShown = false; }
+
+  /* ==================================================================
+     输入
+     ================================================================== */
+  function keyMap(k, code) {
+    if (k === 'ArrowLeft' || k === 'a' || k === 'A') return 'left';
+    if (k === 'ArrowRight' || k === 'd' || k === 'D') return 'right';
+    if (k === ' ' || k === 'Spacebar' || code === 'Space' || k === 'ArrowUp' || k === 'w' || k === 'W') return 'jump';
+    return null;
+  }
+  document.addEventListener('keydown', function (ev) {
+    const k = ev.key;
+    if (k === 'Enter' && overlayShown) { ev.preventDefault(); startGame(); return; }
+    if (k === 'r' || k === 'R') { startGame(); return; }
+    if (k === 'h' || k === 'H') { $('rulesMask').hidden = false; return; }
+    if (k === 'm' || k === 'M') { cycleSound(); return; }
+    if (k === 'p' || k === 'P') { paused = !paused; updatePanel(); return; }
+    const m = keyMap(k, ev.code);
+    if (m) { ev.preventDefault(); Sfx.unlock(); if (!paused && !overlayShown) input[m] = true; }
+  });
+  document.addEventListener('keyup', function (ev) {
+    const m = keyMap(ev.key, ev.code);
+    if (m) { ev.preventDefault(); input[m] = false; }
+  });
+  window.addEventListener('blur', function () { input.left = input.right = input.jump = false; });
+
+  function bindHold(btn, key) {
+    btn.addEventListener('pointerdown', function (ev) { ev.preventDefault(); Sfx.unlock(); if (!paused && !overlayShown) { input[key] = true; btn.classList.add('on'); } });
+    const up = function () { input[key] = false; btn.classList.remove('on'); };
+    btn.addEventListener('pointerup', up);
+    btn.addEventListener('pointercancel', up);
+    btn.addEventListener('pointerleave', up);
+  }
+  bindHold($('tLeft'), 'left');
+  bindHold($('tRight'), 'right');
+  bindHold($('tJump'), 'jump');
+  canvas.addEventListener('pointerdown', function (ev) { ev.preventDefault(); Sfx.unlock(); if (!paused && !overlayShown) input.jump = true; });
+  canvas.addEventListener('pointerup', function () { input.jump = false; });
+  canvas.addEventListener('pointercancel', function () { input.jump = false; });
+
+  /* ==================================================================
+     设置项
+     ================================================================== */
+  function segValue(seg, attr, val) {
+    [].forEach.call(seg.querySelectorAll('button'), function (b) { b.classList.toggle('on', b.dataset[attr] === val); });
+  }
+  const levelSel = $('levelSel');
+  for (let i = 1; i <= LEVEL_COUNT; i++) {
+    const o = document.createElement('option');
+    o.value = String(i); o.textContent = i + ' · ' + LEVEL_NAMES[(i - 1) % LEVEL_NAMES.length];
+    levelSel.appendChild(o);
+  }
+  levelSel.addEventListener('change', function () { setLevel(parseInt(this.value, 10), true); });
+
+  $('diffSeg').addEventListener('click', function (ev) {
+    const b = ev.target.closest('button'); if (!b) return;
+    diff = DIFFS[b.dataset.diff] ? b.dataset.diff : DIFF_DEF;
+    pref.set('mario.diff', diff);
+    segValue(this, 'diff', diff);
+    startGame();
+  });
+  $('livesSeg').addEventListener('click', function (ev) {
+    const b = ev.target.closest('button'); if (!b) return;
+    lives = parseInt(b.dataset.lives, 10) || 3;
+    pref.set('mario.lives', String(lives));
+    segValue(this, 'lives', String(lives));
+    startGame();
+  });
+  $('viewSeg').addEventListener('click', function (ev) {
+    const b = ev.target.closest('button'); if (!b) return;
+    viewKey = VIEWS[b.dataset.view] ? b.dataset.view : VIEW_DEF;
+    pref.set('mario.view', viewKey);
+    segValue(this, 'view', viewKey);
+    st.viewW = viewW();
+    layout();
+  });
+  $('soundSeg').addEventListener('click', function (ev) {
+    const b = ev.target.closest('button'); if (!b) return;
+    setSound(b.dataset.vol);
+  });
+  $('sound').addEventListener('click', function () { cycleSound(); });
+  function setSound(lv) {
+    if (lv !== 'off') pref.set('mario.volpct', String(Number($('volRange').value)));
+    Sfx.setLevel(lv);
+    pref.set('mario.sound', Sfx.level);
+    segValue($('soundSeg'), 'vol', Sfx.level);
+    if (Sfx.enabled) { Sfx.setVolume(clamp(Number($('volRange').value), 0, 100) / 100); Sfx.coin(); }
+    $('sound').textContent = Sfx.enabled ? '音效开关（M）' : '🔇 音效已关（M）';
+    return Sfx.level;
+  }
+  function cycleSound() {
+    const order = ['off', 'low', 'mid', 'high'];
+    return setSound(order[(order.indexOf(Sfx.level) + 1) % order.length]);
+  }
+  const volRange = $('volRange'), volNum = $('volNum');
+  function renderVolume(pctRaw) {
+    const pct = clamp(Math.round(Number(pctRaw) || 0), 0, 100);
+    volRange.value = String(pct);
+    volNum.textContent = String(pct);
+    if (pct === 0) {
+      Sfx.setLevel('off'); Sfx.setVolume(0);
+      segValue($('soundSeg'), 'vol', 'off');
+    } else {
+      pref.set('mario.vol', String(pct / 100));
+      pref.set('mario.volpct', String(pct));
+      if (Sfx.level === 'off') Sfx.setLevel('mid');
+      Sfx.setVolume(pct / 100);
+      segValue($('soundSeg'), 'vol', Sfx.level);
+    }
+    $('sound').textContent = Sfx.enabled ? '音效开关（M）' : '🔇 音效已关（M）';
+  }
+  volRange.addEventListener('input', function () { renderVolume(this.value); });
+  volRange.addEventListener('change', function () { renderVolume(this.value); if (Sfx.enabled) Sfx.coin(); });
+
+  const themeSel = $('theme');
+  THEME_LIST.forEach(function (t) {
+    const o = document.createElement('option');
+    o.value = t.key; o.textContent = t.name;
+    themeSel.appendChild(o);
+  });
+  themeSel.addEventListener('change', function () {
+    applyTheme(this.value);
+    pref.set('mario.theme', this.value);
+    render(0);
+  });
+
+  $('rules').addEventListener('click', function () { $('rulesMask').hidden = false; });
+  $('rulesClose').addEventListener('click', function () { $('rulesMask').hidden = true; });
+  $('rulesMask').addEventListener('click', function (ev) { if (ev.target === this) $('rulesMask').hidden = true; });
+  $('restart').addEventListener('click', function () { startGame(); });
+  $('prevLevel').addEventListener('click', function () { setLevel(levelN - 1, true); });
+  $('nextLevel').addEventListener('click', function () { setLevel(levelN + 1, true); });
+  $('ovBtn').addEventListener('click', function () { startGame(); });
+  $('ovMask').addEventListener('click', function (ev) { if (ev.target === this) startGame(); });
+
+  /* ==================================================================
+     主循环：固定步长推进物理
+     ================================================================== */
+  const FIXED = 1 / 120;
+  function frame(dt) {
+    if (!paused && !overlayShown && !$('rulesMask').hidden === false) { /* 弹窗打开时冻结 */ }
+    const frozen = paused || overlayShown || !$('rulesMask').hidden;
+    if (!frozen) {
+      acc += dt;
+      let guard = 0;
+      while (acc >= FIXED && guard++ < 8) {
+        acc -= FIXED;
+        const evs = stepRun(st, FIXED, input);
+        if (evs.length) handleEvents(evs);
+        if (st.over) break;
+      }
+    } else {
+      acc = 0;
+      input.left = input.right = input.jump = false;
+    }
+    stepFx(dt);
+    updatePanel();
+    render(dt);
+  }
+  function loop(t) {
+    if (!lastFrame) lastFrame = t;
+    let dt = (t - lastFrame) / 1000;
+    lastFrame = t;
+    if (dt > 0.08) dt = 0.08;
+    frame(dt);
+    requestAnimationFrame(loop);
+  }
+
+  /* ==================================================================
+     启动
+     ================================================================== */
+  applyTheme(pref.get('mario.theme', 'midnight'));
+  themeSel.value = theme.key;
+  levelSel.value = String(levelN);
+  segValue($('diffSeg'), 'diff', diff);
+  segValue($('livesSeg'), 'lives', String(lives));
+  segValue($('viewSeg'), 'view', viewKey);
+  const savedVol = parseFloat(pref.get('mario.vol', ''));
+  renderVolume(isNaN(savedVol) ? 68 : Math.round(savedVol * 100));
+  Sfx.setLevel(pref.get('mario.sound', 'mid'));
+  segValue($('soundSeg'), 'vol', Sfx.level);
+  $('sound').textContent = Sfx.enabled ? '音效开关（M）' : '🔇 音效已关（M）';
+  renderStats();
+  st.viewW = viewW();
+  updatePanel();
+  layout();
+  window.addEventListener('resize', layout);
+  requestAnimationFrame(loop);
+
+  /* ==================================================================
+     调试 / 自动化测试钩子
+     ================================================================== */
+  window.__MARIO = {
+    get st() { return st; }, set st(v) { st = v; },
+    stats: stats, recordResult: recordResult, renderStats: renderStats,
+    newGame: function (seed) { return startGame(seed); }, start: function (seed) { return startGame(seed); },
+    step: function (dt, inp) {
+      const evs = stepRun(st, dt, inp === undefined ? input : inp);
+      if (evs.length) handleEvents(evs);
+      stepFx(dt || 0.016);
+      return evs;
+    },
+    /* 一次推进 seconds 秒（固定步长），适合测试里跑完整关 */
+    sim: function (seconds, inp) {
+      const dt = 1 / 120;
+      let n = Math.max(1, Math.round((seconds || 0) / dt)), seen = [];
+      for (let i = 0; i < n; i++) {
+        if (st.over) break;
+        const evs = stepRun(st, dt, inp || input);
+        if (evs.length) { seen = seen.concat(evs); handleEvents(evs); }
+        stepFx(dt);
+        if (st.state === 'clear' && st.clearT >= CLEAR_T) { /* 下一关已自动切 */ }
+      }
+      updatePanel();
+      return seen;
+    },
+    setInput: function (o) {
+      o = o || {};
+      input.left = !!o.left; input.right = !!o.right; input.jump = !!o.jump;
+      return { left: input.left, right: input.right, jump: input.jump };
+    },
+    get input() { return { left: input.left, right: input.right, jump: input.jump }; },
+    get paused() { return paused; }, set paused(v) { paused = !!v; },
+    get overlayShown() { return overlayShown; },
+    render: render, layout: layout, updatePanel: updatePanel,
+    get levelN() { return levelN; }, set levelN(n) { setLevel(n, true); },
+    get diff() { return diff; }, set diff(k) { if (DIFFS[k]) { diff = k; segValue($('diffSeg'), 'diff', k); startGame(); } },
+    get lives() { return st.lives; }, set lives(v) { lives = v | 0 || 3; st.lives = lives; },
+    get viewKey() { return viewKey; }, set viewKey(k) { if (VIEWS[k]) { viewKey = k; segValue($('viewSeg'), 'view', k); st.viewW = viewW(); layout(); } },
+    get best() { return best; }, set best(v) { best = Math.max(0, v | 0); pref.set('mario.top', String(best)); },
+    get viewW() { return viewW(); },
+    setSound: setSound, cycleSound: cycleSound, showRules: function () { $('rulesMask').hidden = false; },
+    hideRules: function () { $('rulesMask').hidden = true; },
+    Sfx: Sfx, THEME_LIST: THEME_LIST, applyTheme: applyTheme, get theme() { return theme; },
+    /* 核心里的纯逻辑也透出去 */
+    TILE: TILE, ROWS: ROWS, GROUND_ROW: GROUND_ROW, LEVEL_COUNT: LEVEL_COUNT, LEVEL_NAMES: LEVEL_NAMES,
+    VIEW_H: VIEW_H, VIEWS: VIEWS, DIFFS: DIFFS,
+    buildLevel: buildLevel, levelInfo: levelInfo, newRun: newRun, stepRun: stepRun,
+    tileAt: tileAt, solidAt: solidAt, solidChar: solidChar, jumpReach: jumpReach,
+    GRAV: GRAV, GRAV_HOLD: GRAV_HOLD, JUMP_V: JUMP_V, RUN_MAX: RUN_MAX, COYOTE: COYOTE,
+    SMALL_H: SMALL_H, BIG_H: BIG_H, INVULN_T: INVULN_T, DIE_T: DIE_T, CLEAR_T: CLEAR_T,
+    mulberry32: mulberry32
+  };
+  window.__STATS = window.__MARIO;
+})();
+
+</script>
+
+<script>
+/* ===== 专注/全屏模式：独立于游戏本体，不改各游戏自己的代码 ===== */
+(function () {
+  var fab = document.getElementById('focusFab');
+  function setLabel(on) {
+    if (!fab) return;
+    fab.innerHTML = on ? '⛶ 退出专注' : '⛶ 专注模式';
+    fab.title = on ? '恢复标题和两侧面板（Shift+F）' : '隐藏标题和两侧面板，让中间占满窗口（Shift+F）';
+  }
+  function refit() { try { window.dispatchEvent(new Event('resize')); } catch (e) {} }
+  function toggleFocus() {
+    var on = document.body.classList.toggle('focus');
+    setLabel(on);
+    refit();                       /* 画布类游戏按新尺寸重新适配 */
+    setTimeout(refit, 60);         /* 布局落定后再补一次 */
+    return on;
+  }
+  if (fab) fab.addEventListener('click', toggleFocus);
+  /* 用 Shift+F：普通 f 可能已经给游戏用了（比如骰子类的「弃权」），不能抢。
+     捕获阶段 + stopPropagation，保证游戏自己的按键处理不会同时触发。 */
+  window.addEventListener('keydown', function (e) {
+    var t = (e.target && e.target.tagName) || '';
+    if (t === 'INPUT' || t === 'SELECT' || t === 'TEXTAREA') return;
+    if ((e.key === 'F' || e.key === 'f') && e.shiftKey) {
+      e.preventDefault();
+      e.stopPropagation();
+      toggleFocus();
+    }
+  }, true);
+})();
+</script>
+</body>
+</html>

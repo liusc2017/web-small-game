@@ -1,0 +1,1043 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>轮盘</title>
+<style>
+:root{
+  --bg:#070f1c; --glow-1:#12294a; --glow-2:#171a3a;
+  --panel:rgba(17,26,43,.80); --panel2:#0e1727; --panel-brd:rgba(148,163,184,.20);
+  --line:rgba(148,163,184,.22);
+  --text:#e8eefb; --muted:#8fa2bb;
+  --accent:#38bdf8; --danger:#f87171; --win:#4ade80;
+  --felt-1:#0d3a2a; --felt-2:#062018;
+}
+*{box-sizing:border-box}
+html,body{min-height:100%}
+body{
+  margin:0;min-height:100vh;padding:12px 16px 14px;
+  font-family:"Segoe UI",system-ui,-apple-system,"Microsoft YaHei","PingFang SC",sans-serif;
+  color:var(--text);background:
+    radial-gradient(1200px 700px at 20% -10%,var(--glow-1),transparent 60%),
+    radial-gradient(1000px 600px at 85% 0%,var(--glow-2),transparent 55%),
+    var(--bg);
+  -webkit-font-smoothing:antialiased;
+}
+h1,h2,h3,h4{margin:0}
+button{font:inherit;font-size:13px;padding:8px 14px;border-radius:9px;cursor:pointer;
+  color:var(--text);background:rgba(148,163,184,.12);border:1px solid var(--panel-brd);
+  transition:background .15s,border-color .15s,transform .06s}
+button:hover:not(:disabled){background:rgba(148,163,184,.20);border-color:rgba(148,163,184,.38)}
+button:active:not(:disabled){transform:translateY(1px)}
+button:disabled{opacity:.38;cursor:not-allowed}
+button.primary{background:linear-gradient(180deg,#f3cd7a,#d9a63a);color:#241a05;border-color:rgba(255,231,170,.7);font-weight:700}
+button.primary:hover:not(:disabled){background:linear-gradient(180deg,#ffdd93,#e6b445)}
+select{font:inherit;font-size:12.5px;color:var(--text);background:var(--panel2);border:1px solid var(--panel-brd);
+  border-radius:8px;padding:5px 8px;outline:none}
+kbd{background:rgba(148,163,184,.16);border:1px solid var(--line);border-radius:5px;padding:1px 5px;font-size:11px;font-family:inherit}
+
+.app{max-width:none;width:100%;margin:0 auto;display:flex;flex-direction:column;gap:10px}
+header{text-align:center}
+header h1{font-size:26px;letter-spacing:.34em;font-weight:800;
+  background:linear-gradient(180deg,#fff,#a9c6e6);-webkit-background-clip:text;background-clip:text;color:transparent}
+header .sub{color:var(--muted);font-size:12px;letter-spacing:.14em;margin-top:4px}
+main{
+  display:grid;
+  grid-template-columns:clamp(250px,17vw,330px) minmax(0,1fr) clamp(250px,17vw,330px);
+  grid-template-rows:minmax(0,1fr);
+  gap:14px;align-items:stretch;
+  height:calc(100vh - 136px);min-height:560px;
+}
+.side-col{display:flex;flex-direction:column;gap:12px;min-height:0;overflow-y:auto;padding-right:3px}
+.side-col::-webkit-scrollbar{width:7px}
+.side-col::-webkit-scrollbar-thumb{background:var(--line);border-radius:4px}
+.side-col::-webkit-scrollbar-track{background:transparent}
+.board-col{min-width:0;display:flex;flex-direction:column;gap:10px;min-height:0}
+.panel{background:var(--panel);border:1px solid var(--panel-brd);border-radius:14px;
+  backdrop-filter:blur(6px);box-shadow:0 6px 20px rgba(0,0,0,.22)}
+.sec{padding:12px;display:flex;flex-direction:column;gap:10px;flex:none}
+.sec h2{margin:0;font-size:12px;letter-spacing:.14em;color:var(--muted);font-weight:700}
+.field{display:flex;align-items:center;justify-content:space-between;gap:9px;font-size:13px}
+.field span{color:var(--muted)}
+.btns2{display:flex;flex-direction:column;gap:8px}
+.btns2 button{width:100%}
+.volbox{display:flex;align-items:center;gap:8px;font-size:13px}
+.volbox input[type=range]{-webkit-appearance:none;appearance:none;width:100px;height:4px;border-radius:3px;
+  background:linear-gradient(90deg,var(--accent),rgba(148,163,184,.30));cursor:pointer;outline:none}
+.volbox input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:13px;height:13px;
+  border-radius:50%;background:#fff;border:2px solid var(--accent);cursor:pointer}
+.vn{font-variant-numeric:tabular-nums;min-width:26px;text-align:right;color:var(--muted);font-size:12px}
+
+.coach{border-radius:14px;border:1px solid rgba(74,222,128,.35);
+  background:linear-gradient(180deg,rgba(74,222,128,.10),rgba(74,222,128,.03));padding:11px 12px;
+  display:flex;flex-direction:column;gap:8px;flex:none}
+.coach-head{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.coach-tag{font-size:11px;font-weight:800;letter-spacing:.06em;padding:2px 8px;border-radius:999px;
+  background:rgba(74,222,128,.22);color:#4ade80;border:1px solid rgba(74,222,128,.45);white-space:nowrap}
+.coach-main{font-size:14px;font-weight:700}
+.coach-why{font-size:12.5px;color:var(--muted);line-height:1.7}
+.coach-why b{color:#4ade80}
+.coach-warn{font-size:12.5px;line-height:1.7;color:#fbbf24}
+.coach-foot{font-size:11px;color:var(--muted);opacity:.8;line-height:1.6}
+
+.stat-row{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-size:13px}
+.stat-row span{color:var(--muted)}
+.stat-row b{font-size:15px;font-variant-numeric:tabular-nums}
+.statsbar{font-size:12.5px;color:var(--muted);display:flex;flex-wrap:wrap;gap:10px;align-items:baseline}
+.statsbar b{font-size:15px;color:var(--text);font-variant-numeric:tabular-nums}
+.statsbar .sb-win{color:var(--win)} .statsbar .sb-lose{color:var(--danger)}
+.sb-note{width:100%;font-size:11px;opacity:.65}
+.hist{display:flex;gap:4px;flex-wrap:wrap}
+.hist i{font-style:normal;width:26px;height:26px;border-radius:7px;display:flex;align-items:center;justify-content:center;
+  font-size:11.5px;font-weight:700;color:#fff;background:#334155}
+.hist i.r{background:#b91c1c} .hist i.b{background:#1e293b;border:1px solid rgba(255,255,255,.18)} .hist i.g{background:#15803d}
+
+/* ================= 转盘 ================= */
+.wheelwrap{flex:0 0 auto;min-height:clamp(250px,38vh,440px);display:flex;align-items:center;justify-content:center;gap:18px;padding:10px;
+  background:radial-gradient(120% 90% at 50% 0%,var(--felt-1),var(--felt-2) 75%);
+  border:1px solid rgba(255,255,255,.07);border-radius:16px;position:relative;overflow:hidden}
+.wheelwrap::after{content:"";position:absolute;inset:0;pointer-events:none;
+  background:repeating-linear-gradient(45deg,rgba(255,255,255,.014) 0 2px,transparent 2px 5px)}
+#wheel{display:block;position:relative;z-index:1}
+.wheelinfo{display:flex;flex-direction:column;gap:8px;z-index:1;min-width:150px}
+.wheelinfo .big{font-size:40px;font-weight:800;line-height:1;font-variant-numeric:tabular-nums}
+.wheelinfo .lbl{font-size:11px;letter-spacing:.16em;color:#a7c4b7}
+.wheelinfo .msg{font-size:13px;color:#d7e7f5;line-height:1.6;max-width:220px}
+
+/* ================= 下注台 ================= */
+.board{flex:1 1 auto;min-height:0;padding:12px;display:flex;flex-direction:column;gap:9px;overflow:auto}
+.board::-webkit-scrollbar{width:7px}
+.board::-webkit-scrollbar-thumb{background:var(--line);border-radius:4px}
+.numgrid{display:grid;grid-template-columns:52px repeat(12,minmax(0,1fr));grid-template-rows:repeat(3,1fr);gap:4px;flex:1 1 auto;min-height:170px}
+.spot{position:relative;border-radius:6px;border:1px solid rgba(255,255,255,.14);cursor:pointer;
+  display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px;color:#fff;
+  background:rgba(148,163,184,.12);transition:filter .12s,transform .06s;user-select:none;min-height:34px}
+.spot:hover{filter:brightness(1.35)}
+.spot:active{transform:scale(.97)}
+.spot.zero{grid-row:span 3;background:#15803d;font-size:19px}
+.spot.red{background:#a51d1d} .spot.blk{background:#1b2432;border-color:rgba(255,255,255,.20)}
+.spot .amt{position:absolute;top:-7px;right:-7px;min-width:22px;height:22px;border-radius:11px;
+  background:linear-gradient(180deg,#f3cd7a,#d9a63a);color:#241a05;font-size:11.5px;font-weight:800;
+  display:flex;align-items:center;justify-content:center;padding:0 5px;box-shadow:0 2px 6px rgba(0,0,0,.4);z-index:2}
+.outside{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px;flex:0 0 auto}
+.outside .spot{min-height:44px;font-size:13px;padding:4px 6px;text-align:center;flex-direction:column;gap:2px}
+.outside .spot small{font-weight:400;font-size:10.5px;opacity:.75}
+.outside .spot.red{background:#a51d1d} .outside .spot.blk{background:#1b2432}
+.actionbar{display:flex;gap:9px;justify-content:center;flex-wrap:wrap;flex:0 0 auto}
+.chipbar{display:flex;gap:8px;justify-content:center;align-items:center;flex-wrap:wrap;flex:0 0 auto}
+.chipbtn{min-width:58px;padding:7px 12px;border-radius:999px;font-weight:700;font-size:13px;
+  background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.20)}
+.chipbtn.on{background:linear-gradient(180deg,#f3cd7a,#d9a63a);color:#241a05;border-color:rgba(255,231,170,.8)}
+.sel-info{font-size:12px;color:var(--muted);text-align:center;min-height:17px}
+
+.rules{position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;
+  background:rgba(4,8,16,.74);backdrop-filter:blur(3px);padding:20px}
+.rules.on{display:flex}
+.rules-box{max-width:min(94vw,660px);max-height:86vh;overflow:auto;border-radius:16px;padding:20px 22px;
+  background:#111a2b;border:1px solid var(--panel-brd);line-height:1.85;font-size:13.5px}
+.rules-box h3{margin:0 0 10px;font-size:16px}
+.rules-box h4{margin:15px 0 6px;font-size:13.5px;color:#4ade80}
+.rules-box ul,.rules-box ol{margin:0;padding-left:20px}
+.rules-box li{margin:4px 0}
+.rules-box b{color:#fbbf24}
+.rules-box .close{margin-top:16px;width:100%}
+.toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(14px);
+  padding:10px 18px;border-radius:10px;background:rgba(15,23,42,.95);border:1px solid var(--panel-brd);
+  font-size:13.5px;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:70}
+.toast.on{opacity:1;transform:translateX(-50%)}
+@media (max-width:1180px){
+  main{grid-template-columns:1fr;height:auto;min-height:0}
+  .side-col{overflow:visible}
+  .board-col{min-height:76vh}
+}
+
+/* ===== 专注/全屏模式：藏起标题和左右两栏，中间区域吃满窗口（Shift+F 或点右上角按钮） ===== */
+body.focus header,body.focus .side-col,body.focus aside{display:none}
+body.focus main{grid-template-columns:minmax(0,1fr);height:calc(100vh - 44px);min-height:0}
+body.focus .app{padding:8px 10px 10px;gap:8px;max-width:none}
+body.focus .board-col{min-height:0}
+.focus-fab{position:fixed;top:9px;right:11px;z-index:80;display:flex;align-items:center;gap:6px;
+  padding:6px 12px;border-radius:999px;font:inherit;font-size:12.5px;font-weight:700;cursor:pointer;
+  color:#e8eefb;background:rgba(15,23,42,.74);border:1px solid rgba(148,163,184,.32);
+  -webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
+  opacity:.6;transition:opacity .15s,transform .15s}
+.focus-fab:hover{opacity:1;transform:translateY(-1px)}
+body.focus .focus-fab{opacity:.92}
+</style>
+</head>
+<body>
+<button class="focus-fab" id="focusFab" title="隐藏标题和两侧面板，让中间占满窗口（Shift+F）">⛶ 专注模式</button>
+<div class="app">
+  <header>
+    <h1>轮 盘</h1>
+    <p class="sub">ROULETTE · 欧式单零轮盘 37 格 · 押红黑大小单双或具体数字（新手教学模式）</p>
+  </header>
+
+  <main>
+    <!-- ================= 左栏 ================= -->
+    <div class="side-col left">
+      <section class="panel sec">
+        <h2>对局设置</h2>
+        <label class="field"><span>转盘时长</span>
+          <select id="spinSel">
+            <option value="2200">快 (2.2s)</option>
+            <option value="3600" selected>正常 (3.6s)</option>
+            <option value="5200">慢 (5.2s)</option>
+          </select>
+        </label>
+        <label class="field" title="轮到你下注时最多等你多久，超时自动接管"><span>我方限时</span>
+          <select id="myDelaySel">
+            <option value="3000">3 秒</option>
+            <option value="5000" selected>5 秒</option>
+            <option value="10000">10 秒</option>
+            <option value="-1">不限时</option>
+          </select>
+        </label>
+        <label class="field"><span>主题</span><select id="theme"></select></label>
+      </section>
+
+      <section class="coach" id="coachCard">
+        <div class="coach-head">
+          <span class="coach-tag" id="coachTag">教学</span>
+          <span class="coach-main" id="coachMain">先放筹码…</span>
+        </div>
+        <div class="coach-why" id="coachWhy"></div>
+        <div class="coach-warn" id="coachWarn"></div>
+        <div class="coach-foot" id="coachFoot"></div>
+        <div class="btns2" style="margin-top:2px">
+          <button id="auto">🤖 手动下注</button>
+          <button id="coach">🎓 教学中</button>
+        </div>
+      </section>
+    </div>
+
+    <!-- ================= 中栏 ================= -->
+    <div class="board-col">
+      <div class="wheelwrap">
+        <canvas id="wheel" width="300" height="300"></canvas>
+        <div class="wheelinfo">
+          <div class="lbl">开奖号码</div>
+          <div class="big" id="resultNum">—</div>
+          <div class="msg" id="resultMsg">先选筹码，点下注台押注</div>
+        </div>
+      </div>
+
+      <div class="board panel">
+        <div class="numgrid" id="numgrid"></div>
+        <div class="outside" id="outside"></div>
+        <div class="chipbar" id="chipbar"></div>
+        <div class="actionbar">
+          <button id="undo">撤销</button>
+          <button id="clear">清空下注</button>
+          <button id="repeat">重复上局</button>
+          <button id="spin" class="primary">开始转盘</button>
+          <button id="hint">提示</button>
+        </div>
+        <div class="sel-info" id="selInfo">选一个筹码，点下注台上的格子押注</div>
+      </div>
+    </div>
+
+    <!-- ================= 右栏 ================= -->
+    <div class="side-col right">
+      <section class="panel sec">
+        <h2>本局状态</h2>
+        <div class="stat-row"><span>你的筹码</span><b id="chips">1000</b></div>
+        <div class="stat-row"><span>本局总注</span><b id="stake">0</b></div>
+        <div class="stat-row"><span>上局结果</span><b id="lastNet">—</b></div>
+        <div class="stat-row"><span>累计盈亏</span><b id="netTotal">0</b></div>
+      </section>
+
+      <section class="panel sec">
+        <h2>本次战绩</h2>
+        <div class="statsbar">
+          <span>总 <b id="stTotal">0</b></span>
+          <span>胜 <b id="stWin" class="sb-win">0</b></span>
+          <span>负 <b id="stLose" class="sb-lose">0</b></span>
+          <span>平 <b id="stDraw">0</b></span>
+          <span class="sb-note">只算本次打开页面后的局数，刷新即清零</span>
+        </div>
+        <div class="hist" id="hist"></div>
+      </section>
+
+      <section class="panel sec">
+        <h2>操作</h2>
+        <div class="btns2">
+          <div class="volbox"><span>音量</span>
+            <input type="range" id="volRange" min="0" max="100" step="1" value="70">
+            <span class="vn" id="volNum">70</span>
+          </div>
+          <button id="sound">🔊 音效</button>
+          <button id="rulesBtn" onclick="document.getElementById('rulesModal').classList.add('on')">📖 规则（H）</button>
+          <button id="reset">筹码回到 1000</button>
+          <button id="newGame" class="primary">重新开局</button>
+        </div>
+      </section>
+
+      <section class="panel sec">
+        <h2>玩法与快捷键</h2>
+        <div style="font-size:12px;color:var(--muted);line-height:1.9">
+          轮盘转出 <b style="color:var(--text)">0~36</b> 其中一个数字。押中了就按倍数赔你，押错就输掉那一注。<br>
+          <b style="color:var(--text)">0 是绿色</b>，只算「押 0」那一注赢，红黑单双大小全输。<br>
+          所有押法的<b style="color:#fbbf24">赌场优势都是 2.70%</b>（因为 37 格但有 36 格的赔率），
+          差别只在波动大小。<br>
+          <span style="display:inline-block;margin-top:6px">快捷键：<kbd>空格</kbd> 开始转 ·
+          <kbd>Z</kbd> 撤销 · <kbd>C</kbd> 清空 · <kbd>R</kbd> 重复上局 ·
+          <kbd>H</kbd> 规则 · <kbd>G</kbd> 教学 · <kbd>A</kbd> 自动 · <kbd>M</kbd> 音效</span>
+        </div>
+      </section>
+    </div>
+  </main>
+</div>
+
+<div class="rules" id="rulesModal">
+  <div class="rules-box">
+    <h3>轮盘怎么玩 —— 三句话入门</h3>
+    <p><b>目标</b>：猜转盘会停在哪个号码上。猜对了按倍数赔你，猜错了那一注就没了。</p>
+    <h4>台面怎么用</h4>
+    <ul>
+      <li>先选一个<b>筹码面额</b>（1 / 5 / 25 / 100），再点台面上的格子押注，点几次就叠几注。</li>
+      <li><b>下注台上的格子</b>：直接押某个数字（0~36）。</li>
+      <li><b>台面下方的长条</b>：押一整个区域，命中容易但赔得少。</li>
+    </ul>
+    <h4>各种押法与赔率</h4>
+    <ul>
+      <li><b>单个数字</b>：1 赔 35（命中概率 1/37 ≈ 2.7%）</li>
+      <li><b>红 / 黑</b>：1 赔 1（18/37 ≈ 48.6%）</li>
+      <li><b>单 / 双</b>：1 赔 1</li>
+      <li><b>小 1-18 / 大 19-36</b>：1 赔 1</li>
+      <li><b>打（1-12 / 13-24 / 25-36）</b>：1 赔 2（12/37 ≈ 32.4%）</li>
+      <li><b>列（第 1/2/3 列）</b>：1 赔 2</li>
+    </ul>
+    <h4>新手口诀三条</h4>
+    <ul>
+      <li><b>所有押法赌场优势都一样，是 2.70%</b>：因为盘上有 37 个格，可赔率是按 36 个格算的。
+          押哪个长期都是亏，只是亏得一样多。</li>
+      <li><b>区别只在波动</b>：押红黑很难一局亏光，押单个数字赢一次爽、但连输几十把很正常。
+          <b>想玩得久就押红黑，想刺激才押数字。</b></li>
+      <li><b>0 是庄家的</b>：开 0 的时候，红黑单双大小<b>全部输</b> —— 这 2.70% 的优势就是这么来的。</li>
+    </ul>
+    <h4>怎么用这个「新手教学」</h4>
+    <ul>
+      <li>你押好注之后，它会算出<b>每一注的命中概率、赔率、期望值</b>，并告诉你这一注长期要亏多少。</li>
+      <li>它会明确告诉你<b>没有一种押法是划算的</b> —— 这是真话，不是打击你。</li>
+      <li>不想被催：把「我方限时」设成<b>不限时</b>；想边看边学：打开<b>🤖 自动下注</b>。</li>
+      <li>忘了口诀：随时按 <b>H</b> 再打开这张卡。</li>
+    </ul>
+    <p style="color:var(--muted);font-size:12.5px">说明：本作用的筹码只是游戏分数，刷新页面就重置，不是真钱。</p>
+    <button class="primary close" id="rulesClose">知道了</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ==================================================================
+     主题 / 偏好
+     ================================================================== */
+  const THEMES = {
+    midnight: { name:'午夜蓝', bg:'#070f1c', g1:'#12294a', g2:'#171a3a', felt1:'#0d3a2a', felt2:'#062018',
+                panel:'rgba(17,26,43,.80)', brd:'rgba(148,163,184,.20)', text:'#e8eefb', muted:'#8fa2bb', accent:'#38bdf8' },
+    emerald:  { name:'翡翠',   bg:'#05120d', g1:'#0f3d2e', g2:'#14261c', felt1:'#14624a', felt2:'#062a1e',
+                panel:'rgba(11,32,25,.82)', brd:'rgba(110,231,183,.20)', text:'#e4f5ec', muted:'#7fa595', accent:'#34d399' },
+    rosewood: { name:'紫檀',   bg:'#150e09', g1:'#4a2415', g2:'#2b1620', felt1:'#5c2a1c', felt2:'#2a1109',
+                panel:'rgba(38,22,16,.82)', brd:'rgba(214,160,110,.22)', text:'#f8ece3', muted:'#b69884', accent:'#f59e0b' },
+    frost:    { name:'霜白',   bg:'#eef2f8', g1:'#dbeafe', g2:'#e6e6ff', felt1:'#1f6f52', felt2:'#0d3a2a',
+                panel:'rgba(255,255,255,.90)', brd:'rgba(100,116,139,.24)', text:'#1e293b', muted:'#64748b', accent:'#2563eb' }
+  };
+  const pref = {
+    get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : v; } catch (e) { return d; } },
+    set(k, v) { try { localStorage.setItem(k, String(v)); } catch (e) {} }
+  };
+  let theme = THEMES[pref.get('rl.theme', 'midnight')] || THEMES.midnight;
+  function applyTheme() {
+    const s = document.documentElement.style;
+    s.setProperty('--bg', theme.bg); s.setProperty('--glow-1', theme.g1); s.setProperty('--glow-2', theme.g2);
+    s.setProperty('--felt-1', theme.felt1); s.setProperty('--felt-2', theme.felt2);
+    s.setProperty('--panel', theme.panel); s.setProperty('--panel-brd', theme.brd);
+    s.setProperty('--text', theme.text); s.setProperty('--muted', theme.muted); s.setProperty('--accent', theme.accent);
+  }
+  applyTheme();
+
+  /* ==================================================================
+     音效
+     ================================================================== */
+  const Sfx = (function () {
+    let ctx = null, master = null, vol = 0.7;
+    const sv = pref.get('rl.vol', null);
+    if (sv !== null) { const v = Number(sv); if (v >= 0 && v <= 1) vol = v; }
+    let on = pref.get('rl.sound', 'on') !== 'off';
+    function gain() { return on ? vol : 0; }
+    function ensure() {
+      if (gain() <= 0) return false;
+      try {
+        if (!ctx) {
+          const AC = window.AudioContext || window.webkitAudioContext;
+          if (!AC) return false;
+          ctx = new AC();
+          master = ctx.createGain(); master.gain.value = gain();
+          const comp = ctx.createDynamicsCompressor();
+          comp.threshold.value = -6; comp.knee.value = 10; comp.ratio.value = 10;
+          master.connect(comp); comp.connect(ctx.destination);
+        }
+        if (ctx.state === 'suspended') ctx.resume();
+        master.gain.value = gain();
+        return true;
+      } catch (e) { return false; }
+    }
+    function tone(f, t0, dur, type, peak) {
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = type || 'sine'; o.frequency.setValueAtTime(f, t0);
+      g.gain.setValueAtTime(0.0001, t0);
+      g.gain.exponentialRampToValueAtTime(peak || .16, t0 + .012);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+      o.connect(g); g.connect(master); o.start(t0); o.stop(t0 + dur + .02);
+      return o;
+    }
+    function noise(t0, dur, freq, peak) {
+      const len = Math.max(1, Math.floor(ctx.sampleRate * dur));
+      const buf = ctx.createBuffer(1, len, ctx.sampleRate);
+      const d = buf.getChannelData(0);
+      for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 2.4);
+      const src = ctx.createBufferSource(); src.buffer = buf;
+      const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = freq || 2200; bp.Q.value = 1.1;
+      const g = ctx.createGain(); g.gain.value = peak || .22;
+      src.connect(bp); bp.connect(g); g.connect(master); src.start(t0);
+    }
+    const api = {
+      get enabled() { return on; },
+      set(v) { on = !!v; pref.set('rl.sound', on ? 'on' : 'off'); if (on) api.click(); return on; },
+      setVolume(v) { vol = Math.max(0, Math.min(1, v)); pref.set('rl.vol', String(vol)); if (master) master.gain.value = gain(); },
+      get volume() { return vol; },
+      click() { if (!ensure()) return; tone(880, ctx.currentTime, .05, 'triangle', .08); },
+      chip() { if (!ensure()) return; const t = ctx.currentTime; noise(t, .07, 3800, .16); noise(t + .05, .07, 3000, .12); tone(1200, t, .05, 'square', .04); },
+      tick() { if (!ensure()) return; const t = ctx.currentTime; noise(t, .022, 4200, .07); },
+      win() { if (!ensure()) return; const t = ctx.currentTime; [523, 659, 784, 1047].forEach((f, i) => tone(f, t + i * .09, .3, 'triangle', .15)); },
+      lose() { if (!ensure()) return; const t = ctx.currentTime; [392, 330, 262].forEach((f, i) => tone(f, t + i * .12, .34, 'sine', .14)); },
+      push() { if (!ensure()) return; const t = ctx.currentTime; tone(494, t, .18, 'sine', .12); tone(494, t + .16, .22, 'sine', .11); }
+    };
+    return api;
+  })();
+
+  /* ==================================================================
+     轮盘数据
+     ================================================================== */
+  /* 欧式轮盘的实际排列顺序（顺时针） */
+  const ORDER = [0, 32, 15, 19, 4, 21, 2, 25, 17, 34, 6, 27, 13, 36, 11, 30, 8, 23, 10, 5, 24, 16, 33, 1,
+                 20, 14, 31, 9, 22, 18, 29, 7, 28, 12, 35, 3, 26];
+  const REDS = [1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36];
+  const isRed = (n) => REDS.indexOf(n) >= 0;
+  const colorOf = (n) => (n === 0 ? 'g' : (isRed(n) ? 'r' : 'b'));
+  const POCKETS = 37;
+  const SEG = Math.PI * 2 / POCKETS;
+
+  /* 每种押法：赔率 + 命中判定 */
+  const BETS = {
+    red:   { pay: 1, name: '红', hit: (n) => n !== 0 && isRed(n) },
+    black: { pay: 1, name: '黑', hit: (n) => n !== 0 && !isRed(n) },
+    odd:   { pay: 1, name: '单', hit: (n) => n !== 0 && n % 2 === 1 },
+    even:  { pay: 1, name: '双', hit: (n) => n !== 0 && n % 2 === 0 },
+    low:   { pay: 1, name: '小 1-18', hit: (n) => n >= 1 && n <= 18 },
+    high:  { pay: 1, name: '大 19-36', hit: (n) => n >= 19 && n <= 36 },
+    d1:    { pay: 2, name: '第一打 1-12', hit: (n) => n >= 1 && n <= 12 },
+    d2:    { pay: 2, name: '第二打 13-24', hit: (n) => n >= 13 && n <= 24 },
+    d3:    { pay: 2, name: '第三打 25-36', hit: (n) => n >= 25 && n <= 36 },
+    c1:    { pay: 2, name: '第 1 列', hit: (n) => n >= 1 && n % 3 === 1 },
+    c2:    { pay: 2, name: '第 2 列', hit: (n) => n >= 1 && n % 3 === 2 },
+    c3:    { pay: 2, name: '第 3 列', hit: (n) => n >= 1 && n % 3 === 0 }
+  };
+  const STRAIGHT_PAY = 35;   /* 押单个数字 1 赔 35 */
+
+  /* 命中概率：单个数字 1/37，其它按格数算（0 让它少一个格） */
+  function hitCount(key) {
+    if (key.indexOf('n:') === 0) return 1;
+    let c = 0;
+    for (let n = 0; n < 37; n++) if (BETS[key].hit(n)) c++;
+    return c;
+  }
+  function payOf(key) { return key.indexOf('n:') === 0 ? STRAIGHT_PAY : BETS[key].pay; }
+  function nameOf(key) { return key.indexOf('n:') === 0 ? ('数字 ' + key.slice(2)) : BETS[key].name; }
+  const probOf = (key) => hitCount(key) / POCKETS;
+  /* 期望值：押 1 单位的净收益 */
+  const evOf = (key) => probOf(key) * payOf(key) - (1 - probOf(key));
+  const edgeOf = (key) => -evOf(key);
+  const isHit = (key, n) => (key.indexOf('n:') === 0 ? Number(key.slice(2)) === n : BETS[key].hit(n));
+
+  /* ==================================================================
+     新手教练
+     ================================================================== */
+  function totalStake() { let s = 0; for (const k in bets) s += bets[k]; return s; }
+
+  function coachAdvise() {
+    const keys = Object.keys(bets).filter(k => bets[k] > 0);
+    if (!keys.length) {
+      return {
+        main: '先下注', tag: '下注',
+        why: '选一个筹码，点下注台上的格子押注。轮盘有 <b>37 个格</b>（0~36），但赔率是按 36 个格算的 —— ' +
+             '这多出来的 0 就是庄家的优势，<b>每种押法的赌场优势都是 2.70%</b>。',
+        warn: '', foot: '你的筹码 ' + chips + ' 分'
+      };
+    }
+    const lines = [];
+    let evSum = 0, stakeSum = 0, straightStake = 0, bigEdge = null;
+    for (const k of keys) {
+      const amt = bets[k];
+      stakeSum += amt;
+      evSum += amt * evOf(k);
+      if (k.indexOf('n:') === 0) straightStake += amt;
+    }
+    const edge = stakeSum ? (-evSum / stakeSum) : 0;
+    /* 逐注解释，最多列 3 注免得刷屏 */
+    const shown = keys.slice().sort((a, b) => bets[b] - bets[a]).slice(0, 3);
+    for (const k of shown) {
+      const p = probOf(k), pay = payOf(k);
+      lines.push('押「<b>' + nameOf(k) + '</b>」' + bets[k] + ' 分：命中概率 <b>' +
+                 (p * 100).toFixed(2) + '%</b>（' + hitCount(k) + '/37），赔率 1:' + pay +
+                 '，长期每押 100 分平均亏 <b>' + (edgeOf(k) * 100).toFixed(2) + ' 分</b>。');
+    }
+    if (keys.length > shown.length) lines.push('（还有 ' + (keys.length - shown.length) + ' 注没列出来）');
+
+    let tag = '分析', main = '共押 ' + stakeSum + ' 分';
+    let warn = '';
+    if (straightStake > 0) {
+      warn = '⚠ 你押了 ' + straightStake + ' 分在单个数字上：赔率 1:35 看着诱人，但命中概率只有 1/37 ≈ 2.70%，' +
+             '连输几十把是常事。想玩得久就押红黑，押数字只是图个刺激。';
+      main = '押了 ' + straightStake + ' 分数字';
+      tag = '提醒';
+    }
+    lines.push('这几注加起来赌场优势 <b>' + (edge * 100).toFixed(2) + '%</b> —— ' +
+               '不管怎么押都差不多是这个数，轮盘没有「划算的押法」。');
+    return {
+      main: main, tag: tag, why: lines.join(' '), warn: warn,
+      edge: edge, ev: evSum, stake: stakeSum,
+      foot: '本局共押 ' + stakeSum + ' 分 · 理论期望 ' + evSum.toFixed(2) + ' 分 · 筹码 ' + chips + ' 分'
+    };
+  }
+
+  /* ==================================================================
+     状态
+     ================================================================== */
+  const $ = (id) => document.getElementById(id);
+  const CHIPS = [1, 2, 5, 10, 15, 20, 25, 30, 50, 100];   /* 和「骰子比大小」的底注档位保持一致 */
+  let chip = 10;
+  let chips = 1000;
+  let bets = {};              /* { key: 金额 } */
+  let betHistory = [];        /* 撤销栈：记录每次加注的 key 和金额 */
+  let lastBets = null;        /* 上局的下注，供「重复上局」 */
+  let spinning = false;
+  let phase = 'bet';          /* bet | spin | over */
+  let result = null;
+  let lastNet = null;
+  let netTotal = 0;
+  let history = [];
+  let gen = 0;
+  let spinMs = Number(pref.get('rl.spin', '3600'));
+  if (!(spinMs > 0)) spinMs = 3600;
+  let myLimit = Number(pref.get('rl.mylimit', '5000'));
+  if (!(myLimit >= -1)) myLimit = 5000;
+  let coachOn = pref.get('rl.coach', 'on') !== 'off';
+  let autoOn = pref.get('rl.auto', 'off') === 'on';
+  if (autoOn && myLimit < 0) myLimit = 5000;
+  let autoSeq = 0, autoLeft = 0, autoShown = -1;
+
+  const stats = { total: 0, win: 0, lose: 0, draw: 0 };
+  let statsCounted = false;
+
+  /* ==================================================================
+     转盘绘制
+     ================================================================== */
+  const cv = $('wheel'), cx2 = cv.getContext('2d');
+  let wheelRot = -SEG / 2;      /* 当前旋转角 */
+
+  function fitWheel() {
+    const wrap = cv.parentElement;
+    const availH = Math.max(200, (wrap.clientHeight || 320) - 24);
+    const availW = Math.max(200, Math.min(wrap.clientWidth * 0.55, 520));
+    const size = Math.floor(Math.min(availH, availW, 460));
+    const dpr = window.devicePixelRatio || 1;
+    cv.width = Math.round(size * dpr); cv.height = Math.round(size * dpr);
+    cv.style.width = size + 'px'; cv.style.height = size + 'px';
+    cx2.setTransform(dpr, 0, 0, dpr, 0, 0);
+    drawWheel();
+  }
+
+  function drawWheel() {
+    const W = cv.width / (window.devicePixelRatio || 1);
+    const cx = W / 2, cy = W / 2, R = W / 2 - 4;
+    cx2.clearRect(0, 0, W, W);
+    /* 外框 */
+    cx2.beginPath(); cx2.arc(cx, cy, R, 0, Math.PI * 2);
+    cx2.fillStyle = '#2a1c0d'; cx2.fill();
+    const inner = R * 0.905;
+    for (let i = 0; i < POCKETS; i++) {
+      const a0 = wheelRot + i * SEG - Math.PI / 2 - SEG / 2;
+      const a1 = a0 + SEG;
+      const num = ORDER[i];
+      cx2.beginPath(); cx2.moveTo(cx, cy);
+      cx2.arc(cx, cy, inner, a0, a1); cx2.closePath();
+      cx2.fillStyle = num === 0 ? '#15803d' : (isRed(num) ? '#b91c1c' : '#141c28');
+      cx2.fill();
+      cx2.strokeStyle = 'rgba(0,0,0,.45)'; cx2.lineWidth = 1; cx2.stroke();
+      /* 号码 */
+      const mid = a0 + SEG / 2;
+      cx2.save();
+      cx2.translate(cx + Math.cos(mid) * inner * 0.855, cy + Math.sin(mid) * inner * 0.855);
+      cx2.rotate(mid + Math.PI / 2);
+      cx2.fillStyle = '#fff';
+      cx2.font = '700 ' + Math.max(8, Math.round(inner * 0.062)) + 'px sans-serif';
+      cx2.textAlign = 'center'; cx2.textBaseline = 'middle';
+      cx2.fillText(String(num), 0, 0);
+      cx2.restore();
+    }
+    /* 中心轴 */
+    cx2.beginPath(); cx2.arc(cx, cy, R * 0.30, 0, Math.PI * 2);
+    cx2.fillStyle = '#3a2a16'; cx2.fill();
+    cx2.beginPath(); cx2.arc(cx, cy, R * 0.24, 0, Math.PI * 2);
+    cx2.fillStyle = '#1b1208'; cx2.fill();
+    cx2.fillStyle = 'rgba(255,255,255,.55)';
+    cx2.font = '700 ' + Math.round(R * 0.10) + 'px sans-serif';
+    cx2.textAlign = 'center'; cx2.textBaseline = 'middle';
+    cx2.fillText(result === null ? '轮盘' : String(result), cx, cy + 1);
+    /* 顶部指针 */
+    cx2.beginPath();
+    cx2.moveTo(cx, cy - R + 2);
+    cx2.lineTo(cx - R * 0.075, cy - R * 0.88);
+    cx2.lineTo(cx + R * 0.075, cy - R * 0.88);
+    cx2.closePath();
+    cx2.fillStyle = '#f3cd7a'; cx2.fill();
+    cx2.strokeStyle = 'rgba(0,0,0,.5)'; cx2.lineWidth = 1; cx2.stroke();
+  }
+
+  /* 让 index 号格停在顶部指针下 */
+  function rotFor(idx) { return -idx * SEG; }
+
+  function spinTo(idx) {
+    const target = rotFor(idx);
+    const start = wheelRot;
+    /* 多转几圈 */
+    let end = target;
+    while (end < start + Math.PI * 2 * 4) end += Math.PI * 2;
+    const t0 = performance.now();
+    let lastTick = 0;
+    return new Promise(function (resolve) {
+      (function step(now) {
+        const t = Math.min(1, (now - t0) / spinMs);
+        /* easeOutCubic */
+        const e = 1 - Math.pow(1 - t, 3);
+        wheelRot = start + (end - start) * e;
+        drawWheel();
+        const ticks = Math.floor((end - start) / SEG);
+        const passed = Math.floor((wheelRot - start) / SEG);
+        if (passed !== lastTick) { lastTick = passed; if (t < 0.93) Sfx.tick(); }
+        if (t < 1) requestAnimationFrame(step);
+        else { wheelRot = end % (Math.PI * 2); drawWheel(); resolve(); }
+      })(t0);
+    });
+  }
+
+  /* ==================================================================
+     下注台
+     ================================================================== */
+  function buildBoard() {
+    /* 数字格：0 独占左边一列三行，其余按 3,6,9… / 2,5,8… / 1,4,7… 排 */
+    let h = '<div class="spot zero" data-key="n:0">0</div>';
+    for (let r = 0; r < 3; r++) {
+      for (let c = 0; c < 12; c++) {
+        const n = 3 + c * 3 - r;
+        h += '<div class="spot ' + (isRed(n) ? 'red' : 'blk') + '" data-key="n:' + n + '">' + n + '</div>';
+      }
+    }
+    $('numgrid').innerHTML = h;
+
+    const out = [
+      ['d1', '第一打', '1-12'], ['d2', '第二打', '13-24'], ['d3', '第三打', '25-36'],
+      ['low', '小', '1-18'], ['even', '双', ''], ['red', '红', ''],
+      ['high', '大', '19-36'], ['odd', '单', ''], ['black', '黑', ''],
+      ['c1', '第 1 列', '2:1'], ['c2', '第 2 列', '2:1'], ['c3', '第 3 列', '2:1']
+    ];
+    $('outside').innerHTML = out.map(function (o) {
+      const cls = o[0] === 'red' ? ' red' : (o[0] === 'black' ? ' blk' : '');
+      return '<div class="spot' + cls + '" data-key="' + o[0] + '">' + o[1] +
+             (o[2] ? '<small>' + o[2] + '</small>' : '') + '</div>';
+    }).join('');
+
+    $('chipbar').innerHTML = CHIPS.map(function (v) {
+      return '<button class="chipbtn' + (v === chip ? ' on' : '') + '" data-chip="' + v + '">' + v + '</button>';
+    }).join('');
+
+    /* 点击押注 */
+    document.querySelectorAll('#numgrid .spot, #outside .spot').forEach(function (el) {
+      el.addEventListener('click', function () { placeBet(el.dataset.key); });
+    });
+    document.querySelectorAll('.chipbtn').forEach(function (el) {
+      el.addEventListener('click', function () {
+        chip = Number(el.dataset.chip);
+        document.querySelectorAll('.chipbtn').forEach(b => b.classList.toggle('on', Number(b.dataset.chip) === chip));
+        Sfx.click(); render();
+      });
+    });
+  }
+
+  function placeBet(key) {
+    if (phase !== 'bet' || spinning) return;
+    if (chips < chip) { toast('筹码不够了，点「筹码回到 1000」'); return; }
+    chips -= chip;
+    bets[key] = (bets[key] || 0) + chip;
+    betHistory.push({ key: key, amt: chip });
+    Sfx.chip();
+    render();
+  }
+  function undoBet() {
+    if (phase !== 'bet' || spinning || !betHistory.length) return;
+    const last = betHistory.pop();
+    bets[last.key] = (bets[last.key] || 0) - last.amt;
+    if (bets[last.key] <= 0) delete bets[last.key];
+    chips += last.amt;
+    Sfx.click(); render();
+  }
+  function clearBets() {
+    if (phase !== 'bet' || spinning) return;
+    chips += totalStake();
+    bets = {}; betHistory = [];
+    Sfx.click(); render();
+  }
+  function repeatBets() {
+    if (phase !== 'bet' || spinning || !lastBets) { toast('还没有上一局可以重复'); return; }
+    clearBets();
+    const need = Object.keys(lastBets).reduce((a, k) => a + lastBets[k], 0);
+    if (chips < need) { toast('筹码不够重复上局（需要 ' + need + ' 分）'); return; }
+    for (const k in lastBets) { bets[k] = lastBets[k]; chips -= lastBets[k]; betHistory.push({ key: k, amt: lastBets[k] }); }
+    Sfx.chip(); render();
+  }
+
+  /* ==================================================================
+     转盘流程
+     ================================================================== */
+  function doSpin() {
+    if (phase !== 'bet' || spinning) return;
+    const stake = totalStake();
+    if (stake <= 0) { toast('先下注再转盘'); return; }
+    gen++;
+    spinning = true; phase = 'spin';
+    stopCountdown();
+    lastBets = Object.assign({}, bets);
+    const myGen = gen;
+    /* 先定结果，再让转盘停到那一格 */
+    const idx = Math.floor(Math.random() * POCKETS);
+    result = ORDER[idx];
+    $('resultNum').textContent = '…';
+    $('resultMsg').textContent = '转盘转动中…';
+    render();
+    spinTo(idx).then(function () {
+      if (myGen !== gen) return;
+      spinning = false; phase = 'over';
+      settle(result);
+    });
+  }
+
+  function settle(n) {
+    const stake = totalStake();
+    let back = 0, winAmt = 0;
+    for (const k in bets) {
+      if (isHit(k, n)) { const ret = bets[k] * (payOf(k) + 1); back += ret; winAmt += ret; }
+    }
+    chips += back;
+    const net = back - stake;
+    lastNet = net; netTotal += net;
+    history.unshift(colorOf(n) + ':' + n);
+    if (history.length > 18) history.pop();
+    $('resultNum').textContent = String(n);
+    $('resultNum').style.color = n === 0 ? '#4ade80' : (isRed(n) ? '#ff8a80' : '#cbd5e1');
+    $('resultMsg').innerHTML = '开出 <b>' + n + '</b> ' + (n === 0 ? '（绿色）' : (isRed(n) ? '（红）' : '（黑）')) +
+      '<br>' + (net > 0 ? '赚了 ' + net + ' 分' : (net < 0 ? '亏了 ' + (-net) + ' 分' : '不输不赢'));
+    if (net > 0) Sfx.win(); else if (net < 0) Sfx.lose(); else Sfx.push();
+    statsCounted = false;
+    recordResult(net > 0 ? 'win' : (net < 0 ? 'lose' : 'draw'));
+    /* 结算完把下注清掉，但保留「重复上局」 */
+    bets = {}; betHistory = [];
+    phase = 'bet';
+    render();
+    if (autoOn) {
+      const myGen = gen;
+      setTimeout(function () {
+        if (gen !== myGen || !autoOn || spinning) return;
+        if (chips < 25) { autoOn = false; pref.set('rl.auto', 'off'); renderAutoBtn(); render(); return; }
+        autoPlace(); doSpin();
+      }, 1200);
+    } else {
+      scheduleAuto();
+    }
+  }
+
+  function recordResult(r) {
+    if (statsCounted) return;
+    statsCounted = true; stats.total++;
+    if (r === 'win') stats.win++; else if (r === 'lose') stats.lose++; else stats.draw++;
+    renderStats();
+  }
+
+  /* ==================================================================
+     自动下注 / 我方限时
+     ================================================================== */
+  function autoPlace() {
+    /* 自动下注只用最稳的押法：红黑 / 大小，从不下单个数字 */
+    const pool = ['red', 'black', 'low', 'high', 'even', 'odd'];
+    const pick = pool[Math.floor(Math.random() * pool.length)];
+    const amt = Math.min(25, chips);
+    if (amt <= 0) return;
+    chips -= amt;
+    bets[pick] = (bets[pick] || 0) + amt;
+    betHistory.push({ key: pick, amt: amt });
+  }
+  function autoAct() {
+    if (phase !== 'bet' || spinning) return;
+    if (totalStake() <= 0) autoPlace();
+    autoSeq++; stopCountdown();
+    render();
+    doSpin();
+  }
+  function stopCountdown() { autoLeft = 0; autoShown = -1; }
+  function scheduleAuto() {
+    autoSeq++;
+    if (phase !== 'bet' || spinning) { stopCountdown(); return; }
+    if (!autoOn && myLimit < 0) { stopCountdown(); return; }
+    const seq = autoSeq;
+    autoLeft = (myLimit >= 0 ? myLimit : 5000) / 1000;
+    autoShown = Math.ceil(autoLeft);
+    const step = function () {
+      if (seq !== autoSeq || phase !== 'bet' || spinning) { stopCountdown(); return; }
+      if (!autoOn && myLimit < 0) { stopCountdown(); return; }
+      autoLeft = Math.max(0, autoLeft - 0.25);
+      const sec = Math.ceil(autoLeft);
+      if (sec !== autoShown) { autoShown = sec; renderCoach(); }
+      if (autoLeft <= 0) {
+        if (!autoOn) { autoOn = true; pref.set('rl.auto', 'on'); renderAutoBtn(); }
+        autoAct();
+        return;
+      }
+      setTimeout(step, 250);
+    };
+    setTimeout(step, 250);
+  }
+
+  /* ==================================================================
+     渲染
+     ================================================================== */
+  function renderStats() {
+    $('stTotal').textContent = stats.total; $('stWin').textContent = stats.win;
+    $('stLose').textContent = stats.lose; $('stDraw').textContent = stats.draw;
+  }
+  function autoText() {
+    if (phase !== 'bet' || spinning) return '';
+    if (!autoOn && myLimit < 0) return '';
+    const cd = Math.max(0, Math.ceil(autoLeft));
+    return autoOn ? '🤖 自动下注：' + cd + ' 秒后自动转' : '⏱ 限时 ' + Math.round(myLimit / 1000) + ' 秒：' + cd + ' 秒后自动接管';
+  }
+  function renderCoach() {
+    const tag = $('coachTag'), main = $('coachMain'), why = $('coachWhy'), warn = $('coachWarn'), foot = $('coachFoot');
+    if (!coachOn && !autoOn && myLimit < 0) {
+      tag.textContent = '关'; main.innerHTML = '教学和自动都关着';
+      why.innerHTML = '想学怎么算，点下面的「🎓 教学中」'; warn.innerHTML = ''; foot.innerHTML = '';
+      return;
+    }
+    if (spinning) {
+      tag.textContent = '转动中'; main.innerHTML = '转盘在转…';
+      why.innerHTML = '结果已经定了，只是在等你看到它停下来。';
+      warn.innerHTML = ''; foot.innerHTML = '本局已押 ' + totalStake() + ' 分';
+      return;
+    }
+    const a = coachAdvise();
+    tag.textContent = a.tag || '分析';
+    main.innerHTML = a.main;
+    why.innerHTML = a.why;
+    warn.innerHTML = a.warn;
+    foot.innerHTML = (a.foot || '') + (autoText() ? '<br>' + autoText() : '');
+  }
+  function render() {
+    /* 下注金额角标 */
+    document.querySelectorAll('#numgrid .spot, #outside .spot').forEach(function (el) {
+      const k = el.dataset.key, v = bets[k] || 0;
+      const old = el.querySelector('.amt');
+      if (old) old.remove();
+      if (v > 0) {
+        const s = document.createElement('span');
+        s.className = 'amt'; s.textContent = String(v);
+        el.appendChild(s);
+      }
+    });
+    $('chips').textContent = chips;
+    $('stake').textContent = totalStake();
+    $('lastNet').textContent = lastNet === null ? '—' : (lastNet > 0 ? '+' + lastNet : String(lastNet));
+    $('lastNet').style.color = lastNet === null ? '' : (lastNet > 0 ? 'var(--win)' : (lastNet < 0 ? 'var(--danger)' : ''));
+    $('netTotal').textContent = (netTotal > 0 ? '+' : '') + netTotal;
+    $('netTotal').style.color = netTotal > 0 ? 'var(--win)' : (netTotal < 0 ? 'var(--danger)' : '');
+    $('hist').innerHTML = history.map(function (h) {
+      const p = h.split(':');
+      return '<i class="' + p[0] + '">' + p[1] + '</i>';
+    }).join('');
+    const canBet = phase === 'bet' && !spinning;
+    $('spin').disabled = !canBet || totalStake() <= 0;
+    $('clear').disabled = !canBet || totalStake() <= 0;
+    $('undo').disabled = !canBet || !betHistory.length;
+    $('repeat').disabled = !canBet || !lastBets;
+    $('hint').disabled = spinning;
+    $('selInfo').textContent = spinning ? '转盘转动中…'
+      : phase === 'bet' ? ('当前筹码 ' + chip + ' 分 · 本局已押 ' + totalStake() + ' 分')
+      : '';
+    renderCoach();
+  }
+
+  /* ==================================================================
+     界面接线
+     ================================================================== */
+  function toast(msg) {
+    const el = $('toast'); el.textContent = msg; el.classList.add('on');
+    clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove('on'), 1800);
+  }
+  function renderAutoBtn() { $('auto').textContent = autoOn ? '🤖 自动下注' : '🤖 手动下注'; $('auto').classList.toggle('sound-off', !autoOn); }
+  function renderCoachBtn() { $('coach').textContent = coachOn ? '🎓 教学中' : '🎓 教学关'; $('coach').classList.toggle('sound-off', !coachOn); }
+  function renderSoundBtn() { $('sound').textContent = Sfx.enabled ? '🔊 音效' : '🔇 音效关'; $('sound').classList.toggle('sound-off', !Sfx.enabled); }
+  function setAuto(v) {
+    autoOn = !!v;
+    if (autoOn && myLimit < 0) { myLimit = 5000; $('myDelaySel').value = '5000'; pref.set('rl.mylimit', '5000'); }
+    if (!autoOn) { myLimit = -1; $('myDelaySel').value = '-1'; pref.set('rl.mylimit', '-1'); }
+    pref.set('rl.auto', autoOn ? 'on' : 'off');
+    autoSeq++; stopCountdown();
+    renderAutoBtn(); render();
+    if (autoOn && phase === 'bet' && !spinning) scheduleAuto();
+  }
+
+  $('spin').addEventListener('click', doSpin);
+  $('clear').addEventListener('click', clearBets);
+  $('undo').addEventListener('click', undoBet);
+  $('repeat').addEventListener('click', repeatBets);
+  $('hint').addEventListener('click', function () {
+    if (spinning) return;
+    const a = coachAdvise();
+    toast(a.tag + '：' + a.main);
+    Sfx.click(); renderCoach();
+  });
+  $('auto').addEventListener('click', function () { setAuto(!autoOn); });
+  $('coach').addEventListener('click', function () { coachOn = !coachOn; pref.set('rl.coach', coachOn ? 'on' : 'off'); renderCoachBtn(); render(); });
+  $('sound').addEventListener('click', function () { Sfx.set(!Sfx.enabled); renderSoundBtn(); });
+  $('volRange').addEventListener('input', function () { Sfx.setVolume(Number($('volRange').value) / 100); $('volNum').textContent = $('volRange').value; });
+  $('reset').addEventListener('click', function () { chips = 1000; netTotal = 0; lastNet = null; Sfx.chip(); toast('筹码已回到 1000'); render(); });
+  $('newGame').addEventListener('click', function () {
+    gen++; chips = 1000; bets = {}; betHistory = []; lastBets = null; lastNet = null; netTotal = 0;
+    history = []; stats.total = stats.win = stats.lose = stats.draw = 0;
+    phase = 'bet'; spinning = false; result = null; statsCounted = false;
+    $('resultNum').textContent = '—'; $('resultNum').style.color = '';
+    $('resultMsg').textContent = '先选筹码，点下注台押注';
+    autoSeq++; stopCountdown();
+    drawWheel(); renderStats(); Sfx.click(); render();
+  });
+  $('spinSel').addEventListener('change', function () { spinMs = Number($('spinSel').value) || 3600; pref.set('rl.spin', String(spinMs)); });
+  $('myDelaySel').addEventListener('change', function () {
+    myLimit = Number($('myDelaySel').value);
+    if (!(myLimit >= -1)) myLimit = 5000;
+    if (myLimit < 0 && autoOn) { autoOn = false; pref.set('rl.auto', 'off'); renderAutoBtn(); }
+    pref.set('rl.mylimit', String(myLimit));
+    autoSeq++; stopCountdown(); render();
+  });
+  $('rulesClose').addEventListener('click', () => $('rulesModal').classList.remove('on'));
+  $('rulesModal').addEventListener('click', (e) => { if (e.target === $('rulesModal')) $('rulesModal').classList.remove('on'); });
+
+  window.addEventListener('keydown', function (ev) {
+    const k = (ev.key || '').toLowerCase();
+    if (k === ' ' || k === 'spacebar') { ev.preventDefault(); doSpin(); return; }
+    if (k === 'z') undoBet();
+    else if (k === 'c') clearBets();
+    else if (k === 'r') repeatBets();
+    else if (k === 'h') $('rulesModal').classList.toggle('on');
+    else if (k === 'g') { coachOn = !coachOn; pref.set('rl.coach', coachOn ? 'on' : 'off'); renderCoachBtn(); render(); }
+    else if (k === 'a') setAuto(!autoOn);
+    else if (k === 'm') { Sfx.set(!Sfx.enabled); renderSoundBtn(); }
+    else if (ev.key === 'Escape') $('rulesModal').classList.remove('on');
+  });
+  window.addEventListener('resize', fitWheel);
+
+  /* ==================================================================
+     启动
+     ================================================================== */
+  (function boot() {
+    const sel = $('theme');
+    Object.keys(THEMES).forEach(k => {
+      const o = document.createElement('option'); o.value = k; o.textContent = THEMES[k].name; sel.appendChild(o);
+    });
+    sel.value = pref.get('rl.theme', 'midnight');
+    sel.addEventListener('change', function () {
+      theme = THEMES[sel.value] || THEMES.midnight; pref.set('rl.theme', sel.value); applyTheme();
+    });
+    $('spinSel').value = String(spinMs);
+    $('myDelaySel').value = String(myLimit);
+    $('volRange').value = String(Math.round(Sfx.volume * 100));
+    $('volNum').textContent = String(Math.round(Sfx.volume * 100));
+    buildBoard();
+    renderAutoBtn(); renderCoachBtn(); renderSoundBtn(); renderStats();
+    fitWheel();
+    render();
+  })();
+
+  /* ==================================================================
+     调试 / 测试钩子
+     ================================================================== */
+  window.__RL = {
+    Sfx: Sfx, ORDER: ORDER, REDS: REDS, BETS: BETS, isRed: isRed, colorOf: colorOf,
+    probOf: probOf, payOf: payOf, evOf: evOf, edgeOf: edgeOf, hitCount: hitCount, isHit: isHit,
+    coachAdvise: coachAdvise, placeBet: placeBet, clearBets: clearBets, undoBet: undoBet,
+    doSpin: doSpin, settle: settle, autoAct: autoAct, autoPlace: autoPlace, render: render,
+    setAuto: setAuto, drawWheel: drawWheel, fitWheel: fitWheel, scheduleAuto: scheduleAuto,
+    get chips() { return chips; }, set chips(v) { chips = Number(v); },
+    get bets() { return Object.assign({}, bets); },
+    get phase() { return phase; }, get spinning() { return spinning; },
+    get result() { return result; }, get stats() { return stats; },
+    get lastNet() { return lastNet; }, get netTotal() { return netTotal; },
+    get history() { return history.slice(); },
+    get autoOn() { return autoOn; }, set autoOn(v) { autoOn = !!v; },
+    get myLimit() { return myLimit; }, set myLimit(v) { myLimit = Number(v); },
+    get coachOn() { return coachOn; }, set coachOn(v) { coachOn = !!v; },
+    get autoLeft() { return autoLeft; }, get chip() { return chip; }, set chip(v) { chip = Number(v); },
+    get wheelRot() { return wheelRot; },
+    setPhase: function (p) { phase = p; render(); },
+    setSpinning: function (v) { spinning = !!v; },
+    get betHistory() { return betHistory.slice(); }
+  };
+})();
+</script>
+
+<script>
+/* ===== 专注/全屏模式：独立于游戏本体，不改各游戏自己的代码 ===== */
+(function () {
+  var fab = document.getElementById('focusFab');
+  function setLabel(on) {
+    if (!fab) return;
+    fab.innerHTML = on ? '⛶ 退出专注' : '⛶ 专注模式';
+    fab.title = on ? '恢复标题和两侧面板（Shift+F）' : '隐藏标题和两侧面板，让中间占满窗口（Shift+F）';
+  }
+  function refit() { try { window.dispatchEvent(new Event('resize')); } catch (e) {} }
+  function toggleFocus() {
+    var on = document.body.classList.toggle('focus');
+    setLabel(on);
+    refit();                       /* 画布类游戏按新尺寸重新适配 */
+    setTimeout(refit, 60);         /* 布局落定后再补一次 */
+    return on;
+  }
+  if (fab) fab.addEventListener('click', toggleFocus);
+  /* 用 Shift+F：普通 f 在骰子游戏里是「弃权」，不能抢。
+     用捕获阶段 + stopPropagation，保证游戏自己的按键处理不会同时触发。 */
+  window.addEventListener('keydown', function (e) {
+    var t = (e.target && e.target.tagName) || '';
+    if (t === 'INPUT' || t === 'SELECT' || t === 'TEXTAREA') return;
+    if ((e.key === 'F' || e.key === 'f') && e.shiftKey) {
+      e.preventDefault();
+      e.stopPropagation();
+      toggleFocus();
+    }
+  }, true);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,2457 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>牌九 · 新手教学</title>
+<style>
+  :root{
+    --bg:#0a1020;--glow-1:#1c2f4f;--glow-2:#241c4a;--panel:rgba(23,33,54,.78);--panel-brd:rgba(148,163,184,.20);
+    --text:#e8eefb;--muted:#8fa2bb;--accent:#38bdf8;--accent-2:#f5b942;--danger:#f87171;
+    --felt-1:#17335c;--felt-2:#0a1a33;--tile-face-1:#fffdf6;--tile-face-2:#e9e0cb;--tile-edge:#b6a37c;
+    --tile-back-1:#3a5a8f;--tile-back-2:#1d3355;--panel2:#16233a;--line:#25364e;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{min-height:100%}
+  body{margin:0;min-height:100vh;padding:12px 16px 14px;color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+    background:radial-gradient(1100px 620px at 12% -8%,var(--glow-1) 0%,transparent 58%),
+      radial-gradient(900px 560px at 92% 4%,var(--glow-2) 0%,transparent 55%),var(--bg);background-attachment:fixed}
+  .app{max-width:1440px;margin:0 auto}
+  h1.brand{margin:2px 0 10px;text-align:center;font-size:26px;letter-spacing:.34em;
+    background:linear-gradient(180deg,var(--accent-2),var(--accent));-webkit-background-clip:text;background-clip:text;color:transparent}
+  .sub{text-align:center;color:var(--muted);font-size:12px;letter-spacing:.16em;margin:-8px 0 10px}
+  .panel{background:var(--panel);border:1px solid var(--panel-brd);border-radius:14px;
+    backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+  .hud{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:10px 12px;margin-bottom:10px}
+  .hud-item{font-size:13px;color:var(--muted);white-space:nowrap}
+  .hud-item b{color:var(--text);font-variant-numeric:tabular-nums}
+  .hud-item b.hot{color:var(--accent-2)}
+  .field{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--muted);white-space:nowrap}
+  select{background:var(--panel2);color:var(--text);border:1px solid var(--panel-brd);border-radius:8px;padding:5px 8px;font-size:13px;cursor:pointer}
+  select:focus{outline:none;border-color:rgba(245,185,66,.6)}
+  select:disabled{opacity:.45;cursor:not-allowed}
+  button{background:var(--panel2);color:var(--text);border:1px solid var(--panel-brd);border-radius:9px;
+    padding:6px 12px;font-size:13px;cursor:pointer;transition:transform .1s ease,border-color .15s ease}
+  button:hover{border-color:var(--accent);transform:translateY(-1px)}
+  button:disabled{opacity:.4;cursor:not-allowed;transform:none}
+  button.primary{background:linear-gradient(180deg,rgba(245,185,66,.92),rgba(214,160,50,.92));color:#2b1e05;border-color:transparent;font-weight:700}
+  button.sound-off{opacity:.55}
+  .hud-sp{flex:1}
+  .volbox input[type=range]{width:96px;accent-color:var(--accent-2)}
+  .volbox .vn{color:var(--muted);font-size:12px;width:22px;display:inline-block;text-align:right}
+  /* 牌桌 */
+  .table{display:grid;grid-template-columns:210px 1fr 210px;gap:10px;margin-bottom:10px}
+  .seat{padding:9px 10px;display:flex;flex-direction:column;gap:6px;align-items:center}
+  .seatname{font-size:13px;font-weight:600}
+  .seatname.hot{color:var(--accent-2)}
+  .seatrow{display:flex;gap:6px;align-items:center;justify-content:center;flex-wrap:wrap}
+  .seatnote{font-size:11.5px;color:var(--muted);text-align:center;line-height:1.6}
+  .felt{position:relative;border-radius:16px;min-height:400px;
+    background:radial-gradient(120% 90% at 50% 0%,var(--felt-1),var(--felt-2));
+    border:1px solid var(--panel-brd);box-shadow:inset 0 0 60px rgba(0,0,0,.35);padding:10px}
+  .centerInfo{position:absolute;left:50%;top:10px;transform:translateX(-50%);text-align:center;font-size:13px;color:var(--muted)}
+  .centerInfo b{color:var(--text)}
+  .dealerZone{position:absolute;left:50%;top:58px;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:6px}
+  .vsZone{position:absolute;left:50%;top:238px;transform:translateX(-50%);font-size:12px;color:var(--muted);text-align:center;line-height:1.9}
+  /* 骨牌 */
+  .tile{width:52px;height:104px;border-radius:8px;padding:5px;display:flex;flex-direction:column;gap:4px;
+    background:linear-gradient(170deg,var(--tile-face-1),var(--tile-face-2));border:1px solid var(--tile-edge);
+    box-shadow:0 3px 0 rgba(0,0,0,.3);user-select:none;position:relative;transition:transform .1s ease,box-shadow .12s ease}
+  .tile .half{flex:1;border-radius:4px;display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);
+    gap:1px;padding:2px;background:rgba(0,0,0,.045)}
+  .tile .pip{width:100%;height:100%;display:flex;align-items:center;justify-content:center}
+  .tile .pip i{width:72%;height:72%;border-radius:50%;background:#26303d;display:block}
+  .tile .pip.r i{background:#cf2b2b}
+  .tile.sm{width:38px;height:76px;padding:3px;gap:3px}
+  .tile.mini{width:28px;height:56px;padding:2px;gap:2px;border-radius:5px}
+  .tile.back{background:linear-gradient(160deg,var(--tile-back-1),var(--tile-back-2));border-color:rgba(0,0,0,.35)}
+  .tile.back::after{content:'';position:absolute;inset:5px;border-radius:5px;border:1px solid rgba(255,255,255,.14)}
+  .tile.pick{cursor:pointer}
+  .tile.pick:hover{transform:translateY(-6px)}
+  .tile.front{box-shadow:0 0 0 3px #38bdf8,0 3px 0 rgba(0,0,0,.3)}
+  .tile.back2{box-shadow:0 0 0 3px #f5b942,0 3px 0 rgba(0,0,0,.3)}
+  .tile.advise{box-shadow:0 0 0 3px #ef4444,0 0 16px rgba(239,68,68,.8);animation:advise 1.4s ease-in-out infinite}
+  @keyframes advise{0%,100%{box-shadow:0 0 0 2px rgba(239,68,68,.6),0 0 10px rgba(239,68,68,.6)}
+    50%{box-shadow:0 0 0 5px rgba(239,68,68,.95),0 0 22px rgba(239,68,68,1)}}
+  .tile.res-win{box-shadow:0 0 0 3px #4ade80}
+  .tile.res-lose{box-shadow:0 0 0 3px #ef4444;opacity:.85}
+  .handarea{display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;min-height:104px}
+  .mine{padding:10px 12px;margin-bottom:10px;display:grid;grid-template-columns:1fr 250px;gap:12px}
+  .handwrap{display:flex;flex-direction:column;gap:6px;min-width:0}
+  .handlabel{font-size:12px;color:var(--muted);display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .handlabel b{color:var(--text)}
+  .tag{font-size:11px;padding:1px 7px;border-radius:999px;border:1px solid var(--panel-brd);color:var(--muted)}
+  .tag.hot{color:var(--accent-2);border-color:rgba(245,185,66,.5)}
+  .tag.you{color:#052e16;background:var(--accent);border-color:transparent;font-weight:700}
+  .tag.front{color:#04263a;background:#7dd3fc;border-color:transparent;font-weight:700}
+  .tag.back{color:#3a2a05;background:var(--accent-2);border-color:transparent;font-weight:700}
+  .side{display:flex;flex-direction:column;gap:6px;font-size:12px;color:var(--muted)}
+  .side h4{margin:0;font-size:12px;color:var(--muted);font-weight:600;letter-spacing:.1em}
+  .vlist{display:flex;flex-direction:column;gap:5px}
+  .vrow{background:var(--panel2);border:1px solid var(--panel-brd);border-radius:8px;padding:5px 8px;font-size:12px;
+    display:flex;justify-content:space-between;gap:8px}
+  .vrow b{color:var(--text)}
+  .vrow.best{border-color:rgba(74,222,128,.6);background:rgba(74,222,128,.12)}
+  .vrow.win b{color:#86efac}
+  .vrow.lose b{color:#fca5a5}
+  /* 教学条 */
+  .coach{margin:0 0 10px;padding:9px 12px;border-radius:12px;border:1px solid rgba(74,222,128,.35);
+    background:linear-gradient(180deg,rgba(22,101,52,.85),rgba(12,74,38,.9));color:#dcfce7}
+  .coach[hidden]{display:none}
+  .coach-top{display:flex;gap:9px;align-items:center;flex-wrap:wrap}
+  .coach-tag{font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:rgba(255,255,255,.16);white-space:nowrap}
+  .coach-main{font-size:14px;font-weight:700}
+  .coach-main em{font-style:normal;color:#fca5a5}
+  .coach-main u,.coach-sub u{text-decoration:none;color:#fde68a;font-weight:700;border-bottom:1px dashed rgba(253,230,138,.6)}
+  .coach-sub{margin-top:5px;font-size:12px;line-height:1.65;color:#bbf7d0}
+  .coach-sub b{color:#fff}
+  .coach-sub span{color:#86efac}
+  .coach-cmp{margin-top:6px;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+  .coach-cmp:empty{display:none}
+  .coach-cmp .cmp-label{font-size:11px;color:#86efac}
+  .coach-cmp .chip{font-size:11px;padding:2px 9px;border-radius:999px;white-space:nowrap;
+    background:rgba(74,222,128,.14);border:1px solid rgba(74,222,128,.34);color:#d1fae5}
+  .coach-cmp .chip.best{background:#4ade80;border-color:#86efac;color:#052e16;font-weight:700}
+  .actions{margin-bottom:8px}
+  .actbar{display:flex;gap:8px;flex-wrap:wrap}
+  .actbar button{display:flex;flex-direction:column;align-items:flex-start;gap:2px;min-width:96px}
+  .actbar .bh{font-size:11px;color:var(--muted);font-weight:400}
+  .actbar button.act-go{background:rgba(74,222,128,.18);border-color:rgba(74,222,128,.55)}
+  .actbar button.act-hint{background:rgba(245,185,66,.16);border-color:rgba(245,185,66,.5)}
+  .foot{text-align:center;font-size:12px;color:var(--muted);line-height:1.9}
+  .foot kbd{background:var(--panel2);border:1px solid var(--panel-brd);border-radius:5px;padding:1px 6px;font-size:11px}
+  .mask{position:fixed;inset:0;background:rgba(3,7,18,.66);backdrop-filter:blur(5px);
+    display:flex;align-items:center;justify-content:center;padding:22px;z-index:60}
+  .mask[hidden]{display:none}
+  .card-modal{width:min(780px,94vw);max-height:88vh;overflow:auto;padding:18px 20px 16px;border-radius:16px;
+    background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--panel-brd);
+    box-shadow:0 26px 70px rgba(0,0,0,.55)}
+  .card-modal h3{margin:0 0 12px;font-size:17px;
+    background:linear-gradient(180deg,var(--accent-2),var(--accent));-webkit-background-clip:text;background-clip:text;color:transparent}
+  .rules ol,.rules ul{margin:0;padding-left:20px;font-size:13.5px;line-height:1.95;color:var(--text)}
+  .rules li{margin-bottom:7px}
+  .rules b{color:var(--accent-2)}
+  .rules .tip{margin-top:12px;padding:9px 12px;border-radius:10px;background:rgba(74,222,128,.12);
+    border:1px solid rgba(74,222,128,.32);color:#d1fae5;font-size:13px;line-height:1.8}
+  .rules-foot{margin-top:14px;text-align:center}
+  .tiletable{display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:6px;margin:10px 0}
+  .tiletable .tt{display:flex;gap:6px;align-items:center;background:var(--panel2);border:1px solid var(--panel-brd);
+    border-radius:8px;padding:4px 6px;font-size:11.5px;color:var(--muted)}
+  .tiletable .tt b{color:var(--accent-2);font-size:12px}
+  .secrets-tip{margin-top:12px;padding:9px 12px;border-radius:10px;background:rgba(245,185,66,.12);
+    border:1px solid rgba(245,185,66,.3);color:#fde68a;font-size:12.5px;line-height:1.8}
+  #secretList{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:9px}
+  #secretList li{display:flex;gap:10px;align-items:flex-start;font-size:13px;line-height:1.75}
+  #secretList li::before{content:attr(data-n);flex:0 0 auto;width:22px;height:22px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#2b1e05;
+    background:linear-gradient(180deg,var(--accent-2),#d6a45f)}
+  #secretList .st{margin-left:6px;font-size:11px;padding:1px 7px;border-radius:999px;border:1px solid var(--panel-brd);color:var(--muted)}
+  #secretList .why{display:block;color:var(--muted);font-size:12.5px;margin-top:2px}
+  #secretList b{color:var(--accent-2)}
+  .toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);z-index:70;padding:10px 18px;border-radius:12px;
+    background:rgba(12,19,34,.94);border:1px solid var(--panel-brd);font-size:13.5px;color:var(--text);
+    box-shadow:0 12px 34px rgba(0,0,0,.5);max-width:88vw;text-align:center;line-height:1.7}
+  .toast[hidden]{display:none}
+  .toast b{color:var(--accent-2)}
+  @media (max-width:1080px){.mine{grid-template-columns:1fr}.table{grid-template-columns:150px 1fr 150px}}
+
+  /* ================= 三栏布局（参考中国象棋） ================= */
+  .app{max-width:none;width:100%;margin:0 auto;padding:12px 16px 14px;display:flex;flex-direction:column;gap:12px}
+  main{
+    display:grid;
+    grid-template-columns:clamp(250px,17vw,330px) minmax(0,1fr) clamp(250px,17vw,330px);
+    gap:14px;align-items:stretch;
+    grid-template-rows:minmax(0,1fr);
+    height:calc(100vh - 158px);min-height:560px;
+  }
+  .side-col{display:flex;flex-direction:column;gap:12px;min-height:0;overflow-y:auto;padding-right:3px}
+  .side-col::-webkit-scrollbar{width:7px}
+  .side-col::-webkit-scrollbar-thumb{background:var(--line,rgba(148,163,184,.35));border-radius:4px}
+  .side-col::-webkit-scrollbar-track{background:transparent}
+  .board-col{min-width:0;display:flex;flex-direction:column;gap:10px;min-height:0}
+  .sec{padding:12px;display:flex;flex-direction:column;gap:10px;flex:none}
+  .sec h2{margin:0;font-size:12px;letter-spacing:.14em;color:var(--muted);font-weight:700}
+  .sec .field{margin:0}
+  .sec .hud-item{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-size:13px}
+  .sec .btns2{display:flex;flex-direction:column;gap:8px}
+  .sec .btns2 button,.sec .btns2 .field{width:100%}
+  .sec .btns2 .volbox{justify-content:space-between}
+  .side-col .coach{flex:none}
+  .board-col .actions{flex:none;justify-content:center}
+  .board-col .mine{flex:0 0 auto}
+
+  /* ==================================================================
+     庄家规则 + 结果排版（跟 骰子比大小 / 骰子炸金花 完全一致的一套）
+     ================================================================== */
+  .field input[type=number]{
+    width:104px;flex:none;text-align:right;font:inherit;font-size:13px;font-variant-numeric:tabular-nums;
+    color:var(--text);background:var(--panel2);border:1px solid var(--panel-brd);border-radius:8px;
+    padding:5px 8px;outline:none;cursor:pointer}
+  .field input[type=number]:focus{border-color:var(--accent);cursor:text}
+  .side-col .sec .field input[type=number]{width:104px}
+  .note-line{font-size:11px;color:var(--muted);line-height:1.5}
+  /* 每个人一个坐位（1~4 人轮流上阵） */
+  .players-row{display:flex;gap:8px;justify-content:center;align-items:flex-start;flex-wrap:wrap;
+    position:relative;z-index:1;margin-top:8px}
+  .pzone{display:flex;flex-direction:column;gap:4px;align-items:center;min-width:132px;
+    padding:6px 9px 5px;border-radius:12px;border:1px solid rgba(255,255,255,.10);
+    background:rgba(0,0,0,.18);transition:border-color .15s,background .15s,box-shadow .15s}
+  .pzone.active{border-color:var(--accent);background:rgba(56,189,248,.10)}
+  .pzone.win{border-color:rgba(74,222,128,.55)}
+  .pzone.lose{border-color:rgba(248,113,113,.38)}
+  .pzone .pname{font-size:12px;font-weight:700;color:var(--text)}
+  .pv{font-size:11.5px;padding:2px 9px;border-radius:999px;background:rgba(255,255,255,.10);
+    border:1px solid rgba(255,255,255,.16);font-variant-numeric:tabular-nums;color:var(--text);white-space:nowrap}
+  .pv.pair{background:rgba(56,189,248,.18);border-color:rgba(56,189,248,.45);color:#bae6fd}
+  .pv.supreme{background:rgba(245,185,66,.24);border-color:rgba(245,185,66,.6);color:#ffe9b8;font-weight:800}
+  .pstate{font-size:10.5px;letter-spacing:.04em;padding:1px 8px;border-radius:999px;min-width:56px;text-align:center;
+    background:rgba(148,163,184,.16);border:1px solid var(--panel-brd);color:var(--muted);white-space:nowrap}
+  .pstate.turn{background:rgba(56,189,248,.20);border-color:rgba(56,189,248,.5);color:#bae6fd}
+  .pstate.decide{background:rgba(245,185,66,.20);border-color:rgba(245,185,66,.5);color:#ffe1a3}
+  .pstate.win{background:rgba(74,222,128,.20);border-color:rgba(74,222,128,.5);color:#a7f3c8}
+  .pstate.lose{background:rgba(248,113,113,.18);border-color:rgba(248,113,113,.45);color:#ffb4b4}
+  .pbet{font-size:10px;color:var(--muted);letter-spacing:.02em}
+  .pbet b{color:var(--text);font-variant-numeric:tabular-nums}
+  .pzone.active .pbet b{color:#ffe1a3}
+  /* 牌桌上庄家那一块的本钱读数 */
+  .dealer-bank{font-size:11.5px;color:rgba(226,240,255,.80);letter-spacing:.02em;
+    background:rgba(0,0,0,.22);border:1px solid rgba(255,255,255,.12);border-radius:999px;padding:2px 12px}
+  .dealer-bank b{color:#fff;font-variant-numeric:tabular-nums}
+  .dealer-bank .up{color:#4ade80} .dealer-bank .down{color:#ffb4b4}
+  .dealer-bank.broke{border-color:rgba(248,113,113,.6);color:#ffb4b4}
+  /* 本局状态那一栏 */
+  .stat-row{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-size:13px}
+  .stat-row span{color:var(--muted)}
+  .stat-row b{font-size:15px;font-variant-numeric:tabular-nums;color:var(--text)}
+  /* 排行榜：庄家一行 + 每人两行（名字 + 筹码 / 本局 + 胜负和） */
+  .rank{display:flex;flex-direction:column;gap:3px;font-size:12.5px}
+  .rankrow{display:grid;grid-template-columns:18px minmax(0,1fr) auto;gap:1px 6px;
+    align-items:baseline;padding:4px 6px;border-radius:7px}
+  .rankrow.active{background:rgba(56,189,248,.14);box-shadow:inset 0 0 0 1px rgba(56,189,248,.35)}
+  .rankrow.dealer{background:rgba(245,185,66,.10);box-shadow:inset 0 0 0 1px rgba(245,185,66,.28);margin-bottom:3px}
+  .rankrow.dealer .rn{color:var(--accent-2)}
+  .rankrow.dealer.broke{box-shadow:inset 0 0 0 1px rgba(248,113,113,.45)}
+  .rankrow.dealer.broke .rc{color:#ffb4b4}
+  .rankrow .rk{grid-row:1/3;align-self:center;color:var(--muted);text-align:center;font-variant-numeric:tabular-nums}
+  .rankrow .rn{grid-column:2;grid-row:1;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .rankrow .rc{grid-column:3;grid-row:1;text-align:right;font-variant-numeric:tabular-nums;font-weight:700}
+  .rankrow .rd{grid-column:2;grid-row:2;color:var(--muted);font-size:11.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .rankrow .rs{grid-column:3;grid-row:2;text-align:right;color:var(--muted);font-variant-numeric:tabular-nums;font-size:11px}
+  .rankrow .up{color:#4ade80} .rankrow .down{color:#ffb4b4}
+  .ranknote{font-size:11px;color:var(--muted);opacity:.8;margin-top:7px;line-height:1.6}
+  /* 中央结果区：左右两组，整块居中，组内每行左对齐
+     左 =【本局总结】赢/输/和 各多少人；右 =【详情情况】庄家第一行 + 玩家按上阵顺序 */
+  .resbox{display:inline-flex;gap:0;text-align:left;margin-top:7px;vertical-align:top;align-items:flex-start;
+    background:rgba(4,10,22,.42);border:1px solid var(--panel-brd);border-radius:12px;padding:9px 4px}
+  .resgroup{display:block;padding:0 22px}
+  .resgroup + .resgroup{border-left:1px dashed rgba(148,163,184,.35)}
+  /* 组标题比内容更大更粗 */
+  .resgtitle{font-size:21px;line-height:1.35;color:var(--text);font-weight:800;letter-spacing:.06em;margin-bottom:5px}
+  .resline{display:block;font-size:18px;line-height:1.5;font-weight:600;letter-spacing:.02em;font-variant-numeric:tabular-nums}
+  .resline b{font-weight:800}
+  .resline .up{color:#4ade80} .resline .down{color:#ffb4b4}
+  /* 底部底注条 */
+  .betbar{display:flex;gap:7px;justify-content:center;flex-wrap:wrap;align-items:center}
+  .betchip{min-width:44px;padding:6px 10px;border-radius:999px;font-weight:700;font-size:13px}
+  .betchip.on{background:linear-gradient(180deg,#f3cd7a,#d9a63a);color:#241a05;border-color:rgba(255,231,170,.8)}
+  .sel-info{font-size:12px;color:var(--muted);text-align:center;min-height:17px;line-height:1.7}
+  .sel-info b{color:var(--text)}
+  .handlabel .pv{margin-left:2px}
+  /* 庄家赔光时的提示卡 */
+  .rules-box.broke{max-width:min(94vw,460px);border-color:rgba(248,113,113,.5)}
+  .rules-box.broke h3{color:#ffb4b4}
+  .broke-big{font-size:42px;line-height:1;text-align:center;margin:2px 0 12px}
+  .broke-kv{display:flex;justify-content:space-between;gap:10px;font-size:13px;padding:5px 0;
+    border-bottom:1px dashed rgba(148,163,184,.22)}
+  .broke-kv span{color:var(--muted)}
+  .broke-kv b{font-variant-numeric:tabular-nums}
+  .broke-kv b.down{color:#ffb4b4}
+  .btns2{display:flex;flex-direction:column;gap:8px}
+  .btns2 button{width:100%}
+
+  @media (max-width:1180px){
+    main{grid-template-columns:1fr;height:auto;min-height:0}
+    .side-col{overflow:visible}
+    .board-col{min-height:70vh}
+  }
+
+/* ===== 专注/全屏模式：藏起标题和两侧面板，中间区域吃满窗口（Shift+F 或点右上角按钮） ===== */
+body.focus header,body.focus aside,body.focus .side-col,body.focus main > *:not(.board-col){display:none}
+body.focus main{display:block !important;grid-template-columns:minmax(0,1fr) !important;
+  height:auto !important;min-height:0 !important;max-height:none !important}
+body.focus .app{max-width:none !important;width:100% !important;padding:6px 10px 10px !important;
+  height:auto !important;min-height:calc(100vh - 26px)}
+body.focus .board-col{min-height:0 !important;width:100% !important}
+body.focus canvas{max-width:100% !important;max-height:calc(100vh - 96px) !important}
+.focus-fab{position:fixed;top:9px;right:11px;z-index:80;display:flex;align-items:center;gap:6px;
+  padding:6px 12px;border-radius:999px;font:inherit;font-size:12.5px;font-weight:700;cursor:pointer;
+  color:#e8eefb;background:rgba(15,23,42,.74);border:1px solid rgba(148,163,184,.32);
+  -webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
+  opacity:.6;transition:opacity .15s,transform .15s}
+.focus-fab:hover{opacity:1;transform:translateY(-1px)}
+body.focus .focus-fab{opacity:.92}
+
+/* ===== 中间区修正：牌桌占满中间列；牌桌内部改为顺序流，不再互相重叠 ===== */
+.table{grid-template-columns:minmax(0,1fr) !important;gap:0 !important}
+.felt{display:flex !important;flex-direction:column;gap:10px;
+  padding:14px 16px !important;min-height:0 !important;flex:1 1 auto}
+.centerInfo{position:static !important;transform:none !important;text-align:center}
+.dealerZone{position:static !important;transform:none !important;left:auto !important;top:auto !important}
+.vsZone{position:static !important;transform:none !important;left:auto !important;top:auto !important}
+.players-row{margin-top:2px !important}
+/* 结果区（【本局总结】/【详情情况】）贴着牌桌底部居中显示；这里要亮色，别继承 .sel-info 的暗色 */
+.felt .sel-info{margin-top:auto;padding-top:8px}
+.felt #centerMsg{color:#d7e7f5}
+/* 底部面板：手牌区 + 一整排筹码（和骰子比大小一样，别挤成两排） */
+.mine{grid-template-columns:minmax(0,1fr) !important;align-items:stretch}
+.betbar{display:flex;gap:6px;justify-content:center;align-items:center;flex-wrap:wrap}
+.betbar .betchip{flex:none}
+.betchip{cursor:pointer;border:1px solid rgba(255,255,255,.20);background:rgba(255,255,255,.10);color:#fff;
+  transition:transform .12s,background .12s}
+.betchip:hover:not(:disabled){background:rgba(255,255,255,.18)}
+.betchip:disabled{opacity:.45;cursor:not-allowed}
+.betchip.on{box-shadow:0 0 0 2px rgba(243,205,122,.35)}
+/* 昵称输入框：建了 DOM 但漏了样式，3 个框挤在一起 → 补上 */
+.namebox{display:flex;flex-direction:column;gap:6px;margin:2px 0 8px}
+.namefield{display:flex;align-items:center;gap:8px;font-size:12.5px}
+.namefield span{flex:none;min-width:54px;color:var(--muted)}
+.namefield input{flex:1;min-width:0;font:inherit;font-size:12.5px;color:var(--text);
+  background:var(--panel2);border:1px solid var(--panel-brd);border-radius:8px;padding:4px 8px;outline:none}
+.namefield input:focus{border-color:var(--accent)}
+.namefield input::placeholder{color:var(--muted);opacity:.6}
+</style>
+</head>
+<body>
+<button class="focus-fab" id="focusFab" title="隐藏两侧面板，让中间占满窗口（Shift+F）">⛶ 专注模式</button>
+<div class="app">
+  <h1 class="brand">牌 九</h1>
+  <div class="sub">PAI GOW · 32 张骨牌 · 四张牌分前后两手 跟庄家比大小（新手教学模式）</div>
+
+  <main>
+    <div class="side-col left">
+      <section class="panel sec">
+        <h2>对局设置</h2>
+<label class="field" title="每种底注档位：一份注＝前手一份 + 后手一份。开局前选这里定的是所有人的默认值"><span id="betLabel">底注</span>
+      <select id="betSel"></select>
+    </label>
+    <div class="field" style="margin-top:-4px"><span class="note-line">轮到谁谁可以改自己的底注</span></div>
+<label class="field" title="庄家开局带多少钱。赔光了就只赔到 0（欠的不赔），重新开局会按这个数重发">庄家本钱
+      <input type="number" id="dealerBankIn" min="0" max="1000000" step="10" value="100">
+    </label>
+    <div class="field" style="margin-top:-4px"><span class="note-line">默认 100 分，随时可改（改完立刻生效）</span></div>
+<label class="field" title="庄家本钱不够赔时，先赔给谁：按牌型大小 = 牌大（至尊宝最强）的先拿满；按玩家顺序 = 先上阵的先拿满">赔不过来时
+      <select id="payOrderSel">
+        <option value="points">按牌型大小赔</option>
+        <option value="order">按玩家顺序赔</option>
+      </select>
+    </label>
+    <div class="field" style="margin-top:-4px"><span class="note-line" id="payOrderHint">牌大的先拿满，牌小的少拿/拿不到</span></div>
+<label class="field" title="同一台电脑上几个人轮流玩（1 个人就是原来的单人模式），每人四张牌，轮流跟同一个庄家比">玩家人数
+      <select id="playerSel"></select>
+    </label>
+    <div class="field" style="margin-top:2px;margin-bottom:2px"><span class="note-line">玩家昵称（可留空，最多 8 个字）</span></div>
+    <div class="namebox" id="nameBox"></div>
+<label class="field" title="电脑思考/开牌前的停顿">对手延时
+      <select id="aiDelaySel">
+        <option value="0">立即</option>
+        <option value="500">0.5s</option>
+        <option value="1000" selected>1s</option>
+        <option value="2000">2s</option>
+      </select>
+    </label>
+<label class="field" title="轮到你分牌时最多等你多久，超时自动接管；选不限时＝永远自己分">我方限时
+      <select id="myDelaySel">
+        <option value="0">立即</option>
+        <option value="3000">3s</option>
+        <option value="5000" selected>5s</option>
+        <option value="10000">10s</option>
+        <option value="-1">不限时</option>
+      </select>
+    </label>
+<label class="field">主题<select id="theme"></select></label>
+      </section>
+  <div class="coach" id="coachPanel" hidden>
+    <div class="coach-top">
+      <span class="coach-tag" id="coachTag">教学</span>
+      <span class="coach-main" id="coachMain"></span>
+    </div>
+    <div class="coach-sub" id="coachSub"></div>
+    <div class="coach-cmp" id="coachCmp"></div>
+  </div>
+      <section class="panel sec">
+        <h2>操作</h2>
+        <div class="btns2">
+<label class="field volbox" title="音量">音量
+      <input type="range" id="volRange" min="0" max="100" step="1" value="70">
+      <span class="vn" id="volNum">70</span>
+    </label>
+<button id="auto" title="自动分牌：轮到你时按教学建议自动分前后手（快捷键 A）">🤖 手动分牌</button>
+<button id="coach" title="新手教学：告诉你为什么这样分（快捷键 G）">🎓 教学中</button>
+<button id="rules" title="牌九三分钟上手（快捷键 H）">❓ 规则</button>
+<button id="secrets" title="牌九秘籍 · 十大新手原则（快捷键 J）">📜 秘籍</button>
+<button id="voice" title="报牌语音开关">🗣 报牌</button>
+<button id="sound" title="音效开关（快捷键 M）">🔊 音效</button>
+<button id="reset" title="所有人筹码回到 1000，庄家本钱按设定值重发">筹码回到 1000</button>
+<button id="restart" class="primary">重新开局</button>
+        </div>
+      </section>
+    </div>
+
+    <div class="board-col">
+  <div class="table">
+    <div class="felt">
+      <div class="centerInfo" id="centerInfo"></div>
+      <div class="dealerZone">
+        <div class="seatname hot" id="dealerName">庄家</div>
+        <div class="seatrow" id="tilesDealer"></div>
+        <div class="seatnote" id="noteDealer">—</div>
+        <div class="dealer-bank" id="dealerBank">本钱 —</div>
+      </div>
+      <div class="vsZone" id="vsZone"></div>
+      <div class="players-row" id="playersRow"></div>
+      <div class="sel-info" id="centerMsg">选好底注和人数，点「🎲 下注开局」</div>
+    </div>
+  </div>
+
+      <div class="mine panel">
+<div class="handwrap">
+      <div class="handlabel"><b id="handWho">你的四张牌</b><span class="tag" id="pickInfo">点两张放「前手」，另外两张就是「后手」</span></div>
+      <div class="handarea" id="handMe"></div>
+      <div class="handlabel" style="margin-top:4px">
+        <span class="tag front" id="tagFront">前手 —</span>
+        <span class="tag back" id="tagBack">后手 —</span>
+        <span id="splitInfo" style="color:var(--muted)"></span>
+      </div>
+    </div>
+<div class="betbar" id="betBar">
+  <button id="roll" class="primary">🎲 下注开局</button>
+</div>
+      </div>
+
+  <div class="actions" id="actions"></div>
+    </div>
+
+    <div class="side-col right">
+      <section class="panel sec">
+        <h2>本局状态</h2>
+<div class="stat-row"><span>当前上阵</span><b id="turnNow">你</b></div>
+<div class="stat-row"><span>他的筹码</span><b id="chips">1000</b></div>
+<div class="stat-row"><span>他的注额</span><b id="betNow">0</b></div>
+<div class="stat-row"><span>他的牌型</span><b id="myNow">—</b></div>
+<div class="stat-row"><span>庄家牌型</span><b id="dealerNow">—</b></div>
+<div class="stat-row"><span>庄家本钱</span><b id="dealerChips">—</b></div>
+<div class="stat-row"><span>庄家本局</span><b id="dealerDelta">—</b></div>
+<div class="stat-row"><span>本局结果</span><b id="resNow">—</b></div>
+      </section>
+
+      <section class="panel sec" id="rankSec">
+        <h2>玩家排行</h2>
+        <div class="rank" id="rankBox"></div>
+        <div class="ranknote">最上面金色一行是庄家（本钱会一直累积）· 每人开局 1000 分 · 每行第一行是「名字 + 筹码」，第二行是「本局输赢 + 累计胜/负/和」</div>
+      </section>
+
+      <section class="panel sec">
+        <h2>本次战绩</h2>
+<span class="hud-item">第 <b id="roundNo">1</b> 局</span>
+<span class="hud-item">底注 <b id="stakeInfo">5</b> 分/手</span>
+<span class="hud-item">本局 <b id="dealScore">0</b></span>
+<span class="hud-item">累计 <b id="totalScore">0</b></span>
+<span class="hud-item">战绩 总<b id="stTotal">0</b> · 胜<b id="stWin">0</b> · 负<b id="stLose">0</b> · 和<b id="stDraw">0</b> · 胜率<b id="stRate">0%</b></span>
+      </section>
+
+      <section class="panel sec">
+<div class="side">
+      <h4>三种分法与大小</h4>
+      <div class="vlist" id="vlist"></div>
+      <h4 style="margin-top:4px">本局进程</h4>
+      <div id="progressNote" style="font-size:12px;line-height:1.75"></div>
+    </div>
+      </section>
+  <div class="foot">
+    点两张牌＝放前手 ·「💡 按建议分好」一键照教学分 ·「确认分牌」后再决定加注/保持/弃权<div style="margin-top:4px">
+      快捷键：<kbd>空格</kbd> 下注开局/确认分牌 · <kbd>D</kbd> 加注 · <kbd>S</kbd> 保持 · <kbd>F</kbd> 弃权 ·
+      <kbd>T</kbd> 按建议分好 · <kbd>R</kbd> 重开 · <kbd>G</kbd> 教学 · <kbd>A</kbd> 自动 · <kbd>H</kbd> 规则 · <kbd>J</kbd> 秘籍 · <kbd>M</kbd> 音效
+    </div>
+  </div>
+    </div>
+  </main>
+
+</div>
+
+<div class="mask" id="rulesMask" hidden>
+  <div class="card-modal rules">
+    <h3>牌九 · 三分钟上手</h3>
+    <ol>
+      <li><b>用什么牌</b>：一副 <b>32 张</b>骨牌（中国牌九）。每张牌上下两半各有 1-6 个点，比如"天牌"是 6-6、"地牌"是 1-1。</li>
+      <li><b>怎么发牌</b>：每人 <b>4 张</b>牌。你要把这 4 张分成两手：<b>前手 2 张</b> + <b>后手 2 张</b>。</li>
+      <li><b>比大小</b>：闲家的前手和庄家的前手比，后手和后手比。<b>两手都赢才算赢</b>；赢一手输一手算和；两手都输就输。<br>
+        平手（两手点数一样）算<b>庄家赢</b>。</li>
+      <li><b>两手怎么排</b>：<b>后手必须 ≥ 前手</b>（把强的放后面），排反了就算犯规。</li>
+      <li><b>单手大小</b>（从大到小）：<br>
+        ① <b>至尊宝</b>＝丁三 + 二四（唯一的特殊组合，最大）；<br>
+        ② <b>对子</b>＝两张同名的牌（天对 &gt; 地对 &gt; 人对 &gt; 和对 &gt; 梅对 &gt; 长三对 &gt; 板凳对 &gt; 虎头对 &gt; 红头十对 &gt; 高脚七对 &gt; 零霖六对 &gt; 杂九对 &gt; 杂八对 &gt; 杂七对 &gt; 杂五对）；<br>
+        ③ <b>点数</b>＝两半的点数相加，<b>满 10 减 10</b>。9 点最大，0 点（瘪十）最小。</li>
+      <li><b>算钱</b>：前手、后手各算一份注（底注 5 分）。赢两手 +10，赢一输一 0 分，输两手 -10。</li>
+      <li id="betRuleLi"><b>选底注</b>：1 / 2 / 5 / 10 / 15 / 20 / 30 / 50 / 100 分随便选（默认 5 分）。</li>
+      <li><b>分好牌再决定</b>：看完自己的四张牌、摆好前后手之后，还能选 <b>加注</b>（再押一份，两手一起翻倍）/
+        <b>保持</b> / <b>弃权</b>（退回自己那一份注，这一局不跟庄家比）。</li>
+      <li><b>庄家也有本钱</b>：默认 <b>100 分</b>（左栏「庄家本钱」随时能改，改完立刻生效），
+        赢的收进来、输的赔出去；<b>赔光了就只赔到 0，欠的部分不赔</b>，还会弹卡片问你要不要补给庄家。
+        本钱不够时先赔给谁也能选（按牌型大小 / 按玩家顺序）。</li>
+      <li><b>几个人玩</b>：1~4 个人轮流上阵，每人开局 1000 分、<b>各押各的底注</b>，
+        轮流跟同一个庄家比；开牌后中间会显示【本局总结】和【详情情况】两块结果。</li>
+      <li><b>你的操作</b>：点两张牌放进「前手」，剩下两张自动是「后手」；不确定就点「💡 按建议分好」。</li>
+    </ol>
+    <div class="tip">
+      <b>三句话记住牌九：</b><br>
+      ① 两手点数相加<b>满十减十</b>，9 点最大、0 点最小；<br>
+      ② 两张同名的牌是<b>对子</b>，比对子大小按"天、地、人、和、梅、长三、板凳、虎头、红头十、高脚七、零霖六、杂九、杂八、杂七、杂五"；<br>
+      ③ <b>对子/大牌放后手</b>，前手用剩下两张 —— 后手输了整局就输一半。<br>
+      <span style="color:#86efac">右侧「三种分法与大小」会把你 4 张牌的所有分法都列出来并标出推荐，看几次就会了。</span>
+    </div>
+    <div class="rules-foot">
+      <div style="margin-bottom:10px;font-size:12px;color:var(--muted)">32 张牌认牌表（新手可以对着看）</div>
+      <div class="tiletable" id="tileTable"></div>
+      <button class="primary" id="rulesClose">明白了，开牌</button>
+    </div>
+  </div>
+</div>
+
+<div class="mask" id="secretMask" hidden>
+  <div class="card-modal rules">
+    <h3>牌九秘籍 · 十大新手原则</h3>
+    <ol id="secretList"></ol>
+    <div class="secrets-tip">
+      <b>记不住？先记前三条：</b>满十减十、对子放后手、后手不能比前手小。<br>
+      另外：<b>⏱ 我方限时</b>（顶栏可改，默认 5 秒）—— 超过时间没分好牌会自动切到「🤖 自动分牌」；想完全自己来就选「不限时」。
+    </div>
+    <div class="rules-foot"><button class="primary" id="secretClose">记住了，继续玩</button></div>
+  </div>
+</div>
+
+<div class="toast" id="toast" hidden></div>
+
+<!-- ================= 庄家赔光提示 ================= -->
+<div class="mask" id="brokeModal" hidden>
+  <div class="card-modal rules rules-box broke">
+    <div class="broke-big">💸</div>
+    <h3 id="brokeTitle">庄家本钱赔光了 —— 这一轮结束了</h3>
+    <p id="brokeText" style="color:var(--muted);margin:0 0 10px">庄家的钱已经见底，它赔不出任何赢注了。要不要补给庄家、开下一轮？</p>
+    <div id="brokeStats"></div>
+    <div class="btns2" style="margin-top:14px">
+      <button id="brokeContinue" class="primary">🔄 补给庄家并继续下一轮</button>
+      <button id="brokeEdit">✏️ 改庄家本钱</button>
+    </div>
+    <button class="close" id="brokeClose">就到这里</button>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+  const $ = function (id) { return document.getElementById(id); };
+
+  /* ---------------- 主题 ---------------- */
+  const THEME_KEYS = ['key','name','bg','glow1','glow2','panel','brd','text','muted','accent','accent2','danger',
+                      'felt1','felt2','back1','back2','wood1','wood2','wood3','wline','wframe','board1','board2','grid','panel2','line'];
+  const THEME_ROWS = [
+    'midnight|午夜蓝|#0a1020|#1c2f4f|#241c4a|rgba(23,33,54,.78)|rgba(148,163,184,.20)|#e8eefb|#8fa2bb|#38bdf8|#f5b942|#f87171|#17335c|#0a1a33|#3a5a8f|#1d3355|#f2d5a0|#e7c088|#d6a45f|rgba(88,55,20,.75)|rgba(70,42,14,.90)|#0d1526|#080e1a|rgba(148,163,184,.09)|#16233a|#25364e',
+    'emerald|翡翠|#06120e|#0f3d2e|#14261c|rgba(14,37,29,.78)|rgba(110,231,183,.18)|#e4f5ec|#7fa595|#34d399|#fbbf24|#fb7185|#124a37|#072018|#2f7d5f|#1a4736|#ecd9ac|#ddc48c|#c8a869|rgba(74,56,24,.72)|rgba(60,44,16,.90)|#0a1a14|#061009|rgba(148,220,190,.10)|#0f2a20|#1c4a3a',
+    'rosewood|紫檀|#17100b|#4a2415|#2b1620|rgba(46,26,19,.78)|rgba(214,160,110,.22)|#f8ece3|#b69884|#f59e0b|#60a5fa|#ef4444|#5c2a1c|#2e1410|#8f4a35|#4a2018|#e8c39a|#d9ab7c|#c08d5e|rgba(80,44,24,.78)|rgba(64,34,16,.92)|#140d09|#0c0705|rgba(230,190,150,.10)|#33201a|#4a3126',
+    'obsidian|曜金|#08080a|#2c2614|#1a1a22|rgba(22,22,26,.82)|rgba(234,179,8,.20)|#f6f2e6|#a49c86|#eab308|#22d3ee|#f87171|#2a2a30|#141418|#4a4a52|#232328|#e6d9b8|#d4c194|#bda871|rgba(70,58,32,.75)|rgba(54,44,22,.92)|#0c0c10|#050507|rgba(234,200,120,.08)|#17171c|#2e2e34',
+    'sakura|樱雪|#fdf6f7|#ffe3ec|#fff1e6|rgba(255,255,255,.86)|rgba(190,120,145,.24)|#3a2b31|#8a7078|#e0526f|#7c6bd6|#dc2626|#e9bfc9|#d69fae|#c98a9c|#a06374|#fbe8e6|#f3d5d2|#e6bdb9|rgba(150,96,96,.55)|rgba(140,86,86,.80)|#eef1f7|#e2e7f0|rgba(120,140,170,.18)|#ffffff|rgba(190,120,145,.30)',
+    'frost|霜白|#f2f6fb|#dbeafe|#e6e6ff|rgba(255,255,255,.88)|rgba(100,116,139,.20)|#1e293b|#64748b|#2563eb|#0891b2|#dc2626|#c9d8ea|#aec2da|#7f9ec4|#4e6d92|#e8eef6|#d7e1ee|#c2cfe0|rgba(80,100,130,.50)|rgba(66,84,110,.78)|#eef2f8|#e2e8f2|rgba(120,140,170,.18)|#ffffff|rgba(100,116,139,.22)'
+  ];
+  const THEMES = {}, THEME_LIST = [];
+  THEME_ROWS.forEach(function (row) {
+    const p = row.split('|'), t = {};
+    for (let i = 0; i < THEME_KEYS.length; i++) t[THEME_KEYS[i]] = p[i];
+    THEMES[t.key] = t; THEME_LIST.push(t);
+  });
+  const THEME_CSS = { bg:'--bg', glow1:'--glow-1', glow2:'--glow-2', panel:'--panel', brd:'--panel-brd',
+                      text:'--text', muted:'--muted', accent:'--accent', accent2:'--accent-2', danger:'--danger',
+                      felt1:'--felt-1', felt2:'--felt-2', back1:'--tile-back-1', back2:'--tile-back-2',
+                      panel2:'--panel2', line:'--line' };
+  function applyTheme(key) {
+    const theme = THEMES[key] || THEMES.midnight;
+    const s = document.documentElement.style;
+    for (const k in THEME_CSS) s.setProperty(THEME_CSS[k], theme[k]);
+  }
+  const pref = {
+    get: function (k, d) { try { return localStorage.getItem(k) || d; } catch (e) { return d; } },
+    set: function (k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+  };
+
+  /* ---------------- 音效 ---------------- */
+  const Sound = (function () {
+    let ctx = null, master = null, enabled = true, vol = 0.7;
+    try { const sv = localStorage.getItem('pg.vol'); if (sv !== null) { const v = Number(sv); if (v >= 0 && v <= 1) vol = v; } } catch (e) {}
+    try { if (localStorage.getItem('pg.sound') === 'off') enabled = false; } catch (e) {}
+    function init() {
+      if (ctx) return;
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return;
+      try { ctx = new AC(); } catch (e) { ctx = null; return; }
+      master = ctx.createGain(); master.gain.value = vol * 0.5; master.connect(ctx.destination);
+    }
+    function tone(freq, dur, type, gain, delay) {
+      if (!enabled) return;
+      init(); if (!ctx) return;
+      try {
+        if (ctx.state === 'suspended') ctx.resume();
+        const t0 = ctx.currentTime + (delay || 0);
+        const o = ctx.createOscillator(), g = ctx.createGain();
+        o.type = type || 'sine'; o.frequency.setValueAtTime(freq, t0);
+        g.gain.setValueAtTime(0.0001, t0);
+        g.gain.exponentialRampToValueAtTime(Math.max(0.0002, (gain || 0.25) * vol), t0 + 0.012);
+        g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+        o.connect(g); g.connect(master); o.start(t0); o.stop(t0 + dur + 0.03);
+      } catch (e) {}
+    }
+    return {
+      unlock: function () { init(); try { if (ctx && ctx.state === 'suspended') ctx.resume(); } catch (e) {} },
+      click: function () { tone(880, 0.05, 'triangle', 0.18); },
+      tile: function () { tone(300, 0.07, 'square', 0.2); tone(180, 0.09, 'triangle', 0.14, 0.03); },
+      flip: function () { tone(520, 0.06, 'triangle', 0.16); },
+      win: function () { [660, 880, 1180].forEach(function (f, i) { tone(f, 0.16, 'triangle', 0.22, i * 0.09); }); },
+      lose: function () { [420, 320, 240].forEach(function (f, i) { tone(f, 0.2, 'sawtooth', 0.16, i * 0.11); }); },
+      push: function () { tone(480, 0.12, 'sine', 0.18); },
+      get enabled() { return enabled; },
+      get volume() { return vol; },
+      setVolume: function (v) { vol = Math.max(0, Math.min(1, v)); if (master) master.gain.value = vol * 0.5; pref.set('pg.vol', String(vol)); },
+      set: function (on) { enabled = !!on; pref.set('pg.sound', enabled ? 'on' : 'off'); if (enabled) init(); return enabled; }
+    };
+  })();
+
+  /* ---------------- 报牌语音 ---------------- */
+  const Voice = (function () {
+    let enabled = true;
+    try { if (localStorage.getItem('pg.voice') === 'off') enabled = false; } catch (e) {}
+    const has = !!(window.speechSynthesis && window.SpeechSynthesisUtterance);
+    let zh = null, male = null;
+    const MALE_RE = /kangkang|yunyang|yunjian|yunxi|male|男|康康|云扬|云希|云健|云野/i;
+    function pick() {
+      if (!has) return;
+      let vs = []; try { vs = window.speechSynthesis.getVoices() || []; } catch (e) { return; }
+      let list = vs.filter(function (v) { return /^(zh|cmn)/i.test(v.lang || ''); });
+      if (!list.length) list = vs.filter(function (v) { return /chinese|中文|普通话|国语|mandarin/i.test((v.name || '') + ' ' + (v.lang || '')); });
+      zh = list[0] || null;
+      male = list.filter(function (v) { return MALE_RE.test((v.name || '') + ' ' + (v.voiceURI || '')); })[0] || null;
+    }
+    if (has) { pick(); try { window.speechSynthesis.addEventListener('voiceschanged', pick); } catch (e) { window.speechSynthesis.onvoiceschanged = pick; } }
+    let saySeq = 0, sayTimer = 0;
+    function say(text, seat) {
+      if (!enabled || !text || !has) return false;
+      const mine = (((seat | 0) % 4) + 4) % 4 === 0;
+      try {
+        if (!zh) pick();
+        const synth = window.speechSynthesis;
+        const u = new window.SpeechSynthesisUtterance(text);
+        u.lang = 'zh-CN';
+        const v = (mine && male) ? male : zh;
+        try { if (v) u.voice = v; } catch (e) {}
+        u.rate = mine ? 1.3 : 1.4;
+        u.pitch = mine ? 0.72 : 1.02;
+        u.volume = Math.max(0, Math.min(1, Sound.volume));
+        const mySeq = ++saySeq;
+        try { synth.cancel(); } catch (e) {}
+        try { if (synth.paused) synth.resume(); } catch (e) {}
+        if (sayTimer) clearTimeout(sayTimer);
+        sayTimer = setTimeout(function () {
+          sayTimer = 0;
+          if (mySeq !== saySeq) return;
+          try { if (synth.paused) synth.resume(); synth.speak(u); } catch (e) {}
+        }, 80);
+        return true;
+      } catch (e) { return false; }
+    }
+    function stop() { saySeq++; if (sayTimer) { clearTimeout(sayTimer); sayTimer = 0; } if (has) { try { window.speechSynthesis.cancel(); } catch (e) {} } }
+    return {
+      say: say, stop: stop,
+      get enabled() { return enabled; }, get available() { return has; }, get hasZhVoice() { return !!zh; },
+      set: function (on) { enabled = !!on; try { localStorage.setItem('pg.voice', enabled ? 'on' : 'off'); } catch (e) {} if (!enabled) stop(); return enabled; }
+    };
+  })();
+
+  /* ==================================================================
+     32 张牌九骨牌
+       一张牌编码 t = hi*7 + lo（hi ≥ lo，1..6）
+       文牌成对：天 地 人 和 梅 长三 板凳 虎头 红头十 高脚七 零霖六（各 2 张）
+       武牌：杂九 杂八 杂七 杂五 各 2 张（点数不同的两张），丁三 二四 各 1 张
+     ================================================================== */
+  const NAMES = [
+    { hi: 6, lo: 6, name: '天牌', rank: 0, copy: 2 },
+    { hi: 1, lo: 1, name: '地牌', rank: 1, copy: 2 },
+    { hi: 4, lo: 4, name: '人牌', rank: 2, copy: 2 },
+    { hi: 3, lo: 1, name: '和牌', rank: 3, copy: 2 },
+    { hi: 5, lo: 5, name: '梅花', rank: 4, copy: 2 },
+    { hi: 3, lo: 3, name: '长三', rank: 5, copy: 2 },
+    { hi: 2, lo: 2, name: '板凳', rank: 6, copy: 2 },
+    { hi: 6, lo: 5, name: '虎头', rank: 7, copy: 2 },
+    { hi: 6, lo: 4, name: '红头十', rank: 8, copy: 2 },
+    { hi: 6, lo: 1, name: '高脚七', rank: 9, copy: 2 },
+    { hi: 5, lo: 1, name: '零霖六', rank: 10, copy: 2 },
+    { hi: 6, lo: 3, name: '杂九', rank: 11, copy: 1 },
+    { hi: 5, lo: 4, name: '杂九', rank: 11, copy: 1 },
+    { hi: 6, lo: 2, name: '杂八', rank: 12, copy: 1 },
+    { hi: 5, lo: 3, name: '杂八', rank: 12, copy: 1 },
+    { hi: 5, lo: 2, name: '杂七', rank: 13, copy: 1 },
+    { hi: 4, lo: 3, name: '杂七', rank: 13, copy: 1 },
+    { hi: 3, lo: 2, name: '杂五', rank: 14, copy: 1 },
+    { hi: 4, lo: 1, name: '杂五', rank: 14, copy: 1 },
+    { hi: 2, lo: 1, name: '丁三', rank: 15, copy: 1 },
+    { hi: 4, lo: 2, name: '二四', rank: 16, copy: 1 }
+  ];
+  const PAIR_RANK_CN = ['天', '地', '人', '和', '梅', '长三', '板凳', '虎头', '红头十', '高脚七', '零霖六', '杂九', '杂八', '杂七', '杂五'];
+  /* 一张牌 = 牌面编码 base*2 + 第几张（同名的两张牌要能区分开，选牌才不会一次选两张） */
+  function baseKey(hi, lo) { return hi * 7 + lo; }
+  function baseOf(t) { return t >> 1; }
+  function hiOf(t) { return Math.floor(baseOf(t) / 7); }
+  function loOf(t) { return baseOf(t) % 7; }
+  function pips(t) { return hiOf(t) + loOf(t); }
+  function infoOf(t) {
+    const hi = hiOf(t), lo = loOf(t);
+    for (let i = 0; i < NAMES.length; i++) if (NAMES[i].hi === hi && NAMES[i].lo === lo) return NAMES[i];
+    return null;
+  }
+  function tileName(t) { const n = infoOf(t); return n ? n.name : (hiOf(t) + '-' + loOf(t)); }
+  function makeDeck() {
+    const d = [];
+    NAMES.forEach(function (n) {
+      const base = baseKey(n.hi, n.lo);
+      for (let c = 0; c < n.copy; c++) d.push(base * 2 + c);
+    });
+    return d;
+  }
+  function isSupreme(a, b) {
+    return (tileName(a) === '丁三' && tileName(b) === '二四') || (tileName(a) === '二四' && tileName(b) === '丁三');
+  }
+  /* 单手（两张牌）的大小：{kind, score, text} */
+  function handValue(a, b) {
+    if (isSupreme(a, b)) return { kind: 'supreme', score: 1000, text: '至尊宝', short: '至尊' };
+    const na = infoOf(a), nb = infoOf(b);
+    if (na && nb && na.name === nb.name) {
+      const r = Math.min(na.rank, nb.rank);
+      return { kind: 'pair', score: 500 + (60 - r * 3), text: PAIR_RANK_CN[r] + '对', short: PAIR_RANK_CN[r] + '对' };
+    }
+    const p = (pips(a) + pips(b)) % 10;
+    return { kind: 'point', score: p, text: p === 0 ? '瘪十（0 点）' : (p + ' 点'), short: p === 0 ? '瘪十' : (p + '点') };
+  }
+  function cmpHand(x, y) { return x.score > y.score ? 1 : x.score < y.score ? -1 : 0; }
+  /* 把一手牌换成一个可比较的「强度」（用来判断怎么分最好）
+     要赢两手才算赢、赢一手只是和局（0 分），所以
+       期望值 = 10 ×（前手胜率 + 后手胜率 - 1）
+     最优策略是让「两手强度之和」最大 —— 不是一味把好牌堆到后手（另一手太弱等于白送）。 */
+  function strength(v, tiles) {
+    if (v.kind === 'supreme') return 100;
+    if (v.kind === 'pair') {
+      const n = tiles && tiles.length ? infoOf(tiles[0]) : null;
+      return 90 - ((n ? n.rank : 14) * 2);
+    }
+    return v.score * 6;                       // 点数 0..9 → 0..54，任何对子都比它大
+  }
+  /* 四张牌的三种分法（每种都自动摆正：强的那手一定放后手） */
+  function splitsOf(tiles) {
+    if (!tiles || tiles.length < 4) return [];      /* 还没发牌：没有可分的东西 */
+    const [a, b, c, d] = tiles;
+    const parts = [
+      [[a, b], [c, d]],
+      [[a, c], [b, d]],
+      [[a, d], [b, c]]
+    ];
+    return parts.map(function (p) {
+      const v0 = handValue(p[0][0], p[0][1]);
+      const v1 = handValue(p[1][0], p[1][1]);
+      /* 后手必须 ≥ 前手：谁大谁去后面 */
+      return cmpHand(v1, v0) >= 0 ? { front: p[0], back: p[1] } : { front: p[1], back: p[0] };
+    });
+  }
+  function evalSplit(sp) {
+    const f = handValue(sp.front[0], sp.front[1]);
+    const b = handValue(sp.back[0], sp.back[1]);
+    const sf = strength(f, sp.front), sb = strength(b, sp.back);
+    return { front: f, back: b, ok: cmpHand(b, f) >= 0, sf: sf, sb: sb,
+             sum: sf + sb, order: (sf + sb) * 1000 + sb };
+  }
+  /* 教学/电脑共用：让两手强度之和最大（平手时后手更强的优先） */
+  function bestSplit(tiles) {
+    const list = splitsOf(tiles).map(function (sp) { return { sp: sp, ev: evalSplit(sp) }; });
+    if (!list.length) return { best: null, list: list };    /* 还没发牌 / 牌不够 */
+    let best = null;
+    list.forEach(function (it) {
+      if (!it.ev.ok) return;                       // 后手必须 ≥ 前手
+      if (!best || it.ev.order > best.ev.order) best = it;
+    });
+    if (!best) {                                   // 兜底：交换前后
+      best = list[0];
+      best.sp = { front: best.sp.back, back: best.sp.front };
+      best.ev = evalSplit(best.sp);
+    }
+    return { best: best, list: list };
+  }
+  function tileSpeech(a, b) { return tileName(a) + '、' + tileName(b) + '，' + handValue(a, b).text; }
+
+  /* ==================================================================
+     渲染骨牌
+     ================================================================== */
+  const PIP_POS = {
+    1: [4], 2: [0, 8], 3: [0, 4, 8], 4: [0, 2, 6, 8], 5: [0, 2, 4, 6, 8], 6: [0, 2, 3, 5, 6, 8]
+  };
+  function halfHTML(n) {
+    const on = PIP_POS[n] || [];
+    const red = (n === 1 || n === 4);
+    let h = '<div class="half">';
+    for (let i = 0; i < 9; i++) {
+      const has = on.indexOf(i) >= 0;
+      h += '<span class="pip' + (has && red ? ' r' : '') + '">' + (has ? '<i></i>' : '') + '</span>';
+    }
+    return h + '</div>';
+  }
+  function tileHTML(t, cls) {
+    return '<div class="tile' + (cls ? ' ' + cls : '') + '" data-t="' + t + '">' + halfHTML(hiOf(t)) + halfHTML(loOf(t)) + '</div>';
+  }
+  function backHTML(cls) { return '<div class="tile back' + (cls ? ' ' + cls : '') + '"></div>'; }
+
+  /* ==================================================================
+     游戏状态
+       一份底注 = 前手一份 + 后手一份（所以底注 5 → 两手共 10 分）
+       1~4 个闲家轮流上阵，各自押底注、各自分牌、各自决定加注/保持/弃权，
+       全部决定完之后庄家开一次牌，所有人各自跟这个庄家比前后手。
+     ================================================================== */
+  const BETS = [1, 2, 5, 10, 15, 20, 30, 50, 100];
+  const BET_DEFAULT = 5;
+  const normBet = function (v) { return BETS.indexOf(Number(v)) >= 0 ? Number(v) : BET_DEFAULT; };
+
+  const PLAYER_COUNTS = [1, 2, 3, 4];
+  const PLAYERS_DEFAULT = 1;
+  const CHIPS_START = 1000;
+  const PLAYER_NAMES = ['玩家 1', '玩家 2', '玩家 3', '玩家 4'];
+  /* 一个人玩的时候就叫「你」，跟原来的单人模式一致 */
+  const playerName = function (i, n) { return n === 1 ? '你' : PLAYER_NAMES[i]; };
+  const NAME_MAX = 8;
+  let customNames = ['', '', '', ''];
+  try {
+    const raw = localStorage.getItem('dc.names');
+    if (raw) {
+      const arr = JSON.parse(raw);
+      if (Array.isArray(arr)) for (let i = 0; i < 4; i++) customNames[i] = String(arr[i] || '').slice(0, NAME_MAX);
+    }
+  } catch (e) {}
+  function nameFor(i, n) {
+    const c = String(customNames[i] || '').trim();
+    return c ? c.slice(0, NAME_MAX) : playerName(i, n === undefined ? playerCount : n);
+  }
+  function setPlayerName(i, v) {
+    if (!(i >= 0 && i < 4)) return false;
+    customNames[i] = String(v == null ? '' : v).trim().slice(0, NAME_MAX);
+    try { localStorage.setItem('dc.names', JSON.stringify(customNames)); } catch (e) {}
+    if (players[i]) players[i].name = nameFor(i, playerCount);
+    syncNameInputs();
+    render();
+    return true;
+  }
+  function buildNameInputs() {
+    const box = $('nameBox');
+    if (!box) return;
+    box.innerHTML = '';
+    for (let i = 0; i < playerCount; i++) {
+      const lb = document.createElement('label');
+      lb.className = 'namefield';
+      const sp = document.createElement('span');
+      sp.id = 'nameLabel-' + i;
+      sp.textContent = (playerCount === 1) ? '你的昵称' : ('玩家 ' + (i + 1));
+      const inp = document.createElement('input');
+      inp.id = 'nameIn-' + i;
+      inp.type = 'text';
+      inp.maxLength = NAME_MAX;
+      inp.value = customNames[i] || '';
+      inp.placeholder = playerName(i, playerCount);
+      inp.addEventListener('input', function () { setPlayerName(i, this.value); });
+      lb.appendChild(sp); lb.appendChild(inp);
+      box.appendChild(lb);
+    }
+  }
+  function syncNameInputs() {
+    for (let i = 0; i < 4; i++) {
+      const inp = $('nameIn-' + i), lb = $('nameLabel-' + i);
+      if (inp && inp.value !== (customNames[i] || '')) inp.value = customNames[i] || '';
+      if (inp) inp.placeholder = playerName(i, playerCount);
+      if (lb) lb.textContent = (playerCount === 1) ? '你的昵称' : ('玩家 ' + (i + 1));
+    }
+  }
+  const normPlayers = function (v) { return PLAYER_COUNTS.indexOf(Number(v)) >= 0 ? Number(v) : PLAYERS_DEFAULT; };
+  function newPlayer(i, n) {
+    return { name: nameFor(i, n), chips: CHIPS_START,
+             stats: { win: 0, lose: 0, draw: 0, supreme: 0 },
+             bet: BET_DEFAULT, hand: null, split: null, ev: null, score: 0, kind: '',
+             wager: 0, state: 'idle', delta: 0, shorted: 0 };
+  }
+
+  /* 庄家的本钱：默认 100 分，左栏随时能改（改完立刻生效）。
+     重新开局 / 换人数 / 点「筹码回到 1000」都按这个数重发；
+     之后庄家就跟玩家一样累积（收输家的注、赔给赢家），赔光只赔到 0。 */
+  const DEALER_BANK_DEFAULT = 100;
+  const DEALER_BANK_MAX = 1000000;
+  const normDealerBank = function (v) {
+    const n = Math.floor(Number(v));
+    if (!isFinite(n)) return DEALER_BANK_DEFAULT;
+    return Math.max(0, Math.min(DEALER_BANK_MAX, n));
+  };
+  let dealerBank = normDealerBank(pref.get('pg.dealerbank', String(DEALER_BANK_DEFAULT)));
+  const dealer = { name: '庄家', chips: 0, delta: 0, short: 0 };
+  const dealerGrant = function () { return dealerBank; };
+  function grantDealer() {
+    dealer.chips = dealerGrant();
+    dealer.delta = 0; dealer.short = 0;
+  }
+  /* 用户改了「庄家本钱」→ 立刻把庄家的钱改成新值
+     strict=false（边打字）：空着或写错就先不动，别把人家的数字抹成 0
+     strict=true（确认时）：空着或写错就回到默认值 */
+  function applyDealerBank(v, quiet, strict) {
+    const raw = String(v == null ? '' : v).trim();
+    let n;
+    if (raw === '' || !isFinite(Number(raw))) {
+      if (!strict) return dealerBank;
+      n = DEALER_BANK_DEFAULT;
+    } else {
+      n = Math.floor(Number(raw));
+    }
+    dealerBank = normDealerBank(n);
+    pref.set('pg.dealerbank', String(dealerBank));
+    dealer.chips = dealerBank;
+    dealer.delta = 0; dealer.short = 0;
+    const inp = $('dealerBankIn');
+    if (inp) inp.value = String(dealerBank);
+    render();
+    if (!quiet) toast('庄家本钱改成 ' + dealerBank + ' 分');
+    return dealerBank;
+  }
+  /* 庄家本钱不够赔时，先赔给谁：
+     'points' = 按牌型大小（跟这里的比牌规则一样，牌大的先拿满）—— 默认
+     'order'  = 按玩家顺序（先上阵的先拿满） */
+  const PAY_ORDERS = ['points', 'order'];
+  const PAY_ORDER_DEFAULT = 'points';
+  const normPayOrder = function (v) { return PAY_ORDERS.indexOf(String(v)) >= 0 ? String(v) : PAY_ORDER_DEFAULT; };
+  const PAY_ORDER_CN = { points: '按牌型大小', order: '按玩家顺序' };
+  let payOrder = normPayOrder(pref.get('pg.payorder', PAY_ORDER_DEFAULT));
+  function setPayOrder(v) {
+    payOrder = normPayOrder(v);
+    pref.set('pg.payorder', payOrder);
+    const sel = $('payOrderSel'); if (sel) sel.value = payOrder;
+    const hint = $('payOrderHint');
+    if (hint) hint.textContent = (payOrder === 'points')
+      ? '牌大的先拿满，牌小的少拿/拿不到'
+      : '先上阵的先拿满，后面的少拿/拿不到';
+    render();
+    return payOrder;
+  }
+
+  let G = null;
+  let phase = 'idle';                 // idle | bet | split | decide | dealer | reveal | done
+  let roundNo = 0;
+  let stats = { total: 0, win: 0, lose: 0, draw: 0 };
+  let session = { total: 0 };
+  let aiDelay = 1000, myDelay = 5000, autoOn = false;
+  let coachOn = true, coachSeenRules = false;
+  let autoSeq = 0, autoLeft = 0, autoShown = -1, autoNote = '';
+  let coachKey = '', coachAdvise = null;
+  let picked = [];                    // 当前玩家为「前手」选的两张
+  let busy = false;                   // 正在开牌 / 动画里，不接受操作
+  let roundResult = '', roundSummary = '', roundExplain = '';
+  let roundDelta = 0, roundKind = '';
+  let toastTimer = 0, gameGen = 0, timers = [];
+  let playerCount = PLAYERS_DEFAULT;
+  let players = [];
+  let cur = 0;                        // 当前上阵的玩家下标
+  let bet = BET_DEFAULT;              // 界面上当前选中的底注（每人可以各自改）
+  function later(fn, ms) { const gen = gameGen; const id = setTimeout(function () { if (gen !== gameGen) return; fn(); }, ms); timers.push(id); return id; }
+  function clearTimers() { for (let i = 0; i < timers.length; i++) clearTimeout(timers[i]); timers = []; }
+  function forEachPlayer(fn) { for (let i = 0; i < players.length; i++) fn(players[i], i); }
+  /* 当前上阵玩家。players 永远是 1~4 个，cur 永远在范围内（越界时兜底到第一个） */
+  const curP = function () { return players[cur] || players[0]; };
+  const curBet = function () { return curP() ? curP().bet : BET_DEFAULT; };
+  const curEv = function () { return (G && G.evs[cur]) ? G.evs[cur] : null; };
+  function resetPlayers(n) {
+    playerCount = normPlayers(n);
+    players = [];
+    for (let i = 0; i < playerCount; i++) {
+      const p = newPlayer(i, playerCount);
+      p.bet = bet;                    /* 新开一局时，大家都从当前选的底注开始 */
+      players.push(p);
+    }
+    cur = 0;
+  }
+  function intDelta(x) { return x > 0 ? '+' + x : (x < 0 ? String(x) : '±0'); }
+  const dealerBroke = function () { return dealer.chips <= 0; };
+
+  /* 本钱不够时要「从谁身上扣回来」的次序（先被扣的 = 最后才拿到的）
+     points：用比牌规则排 —— 两手弱的先被扣（至尊宝等强牌留到最后）；完全一样时后上阵的先扣
+     order ：后上阵的先扣（前面的先拿满） */
+  function clawbackOrder() {
+    const gainers = [];
+    forEachPlayer(function (p, i) { if (p.delta > 0) gainers.push({ p: p, i: i }); });
+    if (payOrder === 'order') gainers.sort(function (a, b) { return b.i - a.i; });
+    else gainers.sort(function (a, b) {
+      const ra = rankOf(a.p), rb = rankOf(b.p);
+      if (ra !== rb) return ra - rb;                     /* 牌小的先被扣，牌大的留到最后 */
+      return b.i - a.i;                                  /* 一样大：后上阵的先被扣 */
+    });
+    return gainers;
+  }
+  /* 一个玩家的整体牌力（用来排「谁先拿满」）：先比后手，再比前手 */
+  function rankOf(p) {
+    const ev = (G && G.evs) ? G.evs[players.indexOf(p)] : null;
+    const e = ev || (p && p.ev) || null;
+    if (!e) return 0;
+    const sb = Number(e.sb || 0), sf = Number(e.sf || 0);
+    return sb * 1000 + sf;
+  }
+
+  /* ==================================================================
+     庄家结算：本局庄家的净额 = −（所有玩家的净额之和）。
+     本钱不够赔时：只赔到 0，欠的部分从赢家身上扣回来（次序由「赔不过来时」决定），
+     每个被扣的人记在 p.shorted 里，庄家欠的总数记在 dealer.short 里明说。
+     这样账目永远是平的。
+     ================================================================== */
+  function settleDealerBank() {
+    dealer.short = 0;
+    forEachPlayer(function (p) { p.shorted = 0; });
+    let net = 0;
+    forEachPlayer(function (p) { net += p.delta; });
+    const dDelta = -net;
+    if (dealer.chips + dDelta < 0) {
+      dealer.short = -Math.round((dealer.chips + dDelta) * 100) / 100;
+      /* 按设定的次序扣（先被扣的人 = 最后才拿到的那个） */
+      let need = dealer.short;
+      clawbackOrder().forEach(function (o) {
+        if (need <= 0) return;
+        const p = o.p;
+        const take = Math.min(p.delta, need);
+        p.delta -= take;
+        p.chips -= take;
+        p.shorted = (p.shorted || 0) + take;
+        need -= take;
+      });
+      /* 扣完重算：庄家本钱减去「实际赔出去的钱」（应付 − 欠账），账目才平 */
+      let net2 = 0;
+      forEachPlayer(function (p) { net2 += p.delta; });
+      dealer.delta = -net2;
+      dealer.chips = Math.max(0, Math.round((dealer.chips + dealer.delta) * 100) / 100);
+    } else {
+      dealer.chips += dDelta;
+      dealer.delta = dDelta;
+    }
+    return dealer.delta;
+  }
+
+  /* ==================================================================
+     一轮：算钱 → 闲家轮流（下注 → 分牌 → 决定）→ 庄家开牌 → 结算
+     ================================================================== */
+  function moneyOf(n) { return n + ' 分'; }
+  function scoreMult(p) {
+    const ev = p && p.ev;
+    if (!ev) return 1;
+    return (ev.back && ev.back.kind === 'supreme') ? 2 : 1;      /* 至尊宝在后手赢＝翻倍 */
+  }
+  function marginText(d, mult) {
+    const m = (mult === undefined ? 1 : mult);
+    return (d > 0 ? '赢 ' + (m * 10) + ' 分' : d < 0 ? '输 ' + (m * 10) + ' 分' : '和 0 分');
+  }
+
+  function newRound(first) {
+    gameGen++; clearTimers(); Voice.stop();
+    roundNo = first ? 1 : roundNo + 1;
+    const deck = makeDeck();
+    for (let i = deck.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1)); const x = deck[i]; deck[i] = deck[j]; deck[j] = x;
+    }
+    /* 每人 4 张，庄家 4 张：座位 0..(playerCount-1) = 闲家轮流上阵，最后一个是庄家 */
+    const hands = [];
+    for (let i = 0; i < playerCount; i++) hands.push(deck.slice(i * 4, i * 4 + 4));
+    hands.push(deck.slice(playerCount * 4, playerCount * 4 + 4));      /* 庄家的四张 */
+    G = {
+      hands: hands, splits: [], evs: [],
+      revealed: false, results: null, over: false, score: 0, dealer: playerCount
+    };
+    for (let i = 0; i <= playerCount; i++) { G.splits.push(null); G.evs.push(null); }
+    phase = 'split';
+    picked = []; coachKey = ''; coachAdvise = null; autoNote = '';
+    stopCountdown();
+    render();
+    step();
+  }
+  /* 记录发牌（给 renderSplitList / 认牌用） */
+  function step() {
+    if (phase !== 'split' && phase !== 'bet') return;
+    /* 开了自动/限时：每开一局都要重新排一次倒计时，否则第二局起就不会自动接管 */
+    if (autoOn || myTimed()) scheduleAuto();
+  }
+  /* 给某个闲家分配前后手（会自动摆正：后手必须 ≥ 前手） */
+  function chooseSplit(front, back, idx) {
+    const i = (idx === undefined) ? 0 : idx;
+    const sp = { front: front.slice(), back: back.slice() };
+    let ev = evalSplit(sp);
+    if (!ev.ok) {                                  /* 前手比后手大 → 自动调正 */
+      sp.front = back.slice(); sp.back = front.slice();
+      ev = evalSplit(sp);
+    }
+    G.splits[i] = sp; G.evs[i] = ev;
+    if (players[i]) { players[i].split = sp; players[i].ev = ev; }
+    return ev.ok;
+  }
+  /* 确认自己的四张牌已经分好了（点「确认分牌」）—— 这是每个人自己的决定点 */
+  function confirmSplit() {
+    if (phase !== 'split') return false;
+    const p = curP();
+    if (!p.split) { toast('先点两张牌放「前手」，或者点「💡 按建议分好」'); return false; }
+    phase = 'decide'; busy = false;
+    p.state = 'decide';
+    picked = [];
+    coachKey = ''; coachAdvise = null;
+    Voice.say('前手 ' + tileSpeech(p.split.front[0], p.split.front[1]) + '，后手 ' + tileSpeech(p.split.back[0], p.split.back[1]), cur);
+    render();
+    scheduleAuto();
+    return true;
+  }
+  /* 庄家开牌：全部闲家都决定完之后 */
+  function reveal() {
+    if (phase !== 'dealer') return false;
+    const r = bestSplit(G.hands[G.dealer]);
+    if ((!G.splits[G.dealer] || !G.evs[G.dealer]) && r && r.best) {
+      G.splits[G.dealer] = r.best.sp;
+      G.evs[G.dealer] = r.best.ev;
+    }
+    if (!G.evs[G.dealer]) {                 /* 兜底：庄家没有可比的牌（理论上不会发生） */
+      phase = 'done';
+      roundSummary = '这一局没有可比的牌';
+      render();
+      return false;
+    }
+    phase = 'reveal';
+    G.revealed = true;
+    Sound.flip();
+    const dev = G.evs[G.dealer];
+    const res = [];
+    let myScore = 0;
+    for (let p = 0; p < playerCount; p++) {
+      const pe = G.evs[p];
+      if (!pe) { res.push({ fw: false, bw: false, score: 0, mult: 1, text: '轮空' }); continue; }
+      const fw = cmpHand(pe.front, dev.front) > 0;
+      const bw = cmpHand(pe.back, dev.back) > 0;
+      const mult = scoreMult(players[p]);
+      let sc = 0, text = '';
+      if (fw && bw) { sc = players[p].wager * 2 * mult; text = '两手都赢'; }
+      else if (!fw && !bw) { sc = -players[p].wager * 2 * mult; text = '两手都输'; }
+      else { sc = 0; text = fw ? '前手赢、后手输' : '后手赢、前手输'; }
+      res.push({ fw: fw, bw: bw, score: sc, mult: mult, text: text });
+      if (p === 0) myScore = sc;
+    }
+    G.results = res;
+    G.score = myScore;
+    return settleRound();
+  }
+
+  /* 结算：每个人跟庄家的两手分别比（前手对前手、后手对后手） */
+  function settleRound() {
+    if (phase === 'done') return false;
+    phase = 'done'; G.over = true;
+    const dev = G.evs[G.dealer];
+    dealer.short = 0;
+    forEachPlayer(function (p) { p.shorted = 0; p.delta = 0; });
+    for (let i = 0; i < playerCount; i++) {
+      const p = players[i], pe = G.evs[i];
+      if (!pe || !p.split) { p.kind = 'out'; p.state = 'out'; p.score = 0; continue; }
+      const fw = cmpHand(pe.front, dev.front) > 0;
+      const bw = cmpHand(pe.back, dev.back) > 0;
+      const mult = scoreMult(p);
+      /* 底注在 beginTurn 里已经扣走了，先原样退回来，再按结果加减
+         （庄家的净额永远 = − 所有玩家的净额之和，账目才平）：
+         赢两手 = 庄家赔 2 份（净 +2w）；赢一输一 = 0；输两手 = 输掉自己那一份（净 -w） */
+      p.chips += p.wager;
+      if (fw && bw) { p.score = p.wager * 2 * mult; p.kind = 'win'; }
+      else if (!fw && !bw) { p.score = -p.wager * mult; p.kind = 'lose'; }
+      else { p.score = 0; p.kind = 'push'; }
+      p.delta = p.score;
+      p.chips += p.delta;
+      if (p.chips < 0) p.chips = 0;              /* 筹码不够时不会变成负数（欠的那部分不追） */
+      p.state = p.kind;
+      stats.total++;
+      if (p.kind === 'win') { stats.win++; p.stats.win++; }
+      else if (p.kind === 'lose') { stats.lose++; p.stats.lose++; }
+      else { stats.draw++; p.stats.draw++; }
+      if (pe.back.kind === 'supreme') p.stats.supreme++;
+    }
+    /* 庄家本钱结算（可能赔不光，也可能赔到 0，欠的部分不赔） */
+    settleDealerBank();
+    const wins = players.filter(function (p) { return p.kind === 'win'; }).length;
+    const loses = players.filter(function (p) { return p.kind === 'lose'; }).length;
+    const draws = players.filter(function (p) { return p.kind === 'push'; }).length;
+    const outs = players.filter(function (p) { return p.state === 'out'; }).length;
+    if (playerCount === 1) {
+      const p = players[0];
+      roundSummary = (p.kind === 'win') ? '你赢了' : (p.kind === 'push') ? '和局'
+                   : (p.kind === 'lose') ? '你输了' : '轮空';
+    } else {
+      roundSummary = wins + ' 人赢 · ' + loses + ' 人输 · ' + draws + ' 人和' + (outs ? ' · ' + outs + ' 人轮空' : '');
+    }
+    if (dealer.short > 0) {
+      roundSummary += ' ｜ ' + PAY_ORDER_CN[payOrder] + '赔：还差 ' + dealer.short + ' 分';
+    }
+    roundResult = '庄家前手 ' + dev.front.text + ' / 后手 ' + dev.back.text + ' —— ' + roundSummary;
+    roundExplain = explainRoundLine();
+    session.total += G.score;
+    const up = players.filter(function (p) { return p.delta > 0; }).length;
+    const down = players.filter(function (p) { return p.delta < 0; }).length;
+    if (up && !down) Sound.win(); else if (down && !up) Sound.lose(); else Sound.push();
+    Voice.say(playerCount === 1 ? (G.score > 0 ? '你赢了' : G.score < 0 ? '你输了' : '和局')
+      : roundSummary, 0);
+    render();
+    /* 单人时上面留一句结论；多人时不加标题行，直接上两组 */
+    const head = (playerCount === 1) ? roundSummary : '';
+    $('centerMsg').innerHTML = (head ? '<div>' + head + '</div>' : '') + resultBox(wins, loses, draws, outs);
+    if (dealer.short > 0) {
+      toast('庄家本钱不够：' + PAY_ORDER_CN[payOrder] + '赔，还差 ' + dealer.short + ' 分（这部分不赔）', 4200);
+    } else if (dealer.chips <= 0) {
+      toast('庄家本钱已经归零，后面的赢注都赔不出来了', 4200);
+    } else if (G.evs[0] && G.results && G.results[0]) {
+      toast('<b>' + (G.score > 0 ? '你赢了 +' + G.score : G.score < 0 ? '你输了 ' + G.score : '本局和局 0') + '</b>　·　' +
+        '你的前手 ' + G.evs[0].front.text + ' / 后手 ' + G.evs[0].back.text + '　对　庄家前手 ' + dev.front.text +
+        ' / 后手 ' + dev.back.text + '　·　' + G.results[0].text, 4200);
+    }
+    /* 庄家赔光了：这一轮到此为止，弹卡片问要不要补钱继续（自动打牌也停下来等人决定） */
+    if (dealerBroke()) {
+      stopAutoFor('庄家本钱赔光了');
+      later(function () { if (phase === 'done') showBrokeCard(); }, 900);
+      return true;
+    }
+    later(function () { if (phase === 'done') startRound(); }, 4800);
+    return true;
+  }
+  function explainRoundLine() {
+    const dev = G.evs[G.dealer];
+    const parts = [];
+    for (let i = 0; i < playerCount; i++) {
+      const p = players[i], pe = G.evs[i];
+      if (!pe || !p.split) { parts.push('<b>' + p.name + '</b> 轮空 ±0'); continue; }
+      parts.push('<b>' + p.name + '</b> 前 ' + pe.front.text + ' / 后 ' + pe.back.text + ' ' + intDelta(p.delta));
+    }
+    return '庄家开牌：前手 <b>' + dev.front.text + '</b> · 后手 <b>' + dev.back.text + '</b>。' +
+      parts.join(' · ') + '。<br>每个人都是<b>单独跟庄家比</b>，别人分得怎么样完全不影响你的两手。';
+  }
+
+  /* ==================================================================
+     庄家赔光（本钱 ≤ 0）：这一轮就结束了，弹卡片问要不要继续下一轮
+     ================================================================== */
+  function showBrokeCard() {
+    const m = $('brokeModal');
+    if (!m || !m.hidden) return false;
+    const owed = dealer.short > 0 ? dealer.short : 0;
+    $('brokeTitle').textContent = '庄家本钱赔光了 —— 这一轮结束了';
+    $('brokeText').innerHTML = '庄家现在 <b style="color:#ffb4b4">0 分</b>，一分钱都赔不出来，' +
+      '再打下去赢了也拿不到钱。补给庄家就能接着玩，或者你自己改个本钱数。';
+    let h = '';
+    h += '<div class="broke-kv"><span>本轮庄家盈亏</span><b class="' + (dealer.delta < 0 ? 'down' : '') + '">' +
+         intDelta(dealer.delta) + ' 分</b></div>';
+    h += '<div class="broke-kv"><span>庄家本钱</span><b class="down">' + dealer.chips + ' 分</b></div>';
+    if (owed) h += '<div class="broke-kv"><span>还欠赢家（不赔）</span><b class="down">' + owed + ' 分</b></div>';
+    h += '<div class="broke-kv"><span>你的筹码</span><b>' + curP().chips + ' 分</b></div>';
+    h += '<div class="broke-kv"><span>补给后本钱</span><b>' + dealerBank + ' 分</b></div>';
+    $('brokeStats').innerHTML = h;
+    $('brokeContinue').textContent = '🔄 补给庄家 ' + dealerBank + ' 分，继续下一轮';
+    m.hidden = false;
+    Sound.lose();
+    return true;
+  }
+  function hideBrokeCard() { const m = $('brokeModal'); if (m) m.hidden = true; }
+
+  /* 「下一局」：庄家没钱时不要清牌桌，先弹卡片问要不要补钱 */
+  function continueToNextRound() {
+    if (phase !== 'done' && phase !== 'reveal' && phase !== 'bet') return false;
+    if (dealerBroke()) { stopAutoFor('庄家本钱赔光了'); showBrokeCard(); return false; }
+    nextRound();
+    return startRound();
+  }
+  /* 庄家没钱时点「下一局 / 下注开局」都走这里：不清牌桌，直接弹卡片 */
+  function guardBroke() {
+    if (!dealerBroke()) return false;
+    stopAutoFor('庄家本钱赔光了');
+    showBrokeCard();
+    return true;
+  }
+
+  /* 结算后开下一轮：回到「下注」阶段，清空桌面（不扣筹码） */
+  function nextRound() {
+    phase = 'bet'; busy = false;
+    picked = []; coachKey = ''; coachAdvise = null;
+    G = { hands: [[], [], [], []], splits: [null, null, null, null], evs: [null, null, null, null],
+          revealed: false, results: null, over: false, score: 0, dealer: playerCount };
+    forEachPlayer(function (p) {
+      p.hand = null; p.split = null; p.ev = null; p.score = 0; p.kind = '';
+      p.wager = 0; p.state = 'idle'; p.delta = 0; p.shorted = 0;
+    });
+    dealer.delta = 0; dealer.short = 0;
+    autoSeq++; stopCountdown();
+    render();
+    return true;
+  }
+
+  /* 开始新的一轮（按钮触发）：给所有人发牌，然后让第一个能下注的闲家上阵 */
+  function startRound() {
+    if (phase !== 'bet') return false;
+    /* 庄家没钱 → 这一轮没法玩，先问要不要补钱（别开局、别清牌桌） */
+    if (dealerBroke()) { stopAutoFor('庄家本钱赔光了'); showBrokeCard(); return false; }
+    if (!players.some(function (p) { return p.chips >= p.bet; })) {
+      toast(playerCount === 1 ? '筹码不够这一注了，点「筹码回到 1000」'
+                              : '所有人的筹码都不够自己那一注了，点「筹码回到 1000」');
+      return false;
+    }
+    newRound(false);
+    return advanceTurn();          /* 发完牌 → 让第一个闲家上阵（先确认底注） */
+  }
+
+  /* 前进到下一个闲家；都上阵完就去开庄家的牌 */
+  function nextPending() {
+    for (let i = 0; i < players.length; i++) if (players[i].state === 'idle') return i;
+    return -1;
+  }
+  function beginTurn(i) {
+    cur = i;
+    const p = players[i];
+    if (p.state !== 'idle' && p.state !== 'bet') return false;   /* 已经上过阵了，别重复扣注 */
+    if (p.chips < p.bet || !G.hands[i] || G.hands[i].length < 4) {
+      p.state = 'out'; p.delta = 0;
+      toast(p.name + ' 的筹码不够自己那一注，本局轮空');
+      render();
+      return advanceTurn();
+    }
+    /* 交自己那份底注 */
+    p.chips -= p.bet;
+    p.wager = p.bet;
+    p.state = 'split';    p.hand = G.hands[i].slice();
+    G.splits[i] = null; G.evs[i] = null; p.split = null; p.ev = null;
+    G.revealed = false;
+    picked = []; coachKey = ''; coachAdvise = null; autoNote = '';
+    phase = 'split'; busy = false;
+    stopCountdown();
+    Sound.tile();
+    say('轮到 <b>' + p.name + '</b> —— 先把自己这 4 张牌分成<b>前手</b>两张、<b>后手</b>两张，再点「确认分牌」');
+    render();
+    if (autoOn) scheduleAuto();
+    return true;
+  }
+  function advanceTurn() {
+    const n = nextPending();
+    if (n < 0) return dealerPhase();
+    const p = players[n];
+    if (p.chips < p.bet) {
+      p.state = 'out'; p.delta = 0;
+      toast(p.name + ' 的筹码不够自己那一注，本局轮空');
+      return advanceTurn();
+    }
+    /* 每人上阵前先确认底注（各押各的） */
+    cur = n; bet = p.bet;
+    phase = 'pass'; busy = false;
+    stopCountdown();
+    coachKey = ''; coachAdvise = null;
+    say('轮到 <b>' + p.name + '</b> —— 先确认<b>自己的底注</b>（现在 ' + p.bet + ' 分），再点「🎲 下注开局」');
+    render();
+    if (autoOn) later(function () { if (phase === 'pass') beginTurn(cur); }, Math.max(300, aiDelay));
+    return true;
+  }
+  /* 轮转阶段点「下注开局」= 押上自己的底注、开始分牌 */
+  function startTurn() {
+    if (phase !== 'pass') return false;
+    return beginTurn(cur);
+  }
+
+  /* 所有人分好牌、做完决定：庄家开牌 */
+  function dealerPhase() {
+    phase = 'dealer'; busy = true;
+    cur = players.length - 1;                 /* 让状态栏显示最后一个人的信息 */
+    stopCountdown();
+    coachKey = ''; coachAdvise = null;
+    picked = [];
+    Voice.say('庄家开牌', 3);
+    say('所有人都分好牌、做完决定了 —— 庄家在开牌…');
+    render();
+    later(reveal, Math.max(0, aiDelay));
+    return true;
+  }
+
+  /* ==================================================================
+     渲染
+     ================================================================== */
+  function renderHand() {
+    /* 四张牌：前手两张高亮蓝框，后手金框；没确认前可以点 */
+    const p = curP();
+    const canPick = (phase === 'split');
+    const tiles = (p && p.hand && (canPick || phase === 'decide')) ? p.hand : [];
+    const sp = (!canPick && p) ? p.split : null;
+    let h = '';
+    if (!tiles.length) {
+      $('handMe').innerHTML = '<div class="seatnote">发牌之后，这 4 张牌会显示在这里</div>';
+    } else {
+      tiles.forEach(function (t) {
+        let cls = '';
+        if (canPick) {
+          if (picked.indexOf(t) >= 0) cls = 'front';
+          else if (picked.length >= 2) cls = 'back2';
+          cls += ' pick';
+          if (coachAdvise && coachAdvise.indexOf(t) >= 0) cls += ' advise';
+        } else if (sp) {
+          if (sp.front.indexOf(t) >= 0) cls = 'front';
+          else if (sp.back.indexOf(t) >= 0) cls = 'back2';
+        }
+        h += tileHTML(t, cls);
+      });
+      $('handMe').innerHTML = h;
+    }
+    $('handWho').textContent = (playerCount === 1 ? '你的四张牌' : (p ? p.name + ' 的四张牌' : '四张牌'));
+    if (sp && p.ev) {
+      $('tagFront').textContent = '前手 ' + sp.front.map(tileName).join(' + ') + '（' + p.ev.front.text + '）';
+      $('tagBack').textContent = '后手 ' + sp.back.map(tileName).join(' + ') + '（' + p.ev.back.text + '）';
+      $('pickInfo').innerHTML = (phase === 'decide')
+        ? '分好了 —— 现在决定：<b>加注</b> / <b>保持</b> / <b>弃权</b>'
+        : '已确认 · 等庄家开牌';
+    } else if (canPick && p && p.hand && p.hand.length >= 2) {
+      const rest = p.hand.filter(function (t) { return picked.indexOf(t) < 0; });
+      $('tagFront').textContent = '前手 ' + (picked.length === 2 ? picked.map(tileName).join(' + ') : '—');
+      $('tagBack').textContent = '后手 ' + (picked.length === 2 ? rest.map(tileName).join(' + ') : '—');
+      $('pickInfo').textContent = picked.length === 2
+        ? '前手选好了：点「✅ 确认分牌」，或者再点一张改选'
+        : '点两张放「前手」，另外两张就是「后手」（前手不能比后手大）';
+    } else {
+      $('tagFront').textContent = '前手 —';
+      $('tagBack').textContent = '后手 —';
+      $('pickInfo').textContent = '等轮到你';
+    }
+    $('splitInfo').textContent = '';
+  }
+  /* 一手的徽章：前 3点 / 后 天对 */
+  function handChip(ev, which) {
+    if (!ev) return '<span class="pv">—</span>';
+    const v = ev[which];
+    const cls = v.kind === 'supreme' ? ' supreme' : (v.kind === 'pair' ? ' pair' : '');
+    return '<span class="pv' + cls + '">' + (which === 'front' ? '前 ' : '后 ') + v.short + '</span>';
+  }
+  /* 某个人在牌桌上的一行 */
+  function seatResultLine(p, res) {
+    const col = res && res.score > 0 ? '#86efac' : res && res.score < 0 ? '#fca5a5' : '#fde68a';
+    return p.name + '：' + handChip(p.ev, 'front') + handChip(p.ev, 'back') +
+      ' <b style="color:' + col + '">' + (res ? marginText(res.score, res.mult) : '') + '</b>';
+  }
+  function renderSeats() {
+    /* 庄家那一块：没开牌先盖着，开牌后显示前后手 */
+    const el = $('tilesDealer'), note = $('noteDealer');
+    if (!el) return;
+    const dev = (G && G.evs) ? G.evs[G.dealer] : null;
+    if (!G || !G.revealed) {
+      let h = '';
+      for (let i = 0; i < 4; i++) h += backHTML('sm');
+      el.innerHTML = h;
+      note.innerHTML = '庄家 · 四张牌已分好（未开）';
+      return;
+    }
+    const sp = G.splits[G.dealer];
+    el.innerHTML = '<div style="display:flex;gap:10px;align-items:center">' +
+      '<div style="display:flex;gap:3px">' + sp.front.map(function (t) { return tileHTML(t, 'sm'); }).join('') + '</div>' +
+      '<div style="font-size:11px;color:var(--muted)">前<br>' + dev.front.short + '</div>' +
+      '<div style="display:flex;gap:3px">' + sp.back.map(function (t) { return tileHTML(t, 'sm'); }).join('') + '</div>' +
+      '<div style="font-size:11px;color:var(--muted)">后<br>' + dev.back.short + '</div></div>';
+    note.innerHTML = '庄家前手 <b>' + dev.front.text + '</b> · 后手 <b>' + dev.back.text + '</b>';
+  }
+  function renderCenter() {
+    const dev = (G && G.evs) ? G.evs[G.dealer] : null;
+    if (!G || phase === 'idle' || phase === 'bet') {
+      $('centerInfo').innerHTML = '等待下注 · 第 <b>' + roundNo + '</b> 局 · 底注 ' + bet + ' 分/手（前手一份 + 后手一份）';
+      $('vsZone').innerHTML = '你的 <b>前手</b> 对 庄家 <b>前手</b>　·　你的 <b>后手</b> 对 庄家 <b>后手</b><br>' +
+        '<span style="color:var(--muted)">两手都赢才算赢（+' + (bet * 2) + '）；赢一手输一手算和（0 分）；两手都输就输（-' + (bet * 2) + '）。平手算庄家赢</span>';
+      return;
+    }
+    if (!G.revealed) {
+      $('centerInfo').innerHTML = '第 <b>' + roundNo + '</b> 局 · ' +
+        (phase === 'dealer' ? '<b>庄家在开牌…</b>' : '轮到 <b>' + (curP() ? curP().name : '') + '</b> 分牌');
+      let v = '';
+      forEachPlayer(function (p) {
+        v += '<div>' + p.name + '：' + (p.ev ? handChip(p.ev, 'front') + handChip(p.ev, 'back')
+          : '<span class="pv">' + (p.state === 'out' ? '轮空' : '未分牌') + '</span>') + '</div>';
+      });
+      v += '<div style="color:var(--muted)">庄家 ' + (phase === 'dealer' ? '正在开牌…' : '还没开牌') + '</div>';
+      $('vsZone').innerHTML = v;
+      return;
+    }
+    /* 已开牌：一行一个人，列出前后手和输赢 */
+    $('centerInfo').innerHTML = '第 <b>' + roundNo + '</b> 局已开牌　·　你的前手 <b>' +
+      (G.evs[0] ? G.evs[0].front.text : '—') + '</b> / 后手 <b>' + (G.evs[0] ? G.evs[0].back.text : '—') +
+      '</b>　对　庄家前手 <b>' + dev.front.text + '</b> / 后手 <b>' + dev.back.text + '</b>';
+    let h = '';
+    for (let i = 0; i < playerCount; i++) {
+      const p = players[i], res = G.results ? G.results[i] : null;
+      if (!p.split) { h += '<div>' + p.name + '：<span class="pv">轮空</span> <b>±0</b></div>'; continue; }
+      h += '<div>' + seatResultLine(p, res) +
+        '　<span style="color:var(--muted)">' + (res ? res.text : '') + '</span></div>';
+    }
+    const foot = (dealer.short > 0)
+      ? '<div style="color:#ffb4b4">庄家本钱不够：' + PAY_ORDER_CN[payOrder] + '赔，还差 ' + dealer.short + ' 分（不赔）</div>'
+      : (dealer.chips <= 0 ? '<div style="color:#ffb4b4">庄家本钱已经归零</div>'
+                           : '<div style="color:var(--muted)">庄家本钱 <b>' + dealer.chips + '</b> 分</div>');
+    $('vsZone').innerHTML = h + foot;
+  }
+  /* 每个人一个坐位（1~4 人轮流上阵） */
+  function buildPlayersUI() {
+    const row = $('playersRow');
+    if (!row) return;
+    row.innerHTML = '';
+    row.classList.toggle('many', playerCount >= 3);
+    for (let i = 0; i < playerCount; i++) {
+      const z = document.createElement('div');
+      z.className = 'pzone';
+      z.id = 'pzone-' + i;
+      const t = document.createElement('div');
+      t.className = 'pname';
+      t.id = 'pName-' + i;
+      t.textContent = players[i] ? players[i].name : playerName(i, playerCount);
+      const v = document.createElement('div');
+      v.id = 'pHand-' + i;
+      v.innerHTML = '<span class="pv">—</span>';
+      const s = document.createElement('div');
+      s.className = 'pstate';
+      s.id = 'pState-' + i;
+      s.textContent = '等待';
+      const b = document.createElement('div');
+      b.className = 'pbet';
+      b.innerHTML = '底注 <b id="pBet-' + i + '">' + (players[i] ? players[i].bet : bet) + ' 分</b>';
+      z.appendChild(t); z.appendChild(v); z.appendChild(s); z.appendChild(b);
+      row.appendChild(z);
+    }
+  }
+  /* 坐位上的信息跟着状态走 */
+  function refreshZones() {
+    forEachPlayer(function (p, i) {
+      const z = $('pzone-' + i), st = $('pState-' + i), v = $('pHand-' + i), b = $('pBet-' + i);
+      const inTurn = (i === cur) && (phase === 'pass' || phase === 'split' || phase === 'decide');
+      if (z) {
+        z.classList.toggle('active', inTurn);
+        z.classList.toggle('win', p.kind === 'win');
+        z.classList.toggle('lose', p.kind === 'lose');
+      }
+      if (st) {
+        st.className = 'pstate' + (p.kind === 'win' ? ' win' : p.kind === 'lose' ? ' lose'
+          : inTurn ? (phase === 'decide' ? ' decide' : ' turn') : '');
+        st.textContent = (inTurn ? '▸ ' : '') + pStateText(p);
+      }
+      if (v) v.innerHTML = p.ev ? (handChip(p.ev, 'front') + handChip(p.ev, 'back'))
+        : '<span class="pv">' + (p.state === 'out' ? '轮空' : '—') + '</span>';
+      if (b) b.textContent = p.bet + ' 分';
+    });
+  }
+  /* 玩家状态 -> 一句话 */
+  const STATE_TEXT = { idle: '等待', bet: '选注', split: '分牌中', decide: '考虑中', hold: '保持', raise: '加注',
+                       fold: '弃权', win: '赢', lose: '输', push: '和', out: '轮空' };
+  function pStateText(p) {
+    if (p.state === 'win') return '赢 ' + intDelta(p.delta);
+    if (p.state === 'lose') return '输 ' + p.delta;
+    if (p.state === 'push') return '和 ±0';
+    if (p.state === 'fold') return '弃权 ±0';
+    if (p.state === 'out') return '轮空';
+    if (p.state === 'hold' || p.state === 'raise') return STATE_TEXT[p.state] + ' ' + p.wager;
+    if (p.state === 'split' || p.state === 'decide') return STATE_TEXT[p.state];
+    return STATE_TEXT[p.state] || '等待';
+  }
+  function renderSplitList() {
+    const box = $('vlist');
+    if (!box) return;
+    if (!G || !G.hands[0] || G.hands[0].length < 4) { box.innerHTML = '<div class="vrow"><span>发牌后显示三种分法</span><b>—</b></div>'; return; }
+    const r = bestSplit(G.hands[0]);
+    let h = '';
+    r.list.forEach(function (it) {
+      const isBest = it === r.best;
+      h += '<div class="vrow' + (isBest ? ' best' : '') + '">' +
+        '<span>前 ' + it.ev.front.short + ' / 后 ' + it.ev.back.short + '</span>' +
+        '<b>' + (isBest ? '★ 推荐' : (it.ev.ok ? '可行' : '前>后 犯规')) + '</b></div>';
+    });
+    box.innerHTML = h;
+  }
+  function renderHud() {
+    $('roundNo').textContent = roundNo;
+    $('betLabel').textContent = (phase === 'pass' && playerCount > 1 && curP()) ? ('底注 · ' + curP().name) : '底注';
+    $('stakeInfo').textContent = bet + '（两手共 ' + (bet * 2) + '）';
+    $('dealScore').textContent = (G && G.revealed) ? (G.score > 0 ? '+' + G.score : String(G.score)) : '0';
+    $('totalScore').textContent = session.total > 0 ? '+' + session.total : String(session.total);
+    $('stTotal').textContent = stats.total;
+    $('stWin').textContent = stats.win;
+    $('stLose').textContent = stats.lose;
+    $('stDraw').textContent = stats.draw;
+    $('stRate').textContent = stats.total ? Math.round(stats.win * 100 / stats.total) + '%' : '0%';
+    $('progressNote').innerHTML =
+      (phase === 'bet' ? '等第 ' + roundNo + ' 局下注'
+       : phase === 'pass' ? '轮到 <b>' + curP().name + '</b> 确认底注'
+       : phase === 'split' ? '轮到 <b>' + curP().name + '</b> 分牌（点两张放前手）'
+       : phase === 'decide' ? '轮到 <b>' + curP().name + '</b> 决定加注 / 保持 / 弃权'
+       : phase === 'dealer' ? '庄家在开牌…'
+       : '本局结果：' + (roundSummary || '—')) +
+      '<br><span style="color:var(--muted)">' + roundExplain + '</span>';
+  }
+  /* 本局状态那一栏 */
+  function pHandText(p) { return p.ev ? (p.ev.front.short + ' / ' + p.ev.back.short) : '—'; }
+  function renderStatus() {
+    const p = curP();
+    $('turnNow').textContent = p ? p.name : '—';
+    $('chips').textContent = p ? p.chips : '—';
+    $('betNow').textContent = (phase === 'bet' || phase === 'pass') ? (p ? p.bet : bet) : (p ? p.wager : 0);
+    $('myNow').textContent = p ? pHandText(p) : '—';
+    const dev = (G && G.evs) ? G.evs[G.dealer] : null;
+    $('dealerNow').textContent = (G && G.revealed && dev) ? (dev.front.short + ' / ' + dev.back.short) : '—';
+    $('dealerChips').textContent = dealer.chips;
+    const ddl = $('dealerDelta');
+    if (phase === 'done' || dealer.delta !== 0) {
+      ddl.innerHTML = '<span style="color:' + (dealer.delta > 0 ? '#4ade80' : dealer.delta < 0 ? '#f87171' : 'inherit') + '">' +
+        intDelta(dealer.delta) + '</span>' + (dealer.short > 0 ? '（欠 ' + dealer.short + '）' : '');
+    } else ddl.textContent = '—';
+    $('resNow').textContent = (phase === 'done' || phase === 'reveal') ? (roundSummary || '—') : '—';
+    /* 牌桌上庄家那一块的本钱读数 */
+    const dk = $('dealerBank');
+    if (dk) {
+      dk.innerHTML = '本钱 <b>' + dealer.chips + '</b>' +
+        ((phase === 'done' || dealer.delta !== 0)
+          ? ' · 本局 <b class="' + (dealer.delta > 0 ? 'up' : dealer.delta < 0 ? 'down' : '') + '">' +
+            intDelta(dealer.delta) + '</b>' : '') +
+        (dealer.short > 0 ? ' · 欠 ' + dealer.short : (dealer.chips <= 0 ? ' · 已赔光' : ''));
+      dk.classList.toggle('broke', dealer.chips <= 0);
+    }
+    /* 庄家本钱输入框：只在没聚焦的时候同步（别打断正在打字的人） */
+    const dbi = $('dealerBankIn');
+    if (dbi) {
+      const focused = (function () { try { return document.activeElement === dbi; } catch (e) { return false; } })();
+      if (!focused && dbi.value !== String(dealerBank)) dbi.value = String(dealerBank);
+    }
+  }
+  /* 排行榜：最上面金色一行是庄家，然后按筹码排名（每人两行） */
+  function renderRank() {
+    const order = players.map(function (p, i) { return { p: p, i: i }; })
+      .sort(function (a, b) { return (b.p.chips - a.p.chips) || (a.i - b.i); });
+    const inTurn = (phase === 'pass' || phase === 'split' || phase === 'decide');
+    let h = '<div class="rankrow dealer' + (dealer.chips <= 0 ? ' broke' : '') + '">' +
+              '<span class="rk">庄</span>' +
+              '<span class="rn">' + dealer.name + '</span>' +
+              '<span class="rc">' + dealer.chips + '</span>' +
+              '<span class="rd ' + (dealer.delta > 0 ? 'up' : dealer.delta < 0 ? 'down' : '') + '">' +
+                ((phase === 'done' || dealer.delta !== 0)
+                  ? intDelta(dealer.delta) + (dealer.short > 0 ? ' 欠' + dealer.short : '') : '—') + '</span>' +
+              '<span class="rs">本钱 ' + dealerBank + '</span>' +
+            '</div>';
+    order.forEach(function (o, k) {
+      const p = o.p;
+      const d = p.delta;
+      h += '<div class="rankrow' + (inTurn && o.i === cur ? ' active' : '') + '">' +
+             '<span class="rk">' + (k + 1) + '</span>' +
+             '<span class="rn">' + p.name + (inTurn && o.i === cur ? ' ▸' : '') + '</span>' +
+             '<span class="rc">' + p.chips + '</span>' +
+             '<span class="rd ' + (d > 0 ? 'up' : d < 0 ? 'down' : '') + '">' + pStateText(p) + '</span>' +
+             '<span class="rs">胜 ' + p.stats.win + ' 负 ' + p.stats.lose + ' 和 ' + p.stats.draw + '</span>' +
+           '</div>';
+    });
+    $('rankBox').innerHTML = h;
+  }
+  function renderButtons() {
+    const el = $('actions');
+    if (!el) return;
+    const canSplit = (phase === 'split');
+    const ready = !!(curP() && curP().split) || picked.length === 2;
+    const canDecide = (phase === 'decide' && !busy);
+    let h = '<div class="actbar">';
+    h += '<button class="act-go" data-act="open"' + (canSplit && ready ? '' : ' disabled') + '>✅ 确认分牌' +
+      '<span class="bh">' + (canSplit ? (ready ? '然后决定加注/保持/弃权' : '先选两张放前手') : '等轮到你') + '</span></button>';
+    h += '<button class="act-hint" data-act="hint"' + (canSplit ? '' : ' disabled') + '>💡 按建议分好<span class="bh">教学推荐的分法</span></button>';
+    h += '<button data-act="raise"' + (canDecide ? '' : ' disabled') + '>📈 加注 ×2（D）<span class="bh">再押一份，风险翻倍</span></button>';
+    h += '<button data-act="hold"' + (canDecide ? '' : ' disabled') + '>✋ 保持（S）<span class="bh">照原样跟庄家比</span></button>';
+    h += '<button data-act="fold"' + (canDecide ? '' : ' disabled') + '>🏳 弃权（F）<span class="bh">退回那一份注</span></button>';
+    if (canSplit && (picked.length || (curP() && curP().split))) h += '<button data-act="clear">重选<span class="bh">清空重新点</span></button>';
+    h += '</div>';
+    el.innerHTML = h;
+  }
+  function render() {
+    renderHud(); renderStatus(); renderHand(); renderSeats(); renderCenter();
+    renderSplitList(); refreshZones(); renderRank(); renderButtons(); coachUpdate();
+    syncBetChips();
+  }
+  /* 底注筹码的选中态：原来没人给筹码加 .on，点了看不出选中了哪个（顺手和 #betSel 同步） */
+  function syncBetChips() {
+    const chips = document.querySelectorAll('.betchip');
+    if (!chips.length) return;
+    const can = canSetBet();
+    const now = Number(bet);
+    for (let i = 0; i < chips.length; i++) {
+      const b = chips[i];
+      const on = Number(b.dataset.bet) === now;
+      if (on !== b.classList.contains('on')) b.classList.toggle('on', on);
+      if (b.disabled === can) b.disabled = !can;
+      const pressed = on ? 'true' : 'false';
+      if (b.getAttribute('aria-pressed') !== pressed) b.setAttribute('aria-pressed', pressed);
+    }
+    const sel = $('betSel');
+    if (sel && String(sel.value) !== String(bet)) sel.value = String(bet);
+  }
+  /* 结果区：左边【本局总结】，右边【详情情况】，两组都一行一条
+     详情情况里庄家排第一行，玩家按上阵顺序跟在后面 */
+  function resultLine(name, p, delta, tail) {
+    let pts;
+    if (!p || p.state === 'out' || p.kind === 'out') pts = '轮空';
+    else if (!p.ev) pts = '—';
+    else {
+      pts = p.ev.front.text + ' / ' + p.ev.back.text;
+      if (p.kind === 'fold' || p.state === 'fold') pts += '（弃权）';
+    }
+    const cls = delta > 0 ? 'up' : delta < 0 ? 'down' : '';
+    const short = (p && p.shorted > 0) ? '（本钱不够，少拿 ' + p.shorted + ' 分）' : '';
+    return '<div class="resline">' + name + '：' + pts + '，<b class="' + cls + '">' + intDelta(delta) + '</b>' +
+           short + (tail || '') + '</div>';
+  }
+  /* 总结区的一行：「赢：2 人」 */
+  function sumLine(label, n) {
+    return '<div class="resline">' + label + '：' + n + ' 人</div>';
+  }
+  function resultBox(wins, loses, draws, outs) {
+    let left = '<div class="resgroup"><div class="resgtitle">【本局总结】</div>' +
+      sumLine('赢', wins) + sumLine('输', loses) + sumLine('和', draws);
+    if (outs) left += sumLine('轮空', outs);
+    left += '</div>';
+    const dev = (G && G.evs) ? G.evs[G.dealer] : null;
+    let right = '<div class="resgroup"><div class="resgtitle">【详情情况】</div>';
+    right += resultLine('庄家', { ev: dev, state: '', kind: '', shorted: 0 }, dealer.delta,
+                        dealer.short > 0 ? '（还欠 ' + dealer.short + ' 分）' : '');
+    forEachPlayer(function (p) { right += resultLine(p.name, p, p.delta); });
+    right += '</div>';
+    return '<div class="resbox">' + left + right + '</div>';
+  }
+
+  /* ==================================================================
+     教学面板
+     ================================================================== */
+  function autoPhase() { return !!G && (phase === 'bet' || phase === 'pass' || phase === 'split' || phase === 'decide'); }
+  function myTimed() { return myDelay >= 0; }
+  function stopCountdown() { autoLeft = 0; autoShown = -1; }
+  function coachUpdate() {
+    if ((!coachOn && !autoOn && !myTimed()) || !G || phase === 'idle' || phase === 'done' || phase === 'reveal') {
+      $('coachPanel').hidden = true; coachAdvise = null;
+      $('coachTag').textContent = ''; $('coachMain').innerHTML = ''; $('coachSub').innerHTML = ''; $('coachCmp').innerHTML = '';
+      return;
+    }
+    if (!coachOn) {
+      const cd = Math.max(0, Math.ceil(autoLeft));
+      $('coachTag').textContent = autoOn ? '自动' : '限时';
+      $('coachMain').innerHTML = (autoOn ? '自动打牌中 · ' : '我方限时 ' + Math.round(myDelay / 1000) + 's · ') +
+        (autoPhase() ? '<b>' + cd + '</b> 秒后自动接管' : '等庄家开牌…');
+      $('coachSub').innerHTML = '想自己分就直接点牌；不想被自动接管，就点上面的「🤖 手动分牌」关掉（限时会一起设为不限时）';
+      $('coachCmp').innerHTML = '';
+      $('coachPanel').hidden = false;
+      return;
+    }
+    const p = curP();
+    const key = phase + '|' + (G.hands[0] ? G.hands[0].join(',') : '') + '|' + cur + '|' +
+      (p && p.split ? 'S' : picked.join(',')) + '|' + (autoPhase() ? Math.ceil(autoLeft) : '') +
+      '|' + (autoOn ? 'A' : 'M') + (autoNote ? 'N' : '');
+    if (key !== coachKey) {
+      coachKey = key;
+      coachAdvise = null;
+      let tag = '教学', main = '', sub = '', cmp = '';
+      if (phase === 'bet') {
+        tag = '下注';
+        main = '第 <b>' + roundNo + '</b> 局 —— 先确认底注（' + bet + ' 分/手），再点「🎲 下注开局」';
+        sub = '一份底注 = <b>前手一份 + 后手一份</b>：底注 5 分时，两手都赢 <b>+10</b>、都输 <b>-10</b>、赢一输一 <b>0</b> 分。';
+        cmp = '<span class="cmp-label">牌力参考</span><span class="chip">满十减十 · 9 点最大</span>' +
+              '<span class="chip">对子 &gt; 点数</span><span class="chip best">至尊宝最大</span>';
+      } else if (phase === 'pass') {
+        tag = '轮转';
+        main = '轮到 <b>' + p.name + '</b> —— 先确认<b>自己的底注</b>（现在 ' + p.bet + ' 分），再点「🎲 下注开局」';
+        sub = playerCount > 1
+          ? '把设备递给 <b>' + p.name + '</b>。左边底注档位现在改的是<b>他这一份</b>，别人押多少不受影响 —— <b>各押各的</b>。'
+          : '点「🎲 下注开局」开始这一局。';
+        cmp = '<span class="cmp-label">他的筹码</span><span class="chip">' + p.chips + ' 分</span>';
+      } else if (phase === 'split') {
+        if (!p || !p.hand || p.hand.length < 4) { $('coachPanel').hidden = true; coachAdvise = null; return; }
+        const r = bestSplit(p.hand);
+        const b = r.best.ev;
+        tag = '轮到 ' + p.name + ' 分牌';
+        coachAdvise = r.best.sp.front.slice();
+        main = '建议：<em>' + r.best.sp.front.map(tileName).join(' + ') + '</em> 放<b>前手</b>、' +
+          '<em>' + r.best.sp.back.map(tileName).join(' + ') + '</em> 放<b>后手</b>（前 ' + b.front.text + ' / 后 ' + b.back.text + '）';
+        const names = p.hand.map(function (t) { return tileName(t) + '(' + hiOf(t) + '-' + loOf(t) + ')'; });
+        sub = '分牌口诀：<u>让两手的强度之和最大</u>。因为要<b>两手都赢才算赢</b>、赢一手只是和局（0 分），' +
+          '所以前手太弱等于白送一手 —— 别把好牌全堆到后手。' +
+          '　<span>硬规则：前手不能比后手大（排反算犯规，会自动调正）</span>' +
+          '　<span>认牌：' + names.join('、') + '</span>';
+        cmp = '<span class="cmp-label">三种分法</span>';
+        r.list.forEach(function (it) {
+          cmp += '<span class="chip' + (it === r.best ? ' best' : '') + '">前 ' + it.ev.front.short + ' / 后 ' + it.ev.back.short +
+            (it.ev.ok ? '' : ' ✗') + '</span>';
+        });
+      } else if (phase === 'decide') {
+        tag = '轮到 ' + p.name + ' 决定';
+        main = '你现在是 前手 <em>' + p.ev.front.text + '</em> · 后手 <em>' + p.ev.back.text + '</em> —— 加注 / 保持 / 弃权？';
+        sub = '你现在押了 <b>' + p.wager + ' 分/手</b>（两手共 ' + (p.wager * 2) + '）。' +
+          '<b>加注</b>＝再押一份，两手都变成 ' + (p.wager * 2) + ' 分，赢多赢一份、输也多输一份；' +
+          '<b>保持</b>＝照原样跟庄家比；<b>弃权</b>＝认输这一局，<b>退回自己那一份注</b>（不跟庄家比，不输不赢）。';
+        cmp = '<span class="cmp-label">我的牌</span>' + handChip(p.ev, 'front') + handChip(p.ev, 'back');
+      } else if (phase === 'dealer') {
+        tag = '庄家';
+        main = '所有人都分好牌、做完决定了，庄家在开牌…';
+        sub = '庄家的四张牌也分成前后手，跟每个人的<b>前手对前手、后手对后手</b>分别比。';
+        cmp = '';
+      }
+      if (sub && !coachSeenRules) sub += '　<span>第一次玩？点上面「❓ 规则」看三分钟上手说明</span>';
+      if (autoPhase() && (autoOn || myTimed()) && phase !== 'bet') {
+        const cd = Math.max(0, Math.ceil(autoLeft));
+        tag = (autoOn ? '自动 ' : '限时 ') + cd + 's · ' + tag;
+        if (sub) sub += autoOn ? '　<span>想自己分就直接点牌</span>' : '　<span>超时没分好就自动接管</span>';
+      }
+      if (autoNote) {
+        $('coachTag').textContent = autoOn ? '自动中' : tag;
+        $('coachMain').innerHTML = (main || '—') + '　<span style="color:#fde68a">' + autoNote + '</span>';
+        $('coachSub').innerHTML = sub; $('coachCmp').innerHTML = cmp;
+        $('coachPanel').hidden = false;
+        return;
+      }
+      $('coachTag').textContent = tag;
+      $('coachMain').innerHTML = main || '—';
+      $('coachSub').innerHTML = sub;
+      $('coachCmp').innerHTML = cmp;
+    }
+    $('coachPanel').hidden = false;
+  }
+
+  /* ==================================================================
+     交互
+     ================================================================== */
+  function toast(html, ms) {
+    const el = $('toast');
+    el.innerHTML = html; el.hidden = false;
+    if (toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { el.hidden = true; }, ms || 2600);
+  }
+  /* 中央那一行提示（结算后会被结果区覆盖） */
+  function say(html) { $('centerMsg').innerHTML = html; }
+  /* 按教学建议分好这个人的前后手 */
+  function applyHint() {
+    if (phase !== 'split') return false;
+    const p = curP();
+    if (!p || !p.hand || p.hand.length < 4) return false;
+    const r = bestSplit(p.hand);
+    if (!r || !r.best) return false;
+    chooseSplit(r.best.sp.front, r.best.sp.back, cur);
+    picked = [];
+    coachKey = ''; render();
+    return true;
+  }
+  /* act: 'raise' | 'hold' | 'fold'（加注/保持/弃权都只影响自己） */
+  function decide(act) {
+    if (phase !== 'decide' || busy) return false;
+    act = String(act || '').toLowerCase();
+    const p = curP();
+    if (!p) return false;
+    if (act === 'fold') {
+      stopCountdown();
+      Sound.click();
+      p.chips += p.wager;                       /* 退回自己那一份 */
+      p.wager = 0; p.kind = 'push'; p.state = 'push';
+      p.score = 0; p.delta = 0;
+      say(p.name + ' 弃权 —— 退回自己那一份注（' + p.bet + ' 分），本局不跟庄家比');
+      render();
+      return advanceTurn();
+    }
+    if (act === 'raise') {
+      if (p.wager <= 0 || p.chips < p.wager) { toast(p.name + ' 的筹码不够再加一份，只能保持原注'); act = 'hold'; }
+      else { p.chips -= p.wager; p.wager = p.wager * 2; Sound.click(); }
+    }
+    if (act !== 'hold' && act !== 'raise') act = 'hold';
+    p.state = act === 'raise' ? 'raise' : 'hold';
+    stopCountdown();
+    coachKey = ''; coachAdvise = null;
+    render();
+    return advanceTurn();
+  }
+  document.addEventListener('click', function (ev) {
+    if (!ev.target.closest) return;
+    const tile = ev.target.closest('.tile');
+    if (tile && tile.hasAttribute && tile.hasAttribute('data-t') && tile.parentNode && tile.parentNode.id === 'handMe') {
+      Sound.unlock();
+      if (phase !== 'split') { toast('这一手已经确认了，等庄家开牌'); return; }
+      const t = parseInt(tile.getAttribute('data-t'), 10);
+      const p = curP();
+      p.split = null; p.ev = null; G.splits[cur] = null; G.evs[cur] = null;
+      const i = picked.indexOf(t);
+      if (i >= 0) picked.splice(i, 1);
+      else {
+        if (picked.length >= 2) picked.shift();
+        picked.push(t);
+      }
+      Sound.click();
+      if (picked.length === 2) {
+        const rest = p.hand.filter(function (x) { return picked.indexOf(x) < 0; });
+        chooseSplit(picked.slice(), rest, cur);
+        Voice.say('前手 ' + tileSpeech(p.split.front[0], p.split.front[1]) +
+                  '，后手 ' + tileSpeech(p.split.back[0], p.split.back[1]), cur);
+      }
+      cancelAuto();
+      coachKey = ''; render();
+      return;
+    }
+    const btn = ev.target.closest('button');
+    if (!btn) return;
+    Sound.unlock();
+    const act = btn.getAttribute('data-act');
+    if (act === 'open') { if (phase !== 'split') return; cancelAuto(); confirmSplit(); return; }
+    if (act === 'hint') { if (phase !== 'split') return; Sound.click(); applyHint(); toast('已按教学建议分好，点「✅ 确认分牌」'); return; }
+    if (act === 'clear') {
+      picked = [];
+      const p = curP();
+      p.split = null; p.ev = null; G.splits[cur] = null; G.evs[cur] = null;
+      coachKey = ''; render(); return;
+    }
+    if (act === 'raise') { decide('raise'); return; }
+    if (act === 'hold') { decide('hold'); return; }
+    if (act === 'fold') { decide('fold'); return; }
+  });
+  document.addEventListener('keydown', function (ev) {
+    /* 在输入框/下拉框里打字时不要触发游戏快捷键（否则打昵称里有个 d 就加注了） */
+    const tn = (ev.target && ev.target.tagName) || '';
+    if (tn === 'INPUT' || tn === 'SELECT' || tn === 'TEXTAREA') {
+      if (ev.key === 'Escape' && ev.target.blur) ev.target.blur();
+      return;
+    }
+    if (ev.key === 'Escape') {
+      hideBrokeCard();
+      if (!$('secretMask').hidden) { hideSecrets(); return; }
+      if (!$('rulesMask').hidden) { hideRules(); return; }
+      if (phase === 'split' && curP()) {
+        const p = curP();
+        picked = []; p.split = null; p.ev = null; G.splits[cur] = null; G.evs[cur] = null;
+        coachKey = ''; render();
+      }
+      return;
+    }
+    if (ev.metaKey || ev.ctrlKey || ev.altKey) return;
+    const k = (ev.key === ' ' ? ' ' : (ev.key || '').toLowerCase());
+    if (k === ' ') {
+      if (ev.preventDefault) ev.preventDefault();
+      if (phase === 'bet') startRound();
+      else if (phase === 'pass') startTurn();
+      else if (phase === 'split') { cancelAuto(); confirmSplit(); }
+      else if (phase === 'done' || phase === 'reveal') continueToNextRound();
+      return;
+    }
+    if (k === 'd') { decide('raise'); return; }
+    if (k === 's') { decide('hold'); return; }
+    if (k === 'f') { decide('fold'); return; }
+    if (k === 't') { if (phase === 'split') applyHint(); return; }
+    if (k === 'a') toggleAuto();
+    else if (k === 'g') toggleCoach();
+    else if (k === 'h') showRules();
+    else if (k === 'j') showSecrets();
+    else if (k === 'm') $('sound').click();
+    else if (k === 'r') $('restart').click();
+  });
+
+  /* ---- 自动打牌 / 我方限时 ---- */
+  const btnAuto = $('auto'), elMyDelay = $('myDelaySel');
+  function renderAutoButton() {
+    btnAuto.textContent = autoOn ? '🤖 自动打牌中' : '🤖 手动分牌';
+    btnAuto.classList.toggle('sound-off', !autoOn);
+    elMyDelay.value = String(myDelay);
+  }
+  function cancelAuto() { autoSeq++; stopCountdown(); }
+  function applyMyDelay(v, save) {
+    const n = parseInt(v, 10);
+    myDelay = [0, 3000, 5000, 10000, -1].indexOf(n) >= 0 ? n : 5000;
+    elMyDelay.value = String(myDelay);
+    if (myDelay < 0 && autoOn) { autoOn = false; pref.set('pg.auto', 'off'); }
+    cancelAuto(); autoNote = '';
+    renderAutoButton();
+    if (save) pref.set('pg.mylimit', String(myDelay));
+    coachKey = ''; render();
+    if (autoOn || myTimed()) scheduleAuto();
+  }
+  function toggleAuto(force) {
+    autoOn = force === undefined ? !autoOn : !!force;
+    if (autoOn && !myTimed()) { myDelay = 5000; pref.set('pg.mylimit', '5000'); }
+    pref.set('pg.auto', autoOn ? 'on' : 'off');
+    cancelAuto(); autoNote = '';
+    renderAutoButton();
+    coachKey = ''; render();
+    if (autoOn) { autoKick(); coachKey = ''; render(); }
+  }
+  /* 需要人来决定的时候（比如庄家赔光了）先把自动打牌停下来 */
+  function stopAutoFor(why) {
+    if (!autoOn) return false;
+    autoOn = false; pref.set('pg.auto', 'off');
+    renderAutoButton();
+    toast(why + '，自动打牌已停');
+    return true;
+  }
+  /* 自动打牌：下注 → 按建议分好 → 加注/保持 → 下一个人 */
+  function autoAct() {
+    if (busy) return false;
+    if (phase === 'bet') return startRound();
+    if (phase === 'pass') return startTurn();
+    if (phase === 'split') { applyHint(); return confirmSplit(); }
+    if (phase === 'dealer') { return reveal(); }        /* 庄家也是「自动」，直接开牌 */
+    if (phase === 'decide') {
+      const p = curP();
+      const dv = (G && G.evs) ? G.evs[G.dealer] : null;
+      if (!p || !p.ev || !dv) return decide('hold');
+      const win = (cmpHand(p.ev.front, dv.front) > 0 ? 1 : 0) + (cmpHand(p.ev.back, dv.back) > 0 ? 1 : 0);
+      const lose = (cmpHand(p.ev.front, dv.front) < 0 ? 1 : 0) + (cmpHand(p.ev.back, dv.back) < 0 ? 1 : 0);
+      return decide(win > lose ? 'raise' : 'hold');
+    }
+    if (phase === 'done' || phase === 'reveal') return continueToNextRound();
+    return false;
+  }
+  function autoKick() {
+    if (!autoOn) return;
+    if (phase === 'bet') { startRound(); return; }
+    if (phase === 'pass' || phase === 'split' || phase === 'decide') { if (!scheduleAuto()) autoAct(); }
+  }
+  function scheduleAuto() {
+    if (!autoPhase()) return false;
+    if (!autoOn && !myTimed()) { stopCountdown(); return false; }
+    const seq = ++autoSeq;
+    autoNote = '';
+    const ms = myTimed() ? myDelay : 5000;
+    startCountdown(ms);
+    later(function () {
+      if (seq !== autoSeq) return;
+      if (!autoPhase()) return;
+      if (!autoOn) {
+        autoOn = true; pref.set('pg.auto', 'on'); renderAutoButton();
+        autoNote = '（超时了，已自动切到「🤖 自动打牌」）';
+      }
+      autoAct();
+    }, ms);
+    return true;
+  }
+  function startCountdown(ms) {
+    autoLeft = ms / 1000; autoShown = -1;
+    const gen = gameGen;
+    const step = function () {
+      if (gen !== gameGen || !autoPhase() || !(autoOn || myTimed())) { stopCountdown(); return; }
+      autoLeft = Math.max(0, autoLeft - 0.25);
+      const sec = Math.ceil(autoLeft);
+      if (sec !== autoShown) { autoShown = sec; coachKey = ''; render(); }
+      if (autoLeft > 0) later(step, 250);
+    };
+    step();
+  }
+  function toggleCoach(force) {
+    coachOn = force === undefined ? !coachOn : !!force;
+    pref.set('pg.coach', coachOn ? 'on' : 'off');
+    const b = $('coach');
+    b.textContent = coachOn ? '🎓 教学中' : '🎓 教学关';
+    b.classList.toggle('sound-off', !coachOn);
+    coachKey = ''; render();
+  }
+  /* ---- 秘籍 / 规则 ---- */
+  const SECRETS = [
+    { tag: '认牌', title: '满十减十', why: '两张牌的点数相加，超过 10 就减掉 10。9 点最大，0 点（瘪十）最小。比如 6-6 天牌加 4-4 人牌 = 12 + 8 = 20 → 减两次 10 → 0 点。' },
+    { tag: '认牌', title: '两张同名就是对子', why: '对子比对子大小：天 > 地 > 人 > 和 > 梅 > 长三 > 板凳 > 虎头 > 红头十 > 高脚七 > 零霖六 > 杂九 > 杂八 > 杂七 > 杂五。对子比任何点数都大。' },
+    { tag: '认牌', title: '至尊宝最大', why: '丁三（1-2）+ 二四（2-4）是唯一的特殊组合「至尊宝」，比对子还大。这两张牌单独用时算 3 点和 6 点。' },
+    { tag: '分牌', title: '让两手强度之和最大', why: '要赢两手才算赢、赢一手只是和局（0 分），所以前手太弱等于白送。三种分法里选「前手强度 + 后手强度」最大的那种 —— 不是把好牌全堆到后手。' },
+    { tag: '分牌', title: '前手不能比后手大（硬规则）', why: '排反了算「犯规」，本游戏会自动帮你调正。注意这只是规则，不等于「好牌都放后面」，到底怎么分最强看上一条。' },
+    { tag: '分牌', title: '别把两张好牌都放一边', why: '前手太弱等于白送一手。两手都过得去，才有机会两手全赢（和局不输不赢，赢要赢两手才 +10）。' },
+    { tag: '下注', title: '各押各的底注', why: '开局前选的底注是给所有人的默认值，轮到谁谁都能在分牌之前改成自己的数（' + BETS.join(' / ') + ' 分）。一份底注＝前手一份 + 后手一份。' },
+    { tag: '下注', title: '先分牌再决定加注', why: '看完自己的 4 张牌、分成前后手之后，再决定加注（再押一份，两手翻倍）/ 保持 / 弃权（退回那一份注，不跟庄家比）。' },
+    { tag: '算分', title: '赢两手才加分', why: '一份底注＝前手一份 + 后手一份：赢两手 +10，赢一输一 0 分，输两手 -10（底注 5 分时）。所以「稳」比「猛」重要。' },
+    { tag: '算分', title: '庄家也有本钱', why: '庄家默认带 100 分本钱（左栏「庄家本钱」随时能改），赢的收进来、输的赔出去。赔光了就只赔到 0，欠的部分不赔，还会弹卡片问你要不要补给庄家。' },
+    { tag: '规则', title: '平手算庄家赢', why: '点数或对子一样时判庄家赢 —— 所以闲家必须明显更强才吃得下。' },
+    { tag: '规则', title: '1~4 个人都能玩', why: '每人开局 1000 分、各押各的底注，轮流跟同一个庄家比。别人分得怎么样完全不影响你的两手。' },
+    { tag: '认牌', title: '先认这几张', why: '天牌（6-6）、地牌（1-1）、人牌（4-4）、梅花（5-5）、板凳（2-2）、长三（3-3）是最大的对子，认熟这六张就够用了。' },
+    { tag: '心态', title: '好牌也可能被吃', why: '你 9 点，庄家也可能 9 点（平手庄赢）或对子。牌九是概率游戏，长期按正确分法打就不会亏。' }
+  ];
+  function renderSecrets() {
+    let h = '';
+    SECRETS.forEach(function (s, i) {
+      h += '<li data-n="' + (i + 1) + '"><span><b>' + s.title + '</b><span class="st">' + s.tag +
+        '</span><span class="why">' + s.why + '</span></span></li>';
+    });
+    $('secretList').innerHTML = h;
+  }
+  function renderTileTable() {
+    let h = '';
+    NAMES.forEach(function (n) {
+      const t = baseKey(n.hi, n.lo) * 2;
+      h += '<div class="tt">' + tileHTML(t, 'mini') + '<span><b>' + n.name + '</b><br>' + n.hi + '-' + n.lo +
+        '（' + (n.hi + n.lo) + ' 点）' + (n.name === '丁三' || n.name === '二四'
+          ? '<br>与「' + (n.name === '丁三' ? '二四' : '丁三') + '」合成至尊' : '') + '</span></div>';
+    });
+    $('tileTable').innerHTML = h;
+  }
+  function showRules() { $('rulesMask').hidden = false; coachSeenRules = true; pref.set('pg.rules', 'seen'); }
+  function hideRules() { $('rulesMask').hidden = true; }
+  function showSecrets() { renderSecrets(); $('secretMask').hidden = false; pref.set('pg.secrets', 'seen'); }
+  function hideSecrets() { $('secretMask').hidden = true; }
+  $('rulesClose').addEventListener('click', function () { Sound.click(); hideRules(); });
+  $('secretClose').addEventListener('click', function () { Sound.click(); hideSecrets(); });
+  $('rulesMask').addEventListener('click', function (ev) { if (ev.target === $('rulesMask')) hideRules(); });
+  $('secretMask').addEventListener('click', function (ev) { if (ev.target === $('secretMask')) hideSecrets(); });
+  $('brokeModal').addEventListener('click', function (ev) { if (ev.target === $('brokeModal')) hideBrokeCard(); });
+  $('rules').addEventListener('click', function () { Sound.click(); showRules(); });
+  $('secrets').addEventListener('click', function () { Sound.click(); showSecrets(); });
+  $('coach').addEventListener('click', function () { Sound.click(); toggleCoach(); });
+  const btnVoice = $('voice');
+  function renderVoiceButton() {
+    btnVoice.textContent = Voice.enabled ? '🗣 报牌' : '🔇 报牌关';
+    btnVoice.classList.toggle('sound-off', !Voice.enabled);
+    if (!Voice.available) { btnVoice.disabled = true; btnVoice.title = '这个浏览器没有语音合成'; }
+  }
+  btnVoice.addEventListener('click', function () { const on = Voice.set(!Voice.enabled); renderVoiceButton(); if (on) Voice.say('报牌已开启'); });
+  const btnSound = $('sound');
+  function renderSoundButton() {
+    btnSound.textContent = Sound.enabled ? '🔊 音效' : '🔇 音效关';
+    btnSound.classList.toggle('sound-off', !Sound.enabled);
+  }
+  btnSound.addEventListener('click', function () { const on = Sound.set(!Sound.enabled); renderSoundButton(); if (on) { Sound.unlock(); Sound.click(); } });
+  btnAuto.addEventListener('click', function () { Sound.click(); toggleAuto(); });
+  elMyDelay.addEventListener('change', function () { Sound.click(); applyMyDelay(elMyDelay.value, true); });
+  $('aiDelaySel').addEventListener('change', function () {
+    aiDelay = parseInt($('aiDelaySel').value, 10) || 0;
+    pref.set('pg.aidelay', String(aiDelay));
+  });
+  $('volRange').addEventListener('input', function () {
+    const v = parseInt($('volRange').value, 10);
+    Sound.setVolume(v / 100); $('volNum').textContent = String(v);
+  });
+  $('theme').addEventListener('change', function () { applyTheme($('theme').value); pref.set('pg.theme', $('theme').value); Sound.click(); });
+
+  /* ---- 底注控件：下拉框 + 底部筹码条都由 BETS 生成，两边永远一致 ---- */
+  function applyBet(v) {
+    bet = normBet(v);
+    if (phase === 'pass' || phase === 'split' || phase === 'decide') { if (curP()) curP().bet = bet; }
+    else if (phase === 'bet') forEachPlayer(function (p) { p.bet = bet; });
+    pref.set('pg.bet', String(bet));
+    render();
+    return bet;
+  }
+  const canSetBet = function () { return (phase === 'bet' || phase === 'pass') && !busy; };
+  function buildBetUI() {
+    const sel = $('betSel');
+    sel.innerHTML = '';
+    for (const v of BETS) {
+      const o = document.createElement('option');
+      o.value = String(v); o.textContent = v + ' 分';
+      sel.appendChild(o);
+    }
+    const bar = $('betBar');
+    const roll = $('roll');
+    for (const v of BETS) {
+      const b = document.createElement('button');
+      b.className = 'betchip';
+      b.dataset.bet = String(v);
+      b.textContent = String(v);
+      bar.insertBefore(b, roll);
+    }
+    /* 底注那段规则文字由 BETS 生成 —— 档位改了文字自动跟着改 */
+    const li = $('betRuleLi');
+    if (li) {
+      li.innerHTML = '<b>选底注</b>：' + BETS.join(' / ') + ' 分随便选（默认 ' + BET_DEFAULT + ' 分）。' +
+        '一份底注 = <b>前手一份 + 后手一份</b>；开局前选的那个是<b>给所有人的默认值</b>，' +
+        '<b>轮到谁，谁都可以在分牌之前改成自己的底注</b> —— 多人时<b>各押各的</b>。';
+    }
+  }
+  function buildPlayerSel() {
+    const sel = $('playerSel');
+    sel.innerHTML = '';
+    for (const n of PLAYER_COUNTS) {
+      const o = document.createElement('option');
+      o.value = String(n); o.textContent = n + ' 个人';
+      sel.appendChild(o);
+    }
+  }
+
+  /* ==================================================================
+     按钮动作（按钮和测试钩子共用同一份实现）
+     ================================================================== */
+  /* 庄家赔光提示卡 */
+  function brokeContinueAction() {
+    hideBrokeCard();
+    grantDealer();                            /* 补到设定值 */
+    Sound.tile();
+    toast('庄家补给 ' + dealerBank + ' 分，开下一轮');
+    nextRound();
+    render();
+    startRound();
+    return true;
+  }
+  function brokeEditAction() {
+    hideBrokeCard();
+    const inp = $('dealerBankIn');
+    if (inp && inp.focus) inp.focus();
+    toast('改「庄家本钱」的数值就能继续（改完直接点「🎲 下注开局」）');
+    render();
+    return true;
+  }
+  /* 「筹码回到 1000」：所有人回到 1000，庄家本钱也回到设定值 */
+  function resetAll() {
+    gameGen++; clearTimers();
+    forEachPlayer(function (p) {
+      p.chips = CHIPS_START; p.wager = 0; p.hand = null; p.split = null; p.ev = null;
+      p.score = 0; p.kind = ''; p.state = 'idle'; p.delta = 0; p.shorted = 0;
+    });
+    grantDealer();
+    nextRound();
+    Sound.tile();
+    toast('所有人筹码回到 1000，庄家本钱回到 ' + dealerBank);
+    render();
+    return true;
+  }
+  /* 「重新开局」：筹码、战绩、庄家本钱全部重来 */
+  function restartAction() {
+    Sound.click();
+    startNewGame(false);
+    toast('已重新开局（筹码和战绩都清零）');
+    return true;
+  }
+
+  /* ---- 中央按钮 / 底注 / 换人数 / 赔序 / 庄家本钱 / 赔光卡 ---- */
+  function bind() {
+    $('roll').addEventListener('click', function () {
+      if (phase === 'bet') startRound();
+      else if (phase === 'pass') startTurn();
+      else if (phase === 'split') confirmSplit();
+      else if (phase === 'done' || phase === 'reveal') continueToNextRound();
+    });
+    document.querySelectorAll('.betchip').forEach(function (b) {
+      b.addEventListener('click', function () {
+        if (!canSetBet()) return;
+        applyBet(b.dataset.bet);
+        Sound.click();
+      });
+    });
+    $('betSel').addEventListener('change', function () {
+      if (!canSetBet()) { this.value = String(bet); return; }
+      applyBet(this.value);
+    });
+    $('playerSel').addEventListener('change', function () {
+      playerCount = normPlayers(this.value);
+      pref.set('pg.players', String(playerCount));
+      gameGen++; clearTimers();
+      resetPlayers(playerCount);
+      buildPlayersUI(); buildNameInputs();
+      grantDealer();                          /* 换人数 = 重新开局，庄家本钱重发 */
+      nextRound();
+      Sound.click();
+      say('改成 ' + playerCount + ' 个人 —— 每人 1000 分，重新开始');
+      render();
+      if (autoOn) autoKick();
+    });
+    /* 赔不过来时先赔给谁 */
+    $('payOrderSel').addEventListener('change', function () {
+      setPayOrder(this.value);
+      Sound.click();
+      toast('本钱不够时改成：' + PAY_ORDER_CN[payOrder] + '赔');
+    });
+    /* 庄家本钱：改完立刻生效（也记住） */
+    $('dealerBankIn').addEventListener('change', function () {
+      const v = applyDealerBank(this.value, false, true);   /* 确认时留空/写错 → 回默认值 */
+      this.value = String(v);
+      Sound.tile();
+    });
+    $('dealerBankIn').addEventListener('input', function () {
+      const v = applyDealerBank(this.value, true);          /* 边打字边生效，空着就先不动、也不弹提示 */
+      if (String(v) !== this.value && this.value !== '') this.value = String(v);
+    });
+    /* 庄家赔光提示卡 */
+    $('brokeContinue').addEventListener('click', brokeContinueAction);
+    $('brokeEdit').addEventListener('click', brokeEditAction);
+    $('brokeClose').addEventListener('click', hideBrokeCard);
+    $('reset').addEventListener('click', resetAll);
+    $('restart').addEventListener('click', restartAction);
+  }
+  /* 重新开局：所有人 1000 分、庄家本钱按设定值重发、回到下注阶段 */
+  function startNewGame(keepStats) {
+    gameGen++; clearTimers(); Voice.stop();
+    autoOn = false; pref.set('pg.auto', 'off');
+    resetPlayers(playerCount);
+    bet = normBet($('betSel').value);
+    $('betSel').value = String(bet);
+    grantDealer();
+    buildPlayersUI(); buildNameInputs();
+    if (!keepStats) { stats = { total: 0, win: 0, lose: 0, draw: 0 }; session = { total: 0 }; }
+    nextRound();
+    roundNo = 1;
+    renderAutoButton();
+    say('新的一局 —— ' + (playerCount === 1 ? '你一个人' : playerCount + ' 个人轮流上阵') +
+        '，各 ' + CHIPS_START + ' 分，庄家本钱 ' + dealerBank + ' 分');
+    render();
+  }
+
+  /* ==================================================================
+     启动
+     ================================================================== */
+  THEME_LIST.forEach(function (t) {
+    const o = document.createElement('option');
+    o.value = t.key; o.textContent = t.name;
+    $('theme').appendChild(o);
+  });
+  applyTheme(pref.get('pg.theme', 'midnight'));
+  $('theme').value = THEMES[pref.get('pg.theme', 'midnight')] ? pref.get('pg.theme', 'midnight') : 'midnight';
+  aiDelay = parseInt(pref.get('pg.aidelay', '1000'), 10);
+  if ([0, 500, 1000, 2000].indexOf(aiDelay) < 0) aiDelay = 1000;
+  $('aiDelaySel').value = String(aiDelay);
+  coachOn = pref.get('pg.coach', 'on') !== 'off';
+  coachSeenRules = pref.get('pg.rules', '') === 'seen';
+  autoOn = pref.get('pg.auto', 'off') === 'on';
+  myDelay = parseInt(pref.get('pg.mylimit', '5000'), 10);
+  if ([0, 3000, 5000, 10000, -1].indexOf(myDelay) < 0) myDelay = 5000;
+  elMyDelay.value = String(myDelay);
+  $('volRange').value = String(Math.round(Sound.volume * 100));
+  $('volNum').textContent = String(Math.round(Sound.volume * 100));
+  $('coach').textContent = coachOn ? '🎓 教学中' : '🎓 教学关';
+  $('coach').classList.toggle('sound-off', !coachOn);
+
+  buildBetUI();
+  buildPlayerSel();
+  /* 存档里的底注如果不在档位里，回落到默认 */
+  bet = normBet(pref.get('pg.bet', String(BET_DEFAULT)));
+  $('betSel').value = String(bet);
+  pref.set('pg.bet', String(bet));
+  /* 玩家人数（1~4，默认 1） */
+  playerCount = normPlayers(pref.get('pg.players', String(PLAYERS_DEFAULT)));
+  $('playerSel').value = String(playerCount);
+  pref.set('pg.players', String(playerCount));
+  resetPlayers(playerCount);
+  buildPlayersUI();
+  buildNameInputs();
+  grantDealer();                            /* 庄家本钱 = 设定的「庄家本钱」（默认 100） */
+  const dbi0 = $('dealerBankIn');
+  if (dbi0) dbi0.value = String(dealerBank);
+  /* 赔不过来时先赔给谁（默认按牌型大小） */
+  payOrder = normPayOrder(pref.get('pg.payorder', PAY_ORDER_DEFAULT));
+  $('payOrderSel').value = payOrder;
+  pref.set('pg.payorder', payOrder);
+  const poh0 = $('payOrderHint');
+  if (poh0) poh0.textContent = (payOrder === 'points') ? '牌大的先拿满，牌小的少拿/拿不到'
+                                                      : '先上阵的先拿满，后面的少拿/拿不到';
+  bind();
+  renderAutoButton(); renderSoundButton(); renderVoiceButton(); renderTileTable();
+  nextRound();
+  roundNo = 1;
+  say('选好底注和人数，点「🎲 下注开局」');
+  render();
+
+  /* ==================================================================
+     调试 / 测试钩子
+     ================================================================== */
+  window.__PJ = {
+    get G() { return G; }, get phase() { return phase; }, set phase(v) { phase = v; },
+    get roundNo() { return roundNo; },
+    get stats() { return stats; }, get session() { return session; }, get picked() { return picked; },
+    set picked(v) { picked = v || []; },
+    get autoOn() { return autoOn; }, set autoOn(v) { autoOn = !!v; },
+    get myDelay() { return myDelay; }, set myDelay(v) { myDelay = v; },
+    get aiDelay() { return aiDelay; }, set aiDelay(v) { aiDelay = v; },
+    get coachOn() { return coachOn; }, set coachOn(v) { coachOn = !!v; },
+    get coachAdvise() { return coachAdvise; }, get coachKey() { return coachKey; }, set coachKey(v) { coachKey = v; },
+    BETS: BETS, BET_DEFAULT: BET_DEFAULT,
+    baseKey: baseKey, baseOf: baseOf, hiOf: hiOf, loOf: loOf, pips: pips, tileName: tileName, NAMES: NAMES,
+    makeDeck: makeDeck, handValue: handValue, cmpHand: cmpHand, splitsOf: splitsOf, evalSplit: evalSplit,
+    bestSplit: bestSplit, isSupreme: isSupreme, tileHTML: tileHTML, strength: strength,
+    chooseSplit: chooseSplit, confirmSplit: confirmSplit, reveal: reveal, newRound: newRound, render: render,
+    applyHint: applyHint, decide: decide, scoreMult: scoreMult, marginText: marginText, rankOf: rankOf,
+    get players() { return players.map(function (p) { return JSON.parse(JSON.stringify(p)); }); },
+    get playerCount() { return playerCount; },
+    get cur() { return cur; }, set cur(v) { cur = Number(v); },
+    playerAt: function (i) { return players[i] ? JSON.parse(JSON.stringify(players[i])) : null; },
+    setPlayerChips: function (i, v) { if (players[i]) { players[i].chips = Number(v); render(); } },
+    setPlayerBet: function (i, v) { if (players[i]) { players[i].bet = normBet(v); render(); } },
+    normPlayers: normPlayers, normBet: normBet, PLAYER_COUNTS: PLAYER_COUNTS, CHIPS_START: CHIPS_START,
+    setPlayers: function (n) {
+      playerCount = normPlayers(n);
+      pref.set('pg.players', String(playerCount));
+      $('playerSel').value = String(playerCount);
+      resetPlayers(playerCount); buildPlayersUI(); buildNameInputs();
+      grantDealer();                          /* 换人数 = 重新开局，庄家本钱重发 */
+      nextRound(); render();
+    },
+    nameFor: nameFor, setPlayerName: setPlayerName, syncNameInputs: syncNameInputs,
+    get names() { return customNames.slice(); }, NAME_MAX: NAME_MAX,
+    applyBet: applyBet, curBet: curBet, canSetBet: canSetBet,
+    get bet() { return bet; }, set bet(v) { applyBet(v); },
+    /* 庄家：本钱可以在左栏改（默认 100），重新开局 / 换人数 / 筹码重置时按设定值重发 */
+    get dealer() { return { name: dealer.name, chips: dealer.chips, delta: dealer.delta, short: dealer.short }; },
+    setDealerChips: function (v) { dealer.chips = Number(v); render(); },
+    get dealerBank() { return dealerBank; }, set dealerBank(v) { applyDealerBank(v); },
+    normDealerBank: normDealerBank, applyDealerBank: applyDealerBank,
+    DEALER_BANK_DEFAULT: DEALER_BANK_DEFAULT, DEALER_BANK_MAX: DEALER_BANK_MAX,
+    grantDealer: grantDealer, settleDealerBank: settleDealerBank,
+    /* 本钱不够时的赔付次序：'points'（默认，按牌型大小）/ 'order'（按玩家顺序） */
+    get payOrder() { return payOrder; }, set payOrder(v) { setPayOrder(v); },
+    setPayOrder: setPayOrder, normPayOrder: normPayOrder, PAY_ORDERS: PAY_ORDERS,
+    PAY_ORDER_DEFAULT: PAY_ORDER_DEFAULT, PAY_ORDER_CN: PAY_ORDER_CN, clawbackOrder: clawbackOrder,
+    dealerBroke: dealerBroke, showBrokeCard: showBrokeCard, hideBrokeCard: hideBrokeCard,
+    continueToNextRound: continueToNextRound, stopAutoFor: stopAutoFor,
+    /* 按钮动作（和页面上的按钮共用同一份实现） */
+    resetAll: resetAll, restartAction: restartAction,
+    brokeContinueAction: brokeContinueAction, brokeEditAction: brokeEditAction,
+    resultBox: resultBox, resultLine: resultLine, sumLine: sumLine,
+    get roundResult() { return roundResult; }, get roundSummary() { return roundSummary; },
+    get roundExplain() { return roundExplain; },
+    /* 流程 */
+    startRound: startRound, nextRound: nextRound, startTurn: startTurn, beginTurn: beginTurn,
+    advanceTurn: advanceTurn, dealerPhase: dealerPhase, settleRound: settleRound,
+    autoAct: autoAct, autoKick: autoKick, scheduleAuto: scheduleAuto,
+    toggleAuto: toggleAuto, toggleCoach: toggleCoach, applyMyDelay: applyMyDelay, stopCountdown: stopCountdown,
+    renderButtons: renderButtons, renderHand: renderHand, renderRank: renderRank, renderStatus: renderStatus,
+    startNewGame: startNewGame,
+    showRules: showRules, hideRules: hideRules, showSecrets: showSecrets, hideSecrets: hideSecrets,
+    get SECRETS() { return SECRETS; }, Sound: Sound, Voice: Voice,
+    /* 给测试用：直接安排某个人的四张牌 / 前后手 */
+    forceHand: function (i, tiles) {
+      if (!G || !G.hands) return false;
+      G.hands[i] = tiles.slice();
+      if (players[i]) players[i].hand = tiles.slice();
+      return true;
+    },
+    forcePlayerSplit: function (i, front, back) { return chooseSplit(front, back, i); },
+    forceDealerSplit: function (front, back) {
+      const i = G.dealer;
+      const sp = { front: front.slice(), back: back.slice() };
+      let ev = evalSplit(sp);
+      if (!ev.ok) { sp.front = back.slice(); sp.back = front.slice(); ev = evalSplit(sp); }
+      G.splits[i] = sp; G.evs[i] = ev;
+      return ev;
+    }
+  };
+})();
+</script>
+
+<script>
+/* ===== 专注/全屏模式：独立于游戏本体 ===== */
+(function () {
+  var fab = document.getElementById('focusFab');
+  function setLabel(on) {
+    if (!fab) return;
+    fab.innerHTML = on ? '⛶ 退出专注' : '⛶ 专注模式';
+    fab.title = on ? '恢复两侧面板（Shift+F）' : '隐藏两侧面板，让中间占满窗口（Shift+F）';
+  }
+  function refit() { try { window.dispatchEvent(new Event('resize')); } catch (e) {} }
+  function toggleFocus() {
+    var on = document.body.classList.toggle('focus');
+    setLabel(on);
+    refit();
+    setTimeout(refit, 60);
+    return on;
+  }
+  if (fab) fab.addEventListener('click', toggleFocus);
+  window.addEventListener('keydown', function (e) {
+    var t = (e.target && e.target.tagName) || '';
+    if (t === 'INPUT' || t === 'SELECT' || t === 'TEXTAREA') return;
+    if ((e.key === 'F' || e.key === 'f') && e.shiftKey) {
+      e.preventDefault();
+      e.stopPropagation();
+      toggleFocus();
+    }
+  }, true);
+})();
+</script>
+</body>
+</html>

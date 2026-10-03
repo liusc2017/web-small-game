@@ -1,0 +1,1065 @@
+<!DOCTYPE html> <html lang="zh-CN"> <head> <meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"> <title>炸金花 · 三张牌</title>
+<style>
+/* 主题变量（午夜蓝 / 翡翠 / 紫檀 / 霜白 / 曜金，applyTheme() 写这些变量） */ :root{ --bg:#070f1c;--glow-1:#12294a;--glow-2:#171a3a;--panel:rgba(17,26,43,.80);--panel2:#0e1727; --panel-brd:rgba(148,163,184,.20);--line:rgba(148,163,184,.22);--text:#e8eefb;--muted:#8fa2bb; --accent:#38bdf8;--accent-2:#f5b942;--danger:#f87171;--win:#4ade80;--felt-1:#12402f;--felt-2:#07231a; }
+*{box-sizing:border-box}html,body{min-height:100%}
+body{margin:0;min-height:100vh;padding:12px 16px 14px;color:var(--text);-webkit-font-smoothing:antialiased; font-family:"Segoe UI",system-ui,-apple-system,"Microsoft YaHei","PingFang SC",sans-serif;background: radial-gradient(1200px 700px at 20% -10%,var(--glow-1),transparent 60%), radial-gradient(1000px 600px at 85% 0%,var(--glow-2),transparent 55%),var(--bg)}
+h1,h2,h3,h4{margin:0}
+button{font:inherit;font-size:13px;padding:8px 14px;border-radius:9px;cursor:pointer;color:var(--text);background:rgba(148,163,184,.12); border:1px solid var(--panel-brd);transition:background .15s,border-color .15s,transform .06s}
+button:hover:not(:disabled){background:rgba(148,163,184,.20);border-color:rgba(148,163,184,.38)}button:active:not(:disabled){transform:translateY(1px)}button:disabled{opacity:.38;cursor:not-allowed}
+button.primary{background:linear-gradient(180deg,#f3cd7a,#d9a63a);color:#241a05;border-color:rgba(255,231,170,.7);font-weight:700}
+button.primary:hover:not(:disabled){background:linear-gradient(180deg,#ffdd93,#e6b445)}button.ghost{background:transparent}select,input[type=range]{font:inherit;font-size:12.5px}
+select{color:var(--text);background:var(--panel2);border:1px solid var(--panel-brd);border-radius:8px;padding:5px 8px;outline:none;max-width:150px}
+kbd{background:rgba(148,163,184,.16);border:1px solid var(--line);border-radius:5px;padding:1px 5px;font-size:11px;font-family:inherit}
+/* 三栏布局（和骰子比大小 / 超级玛丽同一套） */ .app{max-width:none;width:100%;margin:0 auto;padding:0;display:flex;flex-direction:column;gap:10px}header{text-align:center}
+header h1{font-size:26px;letter-spacing:.34em;font-weight:800;background:linear-gradient(180deg,#fff,#a9c6e6); -webkit-background-clip:text;background-clip:text;color:transparent}
+header .sub{color:var(--muted);font-size:12px;letter-spacing:.14em;margin-top:4px}
+main{display:grid;grid-template-columns:clamp(250px,17vw,330px) minmax(0,1fr) clamp(250px,17vw,330px); grid-template-rows:minmax(0,1fr);gap:14px;align-items:stretch;height:calc(100vh - 136px);min-height:560px}
+.side-col{display:flex;flex-direction:column;gap:12px;min-height:0;overflow-y:auto;padding-right:3px}.side-col::-webkit-scrollbar{width:7px}
+.side-col::-webkit-scrollbar-thumb{background:var(--line);border-radius:4px}.side-col::-webkit-scrollbar-track{background:transparent}
+.board-col{min-width:0;display:flex;flex-direction:column;gap:10px;min-height:0}
+.panel{background:var(--panel);border:1px solid var(--panel-brd);border-radius:14px;backdrop-filter:blur(6px);box-shadow:0 6px 20px rgba(0,0,0,.22)}
+.sec{padding:12px;display:flex;flex-direction:column;gap:10px;flex:none}.sec h2{margin:0;font-size:12px;letter-spacing:.14em;color:var(--muted);font-weight:700}
+.field{display:flex;align-items:center;justify-content:space-between;gap:9px;font-size:13px}.field span{color:var(--muted)}
+.field input[type=number]{width:104px;flex:none;text-align:right;font:inherit;font-size:13px;font-variant-numeric:tabular-nums; color:var(--text);background:var(--panel2);border:1px solid var(--panel-brd);border-radius:8px;padding:5px 8px;outline:none}
+.field input[type=number]:focus{border-color:var(--accent)}.btns2{display:flex;flex-direction:column;gap:8px}.btns2 button{width:100%}.volbox{display:flex;align-items:center;gap:8px;font-size:13px}
+.volbox input[type=range]{-webkit-appearance:none;appearance:none;width:100px;height:4px;border-radius:3px;outline:none; background:linear-gradient(90deg,var(--accent),rgba(148,163,184,.30));cursor:pointer}
+.volbox input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:13px;height:13px;border-radius:50%; background:#fff;border:2px solid var(--accent);cursor:pointer}
+.vn{font-variant-numeric:tabular-nums;min-width:26px;text-align:right;color:var(--muted);font-size:12px}/* 四档音效 */ .seg{display:flex;border:1px solid var(--line);border-radius:9px;overflow:hidden}
+.seg button{border:0;border-radius:0;padding:6px 10px;font-size:12.5px;background:transparent}.seg button.on{background:linear-gradient(180deg,#e5bd6b,#c99a35);color:#241a05;font-weight:700}
+/* 昵称输入 */ .namebox{display:flex;flex-direction:column;gap:6px}.namefield{display:flex;align-items:center;gap:8px;font-size:12.5px}
+.namefield span{color:var(--muted);width:58px;flex:none;font-size:11.5px}
+.namefield input{flex:1;min-width:0;font:inherit;font-size:12.5px;color:var(--text);background:var(--panel2); border:1px solid var(--panel-brd);border-radius:8px;padding:5px 8px;outline:none}
+.namefield input:focus{border-color:var(--accent)}.namefield input::placeholder{color:var(--muted);opacity:.6}
+/* 新手教学条 */ .coach{border-radius:14px;border:1px solid rgba(74,222,128,.35);padding:11px 12px;display:flex;flex-direction:column;gap:8px;flex:none; background:linear-gradient(180deg,rgba(74,222,128,.10),rgba(74,222,128,.03))}
+.coach-head{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.coach-tag{font-size:11px;font-weight:800;letter-spacing:.06em;padding:2px 8px;border-radius:999px;white-space:nowrap; background:rgba(74,222,128,.22);color:#4ade80;border:1px solid rgba(74,222,128,.45)}
+.coach-main{font-size:14px;font-weight:700}.coach-why{font-size:12.5px;color:var(--muted);line-height:1.7}.coach-why b{color:#4ade80}.coach-warn{font-size:12.5px;line-height:1.7;color:#fbbf24}
+.coach-foot{font-size:11px;color:var(--muted);opacity:.8;line-height:1.6}.coach-foot b{color:var(--text)}
+/* 状态行 / 战绩 */ .stat-row{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-size:13px}.stat-row span{color:var(--muted)}
+.stat-row b{font-size:15px;font-variant-numeric:tabular-nums;text-align:right}.statsbar{font-size:12.5px;color:var(--muted);display:flex;flex-wrap:wrap;gap:10px;align-items:baseline}
+.statsbar b{font-size:15px;color:var(--text);font-variant-numeric:tabular-nums}.statsbar .sb-win{color:var(--win)}.statsbar .sb-lose{color:var(--danger)}.sb-note{width:100%;font-size:11px;opacity:.65}
+/* 牌桌：绿色台呢 */ .table{flex:1 1 auto;min-height:0;border-radius:16px;padding:14px;display:flex;flex-direction:column;justify-content:space-between; gap:10px;position:relative;overflow:hidden;border:1px solid rgba(255,255,255,.07); background:radial-gradient(120% 90% at 50% 0%,var(--felt-1),var(--felt-2) 70%)}
+.table::after{content:"";position:absolute;inset:0;pointer-events:none; background:repeating-linear-gradient(45deg,rgba(255,255,255,.014) 0 2px,transparent 2px 5px)}
+.hand-zone{display:flex;flex-direction:column;gap:8px;align-items:center;position:relative;z-index:1}
+.hand-title{font-size:12px;letter-spacing:.14em;color:rgba(226,240,255,.72);display:flex;align-items:center;gap:10px}.hand-title b{font-size:15px;letter-spacing:0;color:#fff}
+.hand-title .pv{font-size:12px;padding:2px 9px;border-radius:999px;background:rgba(255,255,255,.10); border:1px solid rgba(255,255,255,.16);font-variant-numeric:tabular-nums}
+.hand-title .pv.baozi{background:rgba(245,185,66,.24);border-color:rgba(245,185,66,.55);color:#ffe1a3}
+.hand-title .pv.big{background:rgba(74,222,128,.20);border-color:rgba(74,222,128,.45);color:#a7f3c8}
+.hand-title .pv.small{background:rgba(248,113,113,.20);border-color:rgba(248,113,113,.45);color:#ffb4b4}
+/* 扑克牌：DOM + CSS 画（♠♥♣♦ + 点数），不用 canvas / 图片 */ .cards-zone{display:flex;gap:10px;align-items:center;justify-content:center;min-height:98px;position:relative;z-index:1;flex-wrap:wrap}
+.card3{width:62px;height:88px;border-radius:9px;flex:none;position:relative;background:linear-gradient(160deg,#ffffff,#e6ebf3); color:#1b2434;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;font-weight:800; border:1px solid rgba(0,0,0,.26);box-shadow:0 6px 16px rgba(0,0,0,.36),inset 0 -3px 8px rgba(0,0,0,.08); animation:cardIn .26s cubic-bezier(.2,1.4,.5,1)}
+.card3 .cr{font-size:22px;line-height:1;letter-spacing:-.02em}.card3 .cs{font-size:22px;line-height:1}.card3 .cc{position:absolute;top:4px;left:6px;font-size:10px;font-weight:700;opacity:.75}
+.card3.red{color:#d83a3a}.card3.back{background:repeating-linear-gradient(45deg,#25406b 0 7px,#1a2d4f 7px 14px);border-color:rgba(255,255,255,.18)}
+.card3.back::after{content:"";position:absolute;inset:7px;border-radius:5px;border:1px dashed rgba(255,255,255,.32)}.card3.back .cr,.card3.back .cs,.card3.back .cc{display:none}
+.card3.empty{background:rgba(255,255,255,.06);border:1px dashed rgba(255,255,255,.22);box-shadow:none}.card3.empty .cr,.card3.empty .cs,.card3.empty .cc{display:none}
+.card3.empty::after{content:"?";font-size:24px;color:rgba(255,255,255,.35)}@keyframes cardIn{from{transform:translateY(-14px) rotate(-6deg) scale(.9);opacity:.2}to{transform:none;opacity:1}}
+.cards-zone.dealing .card3{animation:cardDeal .34s ease both}@keyframes cardDeal{from{transform:translateY(-40px) rotate(-10deg) scale(.8);opacity:0}to{transform:none;opacity:1}}
+.center-msg{text-align:center;font-size:15px;font-weight:600;color:#d7e7f5;letter-spacing:.03em;min-height:22px;z-index:1;position:relative}.center-msg .big{font-size:21px}
+.center-msg .up{color:var(--win)}.center-msg .down{color:#ffb4b4}.center-msg .resbox{display:inline-flex;gap:0;text-align:left;margin-top:6px;vertical-align:top;align-items:flex-start}
+.center-msg .resgroup{display:block;padding:0 22px}.center-msg .resgroup + .resgroup{border-left:1px dashed rgba(148,163,184,.35)}
+.center-msg .resgtitle{font-size:19px;line-height:1.35;color:var(--text);font-weight:800;letter-spacing:.06em;margin-bottom:5px}
+.center-msg .resline{display:block;font-size:16px;line-height:1.5;font-weight:600;font-variant-numeric:tabular-nums}.center-msg .resline b{font-weight:800}
+/* 每个玩家一个坐位 */ .players-row{display:flex;gap:10px;justify-content:center;align-items:flex-start;flex-wrap:wrap;position:relative;z-index:1}
+.pzone{display:flex;flex-direction:column;gap:5px;align-items:center;padding:7px 10px 5px;border-radius:14px; border:1px solid rgba(255,255,255,.10);background:rgba(0,0,0,.14);transition:border-color .15s,background .15s,box-shadow .15s}
+.pzone.active{border-color:var(--accent);background:rgba(56,189,248,.10);box-shadow:0 0 0 3px rgba(56,189,248,.13)}.pzone.win{border-color:rgba(74,222,128,.55)}
+.pzone.lose{border-color:rgba(248,113,113,.38)}.pzone.fold{opacity:.5}.pzone .hand-title{font-size:11.5px;letter-spacing:.08em;gap:7px}.pzone .cards-zone{gap:6px;min-height:0}
+.players-row.many .card3{width:48px;height:68px;border-radius:7px}.players-row.many .card3 .cr,.players-row.many .card3 .cs{font-size:17px}
+.pstate{font-size:10.5px;letter-spacing:.04em;padding:1px 8px;border-radius:999px;background:rgba(148,163,184,.16); border:1px solid var(--line);color:var(--muted);white-space:nowrap;min-width:52px;text-align:center}
+.pbet{font-size:10px;color:var(--muted);letter-spacing:.02em}.pbet b{color:var(--text);font-variant-numeric:tabular-nums}.pzone.active .pbet b{color:#ffe1a3}
+.pstate.turn{background:rgba(56,189,248,.20);border-color:rgba(56,189,248,.5);color:#bae6fd}.pstate.decide{background:rgba(245,185,66,.20);border-color:rgba(245,185,66,.5);color:#ffe1a3}
+.pstate.win{background:rgba(74,222,128,.20);border-color:rgba(74,222,128,.5);color:#a7f3c8}.pstate.lose{background:rgba(248,113,113,.18);border-color:rgba(248,113,113,.45);color:#ffb4b4}
+.dealer-bank{font-size:11.5px;color:rgba(226,240,255,.78);letter-spacing:.02em;background:rgba(0,0,0,.20); border:1px solid rgba(255,255,255,.12);border-radius:999px;padding:2px 12px}
+.dealer-bank b{color:#fff;font-variant-numeric:tabular-nums}.dealer-bank .up{color:var(--win)}.dealer-bank .down{color:#ffb4b4}.dealer-bank.broke{border-color:rgba(248,113,113,.6);color:#ffb4b4}
+/* 排行榜 */ .rank{display:flex;flex-direction:column;gap:3px;font-size:12.5px}
+.rankrow{display:grid;grid-template-columns:18px minmax(0,1fr) auto;gap:1px 6px;align-items:baseline;padding:4px 6px;border-radius:7px}
+.rankrow.active{background:rgba(56,189,248,.14);box-shadow:inset 0 0 0 1px rgba(56,189,248,.35)}
+.rankrow.dealer{background:rgba(245,185,66,.10);box-shadow:inset 0 0 0 1px rgba(245,185,66,.28);margin-bottom:3px}.rankrow.dealer .rn{color:var(--accent-2)}
+.rankrow.dealer.broke{box-shadow:inset 0 0 0 1px rgba(248,113,113,.45)}.rankrow.dealer.broke .rc{color:#ffb4b4}
+.rankrow .rk{grid-row:1/3;align-self:center;color:var(--muted);text-align:center;font-variant-numeric:tabular-nums}
+.rankrow .rn{grid-column:2;grid-row:1;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rankrow .rc{grid-column:3;grid-row:1;text-align:right;font-variant-numeric:tabular-nums;font-weight:700}
+.rankrow .rd{grid-column:2;grid-row:2;color:var(--muted);font-size:11.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rankrow .rs{grid-column:3;grid-row:2;text-align:right;color:var(--muted);font-variant-numeric:tabular-nums;font-size:11px}.rankrow .up{color:var(--win)}.rankrow .down{color:#ffb4b4}
+.ranknote{font-size:11px;color:var(--muted);opacity:.8;margin-top:7px;line-height:1.6}/* 底部操作条 */ .mine{padding:12px;display:flex;flex-direction:column;gap:10px;flex:0 0 auto}
+.actionbar{display:flex;gap:9px;justify-content:center;flex-wrap:wrap}.sel-info{font-size:12px;color:var(--muted);text-align:center;min-height:17px}
+/* 规则卡 / 结果浮层 / 庄家赔光 */ .rules{position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center; background:rgba(4,8,16,.74);backdrop-filter:blur(3px);padding:20px}
+.rules.on{display:flex}
+.rules-box{max-width:min(94vw,660px);max-height:86vh;overflow:auto;border-radius:16px;padding:20px 22px; background:#111a2b;border:1px solid var(--panel-brd);line-height:1.85;font-size:13.5px}
+.rules-box h3{margin:0 0 10px;font-size:16px}.rules-box h4{margin:15px 0 6px;font-size:13.5px;color:#4ade80}.rules-box ul,.rules-box ol{margin:0;padding-left:20px}.rules-box li{margin:4px 0}
+.rules-box b{color:#fbbf24}.rules-box table{border-collapse:collapse;width:100%;font-size:12.5px;margin:4px 0}
+.rules-box th,.rules-box td{border:1px solid rgba(148,163,184,.24);padding:3px 7px;text-align:center;white-space:nowrap}.rules-box th{color:var(--muted);font-weight:700}
+.rules-box .close{margin-top:16px;width:100%}.rules-box.broke{max-width:min(94vw,460px);border-color:rgba(248,113,113,.5)}.rules-box.broke h3{color:#ffb4b4}.rules-box.wide{max-width:min(94vw,560px)}
+.broke-big{font-size:42px;line-height:1;text-align:center;margin:2px 0 12px}
+.broke-kv{display:flex;justify-content:space-between;gap:10px;font-size:13px;padding:5px 0;border-bottom:1px dashed rgba(148,163,184,.22)}.broke-kv span{color:var(--muted)}
+.broke-kv b{font-variant-numeric:tabular-nums}.broke-kv b.down{color:#ffb4b4}.res-big{font-size:26px;font-weight:800;text-align:center;margin:2px 0 10px}.res-big.win{color:var(--win)}
+.res-big.lose{color:#ffb4b4}
+.toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(14px);padding:10px 18px;border-radius:10px; background:rgba(15,23,42,.95);border:1px solid var(--panel-brd);font-size:13.5px;opacity:0;pointer-events:none; transition:opacity .2s,transform .2s;z-index:70}
+.toast.on{opacity:1;transform:translateX(-50%)}@media (max-width:1180px){main{grid-template-columns:1fr;height:auto;min-height:0}.side-col{overflow:visible}.board-col{min-height:78vh}}
+/* 专注模式：藏起标题和左右两栏，中间区域吃满窗口（Shift+F 或点右上角按钮） */ body.focus header,body.focus .side-col,body.focus aside{display:none}
+body.focus main{grid-template-columns:minmax(0,1fr);height:calc(100vh - 44px);min-height:0}body.focus .app{padding:8px 10px 10px;gap:8px;max-width:none}body.focus .board-col{min-height:0}
+.focus-fab{position:fixed;top:9px;right:11px;z-index:80;display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px; font:inherit;font-size:12.5px;font-weight:700;cursor:pointer;color:#e8eefb;background:rgba(15,23,42,.74);opacity:.6; border:1px solid rgba(148,163,184,.32);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);transition:opacity .15s,transform .15s}
+.focus-fab:hover{opacity:1;transform:translateY(-1px)}body.focus .focus-fab{opacity:.92}
+</style>
+</head> <body>
+<button class="focus-fab" id="focusFab" title="隐藏标题和两侧面板，让中间占满窗口（Shift+F）">⛶ 专注模式</button>
+<div class="app"> <header> <h1>炸 金 花</h1>
+    <p class="sub">ZHAN JIN HUA · 三张牌 · 1~4 人轮流上阵，各发 3 张暗牌跟同一个庄家比大小</p>
+  </header> <main> <!-- ============ 左栏：对局设置 + 教学 + 玩法与快捷键 ============ -->
+    <div class="side-col left"> <section class="panel sec"> <h2>对局设置</h2>
+        <label class="field" title="每局开场每个人（包括庄家）先下的底注，之后跟注/加注都以它为基准"><span id="anteLabel">底注</span><select id="anteSel"></select></label>
+        <div class="field" style="margin-top:-4px"><span style="font-size:11px;color:var(--muted)">闷牌跟注 1 份 · 看牌跟注 2 份（翻倍）</span></div>
+        <label class="field" title="庄家开局带多少筹码。赔光了就只赔到 0（欠的不赔），可以补给庄家继续"><span>庄家本钱</span><input type="number" id="dealerBankIn" min="0" max="1000000" step="10" value="200"></label>
+        <div class="field" style="margin-top:-4px"><span style="font-size:11px;color:var(--muted)">默认 200 分，随时可改（改完下次发牌生效）</span></div>
+        <label class="field" title="庄家本钱不够赔时先赔给谁：按牌型大小 = 牌型强的先拿满；按玩家顺序 = 先上阵的先拿满"><span>赔不过来时</span><select id="payOrderSel"><option value="points">按牌型大小赔</option><option value="order">按玩家顺序赔</option></select></label>
+        <div class="field" style="margin-top:-4px"><span style="font-size:11px;color:var(--muted)" id="payOrderHint">牌型强的先拿满，牌型弱的少拿/拿不到</span></div>
+        <label class="field" title="同一台电脑上几个人轮流玩（1 个人就是单人模式），轮流跟同一个庄家比牌型"><span>玩家人数</span><select id="playerSel"></select></label>
+        <div class="field" style="margin-top:2px;margin-bottom:2px"><span style="font-size:11.5px;color:var(--muted)">玩家昵称（可留空）</span></div>
+        <div class="namebox" id="nameBox"></div>
+        <label class="field" title="发牌动画持续多久"><span>发牌动画</span><select id="dealMsSel"><option value="500">0.5s</option><option value="900" selected>0.9s</option><option value="1500">1.5s</option></select></label>
+        <label class="field" title="所有人都决定完后，庄家隔多久亮牌"><span>庄家延时</span><select id="gapSel"><option value="0">立即</option><option value="400">0.4s</option><option value="900" selected>0.9s</option><option value="1800">1.8s</option></select></label>
+        <label class="field" title="轮到你决定时最多等你多久，超时自动接管"><span>我方限时</span><select id="myDelaySel"><option value="4000">4 秒</option><option value="8000" selected>8 秒</option><option value="15000">15 秒</option><option value="-1">不限时</option></select></label>
+        <label class="field"><span>主题</span><select id="theme"></select></label>
+      </section> <section class="coach" id="coachCard">
+        <div class="coach-head"><span class="coach-tag" id="coachTag">教学</span><span class="coach-main" id="coachMain">准备中…</span></div>
+        <div class="coach-why" id="coachWhy"></div><div class="coach-warn" id="coachWarn"></div><div class="coach-foot" id="coachFoot"></div>
+        <div class="btns2" style="margin-top:2px"><button id="auto">🤖 自动打牌</button><button id="coach">🎓 教学中</button></div>
+      </section>
+      <section class="panel sec"><h2>玩法与快捷键</h2><div style="font-size:12px;color:var(--muted);line-height:1.9" id="howtoBox"></div></section>
+    </div>
+
+    <!-- ============ 中栏：牌桌 ============ -->
+    <div class="board-col"> <div class="table" id="table"> <div class="hand-zone">
+          <div class="hand-title">庄家 <span class="pv" id="dealerPv">—</span></div>
+          <div class="cards-zone" id="dealerCards"></div>
+          <div class="dealer-bank" id="dealerBank">本钱 —</div>
+        </div> <div class="center-msg" id="centerMsg">选好底注和人数，点「🃏 发牌」开局</div>
+        <div class="players-row" id="playersRow"></div>
+      </div> <div class="mine panel"> <div class="sel-info" id="selInfo">先选底注，再点「🃏 发牌」</div>
+        <div class="actionbar" id="actionBar">
+          <button id="dealBtn" class="primary">🃏 发牌</button><button id="look">👀 看牌 (L)</button>
+          <button id="call">💰 跟注 (空格)</button><button id="raise1">📈 加注 ×1 (D)</button>
+          <button id="raise2">×2 (E)</button><button id="raise3">×3 (W)</button><button id="fold">🏳 弃牌 (F)</button>
+          <button id="showBtn" class="primary">🎴 开牌 (Enter)</button><button id="nextBtn">➡ 下一局 (R)</button><button id="hint">提示</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ 右栏：状态 + 排行 + 战绩 + 操作 ============ -->
+    <div class="side-col right"> <section class="panel sec"> <h2>本局状态</h2>
+        <div class="stat-row"><span>当前上阵</span><b id="turnNow">玩家 1</b></div>
+        <div class="stat-row"><span>他的筹码</span><b id="chips">1000</b></div>
+        <div class="stat-row"><span>他的注额</span><b id="betNow">0</b></div>
+        <div class="stat-row"><span>他的状态</span><b id="seenNow">未看牌</b></div>
+        <div class="stat-row"><span>他的牌型</span><b id="handNow">—</b></div>
+        <div class="stat-row"><span>庄家牌型</span><b id="dealerHandNow">—</b></div>
+        <div class="stat-row"><span>桌面总注</span><b id="potNow">0</b></div>
+        <div class="stat-row"><span>庄家本钱</span><b id="dealerChips">—</b></div>
+        <div class="stat-row"><span>庄家本局</span><b id="dealerDelta">—</b></div>
+        <div class="stat-row"><span>本局结果</span><b id="resNow">—</b></div>
+      </section> <section class="panel sec" id="rankSec">
+        <h2>玩家排行</h2><div class="rank" id="rankBox"></div>
+        <div class="ranknote">按筹码自动排名 · 每人开局 1000 分 · 每行第一行是「名字 + 筹码」，第二行是「本局输赢 + 累计胜/负/和」</div>
+      </section> <section class="panel sec"> <h2>本次战绩</h2> <div class="statsbar">
+          <span>总 <b id="stTotal">0</b></span><span>胜 <b id="stWin" class="sb-win">0</b></span><span>负 <b id="stLose" class="sb-lose">0</b></span>
+          <span>和 <b id="stDraw">0</b></span><span>豹子 <b id="stBaozi">0</b></span>
+          <span class="sb-note">只算本次打开页面后的对局，刷新即清零（筹码也一样）</span>
+        </div>
+      </section> <section class="panel sec"> <h2>操作</h2> <div class="btns2">
+          <div class="volbox"><span>音量</span><input type="range" id="volRange" min="0" max="100" step="1" value="68"><span class="vn" id="volNum">68</span></div>
+          <div class="field"><span>音效</span> <div class="seg" id="soundSeg">
+              <button data-vol="off">关</button><button data-vol="low">小</button><button data-vol="mid" class="on">中</button><button data-vol="high">大</button>
+            </div>
+          </div> <button id="sound">🔊 音效</button><button id="rulesBtn">📖 规则（H）</button>
+          <button id="reset">筹码回到 1000</button><button id="newRound" class="primary">重新开局</button>
+        </div>
+      </section>
+    </div>
+  </main>
+</div>
+
+<!-- ============ 规则卡 ============ -->
+<div class="rules" id="rulesModal"> <div class="rules-box"> <h3>炸金花怎么玩 —— 三句话入门</h3>
+    <p><b>一句话</b>：每人 3 张暗牌，跟庄家比牌型大小，<b>豹子 &gt; 同花顺 &gt; 金花 &gt; 顺子 &gt; 对子 &gt; 单张</b>。你可以<b>先看牌再决定跟不跟</b>，但看牌之后跟注要<b>翻倍</b>。</p>
+    <h4>几个人玩（1 / 2 / 3 / 4 人，默认 1 人）</h4> <ul>
+      <li><b>1 个人</b>就是最经典的单人模式：你一个人跟庄家比，左边玩家人数选「1 个人」即可（默认就是它）。</li>
+      <li><b>2~4 个人</b>在同一台电脑上轮流玩：每人开局 <b>1000 分</b>，各押各的。</li>
+      <li>每个人都是<b>单独跟庄家比</b>，互相之间不比分，所以别人拿什么牌完全不影响你，<b>先后顺序绝对公平</b>。</li>
+      <li>多人时右侧会有「玩家排行」，按筹码自动排名，还写着每个人本局的输赢和累计的胜/负/和。</li>
+    </ul> <h4>一局怎么走</h4> <ol> <li id="anteRuleLi"></li>
+      <li><b>发牌</b>：每人 3 张暗牌，庄家也 3 张（庄家的牌开局是扣着的）。</li> <li><b>轮到你做决定</b>（本作的策略核心）：
+        <ul> <li><b>看牌</b>：花 0 分看清自己的 3 张牌，看完之后<b>跟注要翻倍</b>（炸金花的经典规矩）。不看牌叫<b>闷牌</b>，跟注只算一份。</li>
+          <li><b>跟注</b>：闷牌跟 1 份底注，看牌后跟 2 份底注。<b>加注</b>：在跟注的基础上再加 1~3 倍（看牌后以 2 份底注为 1 倍算）。</li>
+          <li><b>弃牌</b>：直接认输这一局，<b>输掉已经下进去的注</b>（底注 + 之前跟/加的部分）。</li>
+        </ul>
+      </li> <li><b>开牌</b>：所有人决定完之后庄家亮牌，跟每个没弃牌的人比大小。</li>
+      <li><b>结算</b>：你的牌型大 → 赢（庄家按你下的注 1 赔 1 赔给你）；牌型小 → 输掉自己的注；完全一样 → 退还本注（理论上不会，花色已经分出胜负）。</li>
+    </ol> <h4>牌型（强 → 弱）</h4>
+    <table>
+      <tr><th>牌型</th><th>例子</th><th>说明</th></tr>
+      <tr><td><b>豹子</b></td><td>♠A ♥A ♦A</td><td>三张同点，最强</td></tr>
+      <tr><td><b>同花顺</b></td><td>♠Q ♠J ♠10</td><td>同花色 + 连号</td></tr>
+      <tr><td><b>金花</b></td><td>♠K ♠9 ♠4</td><td>同花色不连号</td></tr>
+      <tr><td><b>顺子</b></td><td>♥Q ♣J ♦10</td><td>连号不同花</td></tr>
+      <tr><td><b>对子</b></td><td>♠9 ♥9 ♦4</td><td>两张同点</td></tr>
+      <tr><td><b>单张</b></td><td>♠A ♥9 ♦3</td><td>什么都没有</td></tr>
+    </table> <ul>
+      <li><b>点数</b>：A 最大（A &gt; K &gt; Q &gt; J &gt; 10 &gt; … &gt; 3 &gt; 2）。<b>顺子</b>按最大牌比大小，<b>A23 算最小的顺子</b>（这时 A 当 1 用）。</li>
+      <li><b>同类比较</b>：豹子/金花/顺子/单张从大到小逐张比；对子先比对子的那张，再比单张。</li>
+      <li><b>完全一样比花色</b>：♠ &gt; ♥ &gt; ♣ &gt; ♦（所以永远不会平局，只看牌型 / 点数 / 花色三关）。</li>
+    </ul> <h4>庄家本钱（庄家也是个有分数的对手）</h4> <ul>
+      <li>庄家的本钱<b>默认 200 分</b>，左栏「对局设置 → 庄家本钱」里<b>随时可以改</b>（0 ~ 1000000），改完立刻生效，也会记住。之后庄家就跟玩家一样累积：<b>收走输家的注、赔给赢家</b>，不会每局重置。</li>
+      <li><b>本钱赔光了就赔不出来</b>：只赔到 0，欠的部分不赔，并且会明确告诉你「还差 X 分」，被少给的人也会在自己的那一行写明「本钱不够，少拿 X 分」。</li>
+      <li><b>本钱不够时先赔给谁，可以自己选</b>（左栏「赔不过来时」）：<b>按牌型大小赔（默认）</b>牌型强的先拿满、牌型弱的少拿/拿不到；<b>按玩家顺序赔</b>先上阵的先拿满、后面的少拿/拿不到。两种都只是「谁先拿钱」的差别，<b>总共赔出去的钱一样多</b>（庄家赔到 0 为止），账目永远是平的。</li>
+      <li><b>赔到 0 就会自动弹卡片</b>告诉你「这一局结束了」，问你要不要继续：「🔄 补给庄家并继续下一局」按你设定的本钱补满就接着玩；「✏️ 改庄家本钱」直接去改数字；「就到这里」先停手看看牌桌。</li>
+    </ul> <h4>新手口诀三条</h4> <ol> <li><b>豹子 / 同花顺：放心加满</b>：这是天花板级别的牌，加注 ×3 一点也不过分。</li>
+      <li><b>金花 / 顺子：跟注或小加</b>：能赢大部分单张和对子，但不值得押上全部身家。</li>
+      <li><b>单张小牌：闷牌最便宜</b>：没看牌时跟注只要一份底注，看清楚了是烂牌就<b>弃牌</b>，只亏已经下进去的那一点。</li>
+    </ol> <h4>怎么用这个「新手教学」</h4> <ul> <li>轮到你决定，教学条就会告诉你这手牌的牌型、强弱和建议动作（看牌 / 跟注 / 加注 / 弃牌）。</li>
+      <li>不想被催：把「我方限时」设成<b>不限时</b>；想边看边学：打开<b>🤖 自动打牌</b>，它会替每个人做决定并连打下一局。忘了口诀：随时按 <b>H</b> 再打开这张卡。</li>
+    </ul>
+    <p style="color:var(--muted);font-size:12.5px">说明：筹码和战绩都只在内存里，刷新页面就回到每人 1000 分、战绩清零；主题、底注、人数、音量这些设置会记住。</p>
+    <button class="primary close" id="rulesClose">知道了</button>
+  </div>
+</div>
+
+<!-- ============ 本局结算浮层（Enter 关掉 / 继续） ============ -->
+<div class="rules" id="resultModal"> <div class="rules-box wide">
+    <div class="res-big" id="resultTitle">本局结束</div>
+    <div id="resultBox" style="font-size:13.5px;line-height:1.85"></div>
+    <div class="btns2" style="margin-top:14px"><button id="resultNext" class="primary">➡ 下一局（Enter）</button></div>
+    <button class="close" id="resultClose">先看看牌桌（Esc）</button>
+  </div>
+</div>
+
+<!-- ============ 庄家赔光提示 ============ -->
+<div class="rules" id="brokeModal"> <div class="rules-box broke"> <div class="broke-big">💸</div>
+    <h3 id="brokeTitle">庄家本钱赔光了 —— 这一局结束了</h3>
+    <p id="brokeText" style="color:var(--muted);margin:0 0 10px">庄家的钱已经见底，它赔不出任何赢注了。要不要补给庄家、开下一局？</p>
+    <div id="brokeStats"></div> <div class="btns2" style="margin-top:14px">
+      <button id="brokeContinue" class="primary">🔄 补给庄家并继续下一局</button>
+      <button id="brokeEdit">✏️ 改庄家本钱</button>
+    </div> <button class="close" id="brokeClose">就到这里</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script id="core">
+/* ==================================================================
+   炸金花 · 核心逻辑（纯逻辑，不碰 DOM、不碰任何浏览器 API，可在 Node 里直接跑）
+   一副 52 张（无王），每人 3 张。牌型由强到弱：豹子 > 同花顺 > 金花 > 顺子 > 对子 > 单张。
+   点数 A 最大（A>K>Q>J>10>…>3>2）；A23 是最小的顺子（A 当 1 用）。
+   同类型逐张比，完全相同比花色（♠ > ♥ > ♣ > ♦，所以永远不会平局）。
+   ================================================================== */
+const SUITS = ['♠', '♥', '♣', '♦'];                    /* 下标即花色强度顺序 */
+const SUIT_KEYS = ['s', 'h', 'c', 'd']; const SUIT_NAMES = { s: '黑桃', h: '红桃', c: '梅花', d: '方块' };
+const RANK_LABEL = { 2:'2', 3:'3', 4:'4', 5:'5', 6:'6', 7:'7', 8:'8', 9:'9', 10:'10', 11:'J', 12:'Q', 13:'K', 14:'A' };
+const HAND_TYPES = ['baozi', 'tonghuashun', 'jinhua', 'shunzi', 'duizi', 'danzhang'];
+const HAND_NAMES = { baozi:'豹子', tonghuashun:'同花顺', jinhua:'金花', shunzi:'顺子', duizi:'对子', danzhang:'单张' };
+const HAND_RANK = { baozi:6, tonghuashun:5, jinhua:4, shunzi:3, duizi:2, danzhang:1 };
+const ANTES = [1, 2, 5, 10, 20, 50, 100];
+const ANTE_DEFAULT = 10, CHIPS_START = 1000, DEALER_BANK_DEFAULT = 200, DEALER_BANK_MAX = 1000000;
+const PLAYER_COUNTS = [1, 2, 3, 4], PLAYERS_DEFAULT = 1, NAME_MAX = 8, RAISE_MAX = 3;
+const PAY_ORDERS = ['points', 'order'], PAY_ORDER_DEFAULT = 'points', BET_ACTS = ['call', 'raise', 'fold'];
+
+function r2(v) { return Math.round(Number(v) * 100) / 100; }
+function signedInt(v) { return v > 0 ? '+' + v : (v < 0 ? String(v) : '±0'); }
+function normAnte(v) { const n = Math.round(Number(v)); return ANTES.indexOf(n) >= 0 ? n : ANTE_DEFAULT; }
+function normPlayerCount(v) { const n = Math.round(Number(v)); return PLAYER_COUNTS.indexOf(n) >= 0 ? n : PLAYERS_DEFAULT; }
+function normPayOrder(v) { return PAY_ORDERS.indexOf(String(v)) >= 0 ? String(v) : PAY_ORDER_DEFAULT; }
+function normDealerBank(v) { const n = Math.floor(Number(v)); return isFinite(n) ? Math.max(0, Math.min(DEALER_BANK_MAX, n)) : DEALER_BANK_DEFAULT; }
+
+/* 可复现的伪随机数：mulberry32(seed) —— 同种子永远同一串 */
+function mulberry32(a) { a = a >>> 0; return function () { a = (a + 0x6D2B79F5) >>> 0; let t = a;
+    t = Math.imul(t ^ (t >>> 15), 1 | t); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+/* 52 张牌：{rank:2..14, suit:0..3, sym:'♠', label:'A', red:bool} */
+function makeDeck() { const d = []; for (let s = 0; s < 4; s++) for (let r = 2; r <= 14; r++) {
+    d.push({ rank: r, suit: s, sym: SUITS[s], label: RANK_LABEL[r], red: (s === 1 || s === 3) }); }
+  return d; }
+/* Fisher-Yates；rng 省略时用 Math.random，传 mulberry32(seed) 就能复现同一副牌 */
+function shuffleCards(deck, rng) {
+  const r = (typeof rng === 'function') ? rng : Math.random, a = (deck || []).slice();
+  for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)) % (i + 1), t = a[i];
+    a[i] = a[j]; a[j] = t; } return a; }
+function cardText(c) { return c ? (c.sym + c.label) : '—'; }
+function cardsText(cards) { return (cards || []).map(cardText).join(' '); }
+
+/* 牌型判定 -> { type, name, key, desc, cards, vals, suits, high, score }
+   key = [类型权重, 逐张比较权重×3, 逐张花色权重×3]（花色 ♠4 ♥3 ♣2 ♦1）
+   按 key 逐位比较就是最终大小：先类型 → 再逐张点数 → 最后花色 */
+function evaluateHand(cards) { if (!cards || cards.length < 3) return null;
+  const cs = cards.slice(0, 3).sort(function (a, b) { return (b.rank - a.rank) || (a.suit - b.suit); });
+  const r = [cs[0].rank, cs[1].rank, cs[2].rank], s = [cs[0].suit, cs[1].suit, cs[2].suit];
+  const flush = (s[0] === s[1] && s[1] === s[2]), trip = (r[0] === r[1] && r[1] === r[2]);
+  let sh = 0; if (r[0] - 1 === r[1] && r[1] - 1 === r[2]) sh = r[0];
+  else if (r[0] === 14 && r[1] === 3 && r[2] === 2) sh = 3;         /* A23 = 最小顺子 */
+  let type, vals, order = cs; if (trip) { type = 'baozi'; vals = r; }
+  else if (flush && sh) { type = 'tonghuashun'; vals = a23(r, sh); }
+  else if (flush) { type = 'jinhua'; vals = r; }
+  else if (sh) { type = 'shunzi'; vals = a23(r, sh); } else if (r[0] === r[1] || r[1] === r[2]) {
+    type = 'duizi'; const pr = (r[0] === r[1]) ? r[0] : r[1], kick = (r[0] === r[1]) ? r[2] : r[0];
+    vals = [pr, pr, kick];
+    /* 比较顺序：先对子的两张（花色强的在前），再单张 */
+    order = cs.filter(function (c) { return c.rank === pr; }).concat(cs.filter(function (c) { return c.rank === kick; }));
+  } else { type = 'danzhang'; vals = r; }
+  const suits = order.map(function (c) { return 4 - c.suit; });
+  const info = { type: type, vals: vals };
+  return { type: type, name: HAND_NAMES[type], key: [HAND_RANK[type]].concat(vals, suits), desc: handDesc(type, vals), cards: cs, vals: vals, suits: suits, high: vals[0], score: handScore(info) }; }
+function a23(r, sh) { return sh === 3 ? [3, 2, 1] : r; } function handDesc(type, vals) {
+  if ((type === 'shunzi' || type === 'tonghuashun') && vals[0] === 3 && vals[1] === 2 && vals[2] === 1) return HAND_NAMES[type] + ' · A23 最小';
+  return HAND_NAMES[type] + ' · ' + (RANK_LABEL[vals[0]] || '?') + ' 高'; }
+/* 仅供 AI / 教学用的强弱分（0~100），牌型之间严格分层 */
+function handScore(info) { if (!info) return 0;
+  const v = info.vals || [2, 2, 2], a = v[0] - 2, b = v[1] - 2, c = v[2] - 2; switch (info.type) {
+    case 'baozi': return 92 + a / 12 * 8; case 'tonghuashun': return 80 + (v[0] - 3) / 11 * 9;
+    case 'jinhua': return 62 + a / 12 * 10 + b / 12 * 4 + c / 12 * 2;
+    case 'shunzi': return 52 + (v[0] - 3) / 11 * 7;
+    case 'duizi': return 30 + a / 12 * 16 + c / 12 * 3;
+    default: return 5 + a / 12 * 17 + b / 12 * 4.5 + c / 12 * 2; } } function handKey(x) {
+  if (!x) return []; if (x.key) return x.key;
+  if (Array.isArray(x)) { const i = evaluateHand(x); return i ? i.key : []; } return []; }
+/* 1 / 0 / -1：a 比 b 大返回 1。参数既可以是 evaluateHand 的结果，也可以是 3 张牌 */
+function compareHands(a, b) {
+  const ka = handKey(a), kb = handKey(b), n = Math.max(ka.length, kb.length);
+  for (let i = 0; i < n; i++) {
+    const x = ka[i] === undefined ? 0 : ka[i], y = kb[i] === undefined ? 0 : kb[i];
+    if (x !== y) return x > y ? 1 : -1; } return 0; }
+
+/* ============ 开局状态 ============ */
+function newGameState(opts) { opts = opts || {}; let cnt = opts.playerCount;
+  if (cnt === undefined) cnt = (opts.players && opts.players.length) ? opts.players.length : opts.count;
+  cnt = normPlayerCount(cnt);
+  const seed = (opts.seed === undefined || opts.seed === null) ? null : (Number(opts.seed) >>> 0);
+  const chips = (opts.chips === undefined || opts.chips === null) ? CHIPS_START : Math.max(0, Math.floor(Number(opts.chips) || 0));
+  const bank = normDealerBank(opts.dealerChips === undefined ? DEALER_BANK_DEFAULT : opts.dealerChips);
+  const names = Array.isArray(opts.names) ? opts.names : []; const st = {
+    seed: seed, rng: seed === null ? null : mulberry32(seed), playerCount: cnt, ante: normAnte(opts.ante), round: 0, turn: 0, phase: 'bet', dealt: false, payOrder: normPayOrder(opts.payOrder), players: [], dealer: { name: '庄家', chips: bank, bank: bank, hand: [], handInfo: null, ante: 0, delta: 0, short: 0, lastAction: '' }, log: [], results: [], pot: 0, dealerDelta: 0, dealerShort: 0, summary: '' };
+  for (let i = 0; i < cnt; i++) {
+    st.players.push({ seat: i, name: String(names[i] || (cnt === 1 ? '你' : '玩家 ' + (i + 1))).slice(0, NAME_MAX), chips: chips, hand: [], handInfo: null, seen: false, folded: false, bet: 0, lastAction: '', delta: 0, short: 0, kind: '', wins: 0, loses: 0, draws: 0 }); }
+  return st; }
+function hasActed(p) { return !!p && BET_ACTS.indexOf(p.lastAction) >= 0; }      /* 看牌不算决定 */
+function callUnit(st, p) { return st.ante * (p && p.seen ? 2 : 1); }            /* 闷牌 1 份 / 看牌 2 份 */
+function totalPot(st) { let n = st.dealer.ante || 0;
+  st.players.forEach(function (p) { n += p.bet || 0; }); return r2(n); } function firstToAct(st) {
+  for (let i = 0; i < st.players.length; i++) if (!st.players[i].folded) return i; return -1; }
+function nextToAct(st, from) { const n = st.players.length; for (let k = 1; k <= n; k++) {
+    const i = ((from + k) % n + n) % n, p = st.players[i];
+    if (!p.folded && !hasActed(p)) return i; } return -1; } function advanceTurn(st) {
+  const nxt = nextToAct(st, st.turn < 0 ? st.players.length - 1 : st.turn);
+  if (nxt < 0) { st.phase = 'show'; st.turn = -1; } else { st.turn = nxt; st.phase = 'bet'; }
+  return st.turn; }
+
+/* ============ 发牌（每人 3 张暗牌 + 庄家 3 张），同时收底注 ============ */
+function dealRound(st, rng) { if (!st) return null;
+  const r = (typeof rng === 'function') ? rng : (st.rng || Math.random), deck = shuffleCards(makeDeck(), r);
+  st.round++; st.phase = 'bet'; st.dealt = true; st.results = []; st.summary = '';
+  st.dealerDelta = 0; st.dealerShort = 0; st.dealer.delta = 0; st.dealer.short = 0; let k = 0;
+  st.players.forEach(function (p) { p.hand = [deck[k++], deck[k++], deck[k++]];
+    p.handInfo = evaluateHand(p.hand);
+    p.seen = false; p.folded = false; p.lastAction = ''; p.delta = 0; p.short = 0; p.kind = '';
+    const a = Math.min(st.ante, p.chips);                     /* 筹码不够就全下，不欠账 */
+    p.chips = r2(p.chips - a); p.bet = a; }); st.dealer.hand = [deck[k++], deck[k++], deck[k++]];
+  st.dealer.handInfo = evaluateHand(st.dealer.hand); st.dealer.lastAction = '底注';
+  const da = Math.min(st.ante, st.dealer.chips);
+  st.dealer.chips = r2(st.dealer.chips - da); st.dealer.ante = da; st.pot = totalPot(st);
+  st.turn = firstToAct(st); if (st.turn < 0) st.phase = 'show';
+  st.log.push('第 ' + st.round + ' 局 · 每人底注 ' + st.ante + ' 分，发牌完毕（' + st.players.length + ' 人 + 庄家）');
+  return st; }
+
+/* ============ 玩家动作 action: 'look' | 'call' | 'raise' | 'fold'（amount 只在 raise 用，1~3 倍） ============ */
+function playerAction(st, seat, action, amount) {
+  const p = (st && st.players) ? st.players[seat] : null;
+  if (!p) return { ok: false, reason: '没有这个座位', seat: seat };
+  if (st.phase !== 'bet' || st.turn !== seat) return { ok: false, reason: '现在不是 ' + p.name + ' 的下注时机', seat: seat, turn: st.turn, phase: st.phase };
+  if (p.folded) return { ok: false, reason: p.name + ' 已经弃牌了', seat: seat };
+  action = String(action || '').toLowerCase(); const unit = callUnit(st, p);
+  if (action === 'look') {                                    /* 看牌免费，也不结束回合 */
+    p.seen = true; p.lastAction = '看牌';
+    st.log.push(p.name + ' 看牌：' + p.handInfo.desc + '（之后跟注 ' + callUnit(st, p) + ' 分）');
+    return { ok: true, action: 'look', seat: seat, cost: 0, unit: callUnit(st, p), seen: true, hand: p.handInfo, phase: st.phase, turn: st.turn, chips: p.chips }; }
+  if (hasActed(p)) return { ok: false, reason: p.name + ' 这一局已经决定过了', seat: seat };
+  if (action === 'fold') { p.folded = true; p.lastAction = 'fold'; p.kind = 'fold';
+    st.log.push(p.name + ' 弃牌，损失已下的 ' + r2(p.bet) + ' 分'); advanceTurn(st);
+    return { ok: true, action: 'fold', seat: seat, cost: 0, unit: unit, bet: p.bet, phase: st.phase, turn: st.turn, chips: p.chips }; }
+  if (action === 'call' || action === 'raise') { let mult = 1;
+    if (action === 'raise') { mult = Math.round(Number(amount)); if (!(mult >= 1)) mult = 1; if (mult > RAISE_MAX) mult = RAISE_MAX; }
+    const cost = unit * mult;
+    if (p.chips < cost) return { ok: false, reason: p.name + ' 的筹码不够（需要 ' + cost + ' 分，只有 ' + p.chips + ' 分）', seat: seat, need: cost, chips: p.chips };
+    p.chips = r2(p.chips - cost); p.bet = r2(p.bet + cost);
+    p.lastAction = (action === 'raise') ? 'raise' : 'call'; st.pot = totalPot(st);
+    st.log.push(p.name + (action === 'raise' ? ('加注 ×' + mult + '，下注 ' + cost + ' 分') : ('跟注 ' + cost + ' 分' + (p.seen ? '（看牌翻倍）' : '（闷牌）'))) + '，本局已下 ' + p.bet + ' 分');
+    advanceTurn(st);
+    return { ok: true, action: action, seat: seat, cost: cost, mult: mult, unit: unit, bet: p.bet, chips: p.chips, phase: st.phase, turn: st.turn }; }
+  return { ok: false, reason: '未知动作：' + action, seat: seat }; }
+
+/* ============ AI：先看牌，再按牌力跟注 / 加注 / 弃牌（由 seed/round/seat 决定，可复现） ============ */
+function aiRand01(st, seat) {
+  if (st && st.seed !== null && st.seed !== undefined) return mulberry32(((st.seed >>> 0) + st.round * 131 + seat * 17 + 7) >>> 0)();
+  return Math.random(); } function aiDecision(st, seat) {
+  const p = (st && st.players) ? st.players[seat] : null;
+  if (!p) return { action: 'fold', amount: 0, note: '没有这个座位' };
+  if (st.phase !== 'bet' || st.turn !== seat || p.folded || hasActed(p)) return { action: 'fold', amount: 0, note: '不在他的决策时机' };
+  if (!p.seen) return { action: 'look', amount: 0, note: '先花 0 分看牌' };
+  const info = p.handInfo || evaluateHand(p.hand), score = handScore(info), unit = callUnit(st, p), r = aiRand01(st, seat);
+  if (p.chips < unit) return { action: 'fold', amount: 0, note: '筹码不够跟注了' };
+  let action = 'fold', amount = 0, note = '';
+  if (score >= 80) { action = 'raise'; amount = 3; note = '牌型很强，加注 ×3'; }
+  else if (score >= 70) { action = 'raise'; amount = 2; note = '金花不小，加注 ×2'; }
+  else if (score >= 62) { action = 'raise'; amount = 1; note = '金花，加注 ×1'; }
+  else if (score >= 52) { action = r < 0.45 ? 'raise' : 'call'; amount = 1; note = '顺子，小加或跟注'; }
+  else if (score >= 40) { action = r < 0.35 ? 'raise' : 'call'; amount = 1; note = '对子够大，跟注为主'; }
+  else if (score >= 30) { action = r < 0.62 ? 'call' : 'fold'; note = '对子偏小，多半跟一手'; } else {
+    const big = info.vals[0] >= 13 && info.vals[1] >= 11;
+    action = (big || r < 0.16) ? 'call' : 'fold'; note = big ? '单张但连着大牌，跟一手' : '单张太小，弃牌'; }
+  if (action === 'raise') { while (amount > 1 && p.chips < unit * amount) amount--;
+    if (p.chips < unit * amount) { action = 'call'; amount = 0; note = '筹码不够加注，改成跟注'; } }
+  if (action === 'call' && p.chips < unit) { action = 'fold'; amount = 0; note = '筹码不够，弃牌'; }
+  return { action: action, amount: amount, score: score, unit: unit, note: note, hand: info }; }
+
+/* ============ 结算：庄家亮牌跟每个没弃牌的人比大小 ============ */
+/* 赢 = 赢下自己下的注（庄家 1 赔 1）；输 = 输掉自己的注；平 = 退还本注 */
+/* 赔不过来时「从谁身上扣回来」的次序（先被扣的 = 最后才拿到的）：
+   'order' 按玩家顺序赔 → 后上阵的先被扣，前面的先拿满
+   'points' 按牌型大小赔 → 牌型弱的先被扣，牌型强的先拿满；同牌型时后上阵的先被扣 */
+function clawbackOrder(st, results) {
+  const gain = results.filter(function (x) { return x.delta > 0; });
+  if (st.payOrder === 'order') gain.sort(function (a, b) { return b.seat - a.seat; });
+  else gain.sort(function (a, b) { const c = compareHands(a.hand, b.hand);
+    return c !== 0 ? c : (b.seat - a.seat); }); return gain; } function resolveRound(st) {
+  if (!st) return null; const dealerHand = st.dealer.handInfo || evaluateHand(st.dealer.hand);
+  st.phase = 'over'; st.turn = -1; const results = []; st.players.forEach(function (p) {
+    const ph = p.handInfo || evaluateHand(p.hand); if (p.folded || p.lastAction === 'fold') {
+      p.kind = 'fold'; p.delta = r2(-p.bet);
+      results.push({ seat: p.seat, name: p.name, win: false, cmp: null, kind: 'fold', delta: p.delta, bet: p.bet, chips: p.chips, hand: ph, dealerHand: dealerHand, short: 0 });
+      return; } const cmp = compareHands(ph, dealerHand); let kind, delta;
+    if (cmp > 0) { kind = 'win'; delta = r2(p.bet); p.chips = r2(p.chips + p.bet * 2); }
+    else if (cmp < 0) { kind = 'lose'; delta = r2(-p.bet); }
+    else { kind = 'draw'; delta = 0; p.chips = r2(p.chips + p.bet); }
+    p.kind = kind; p.delta = delta; p.lastAction = kind; p.short = 0;
+    results.push({ seat: p.seat, name: p.name, win: cmp > 0, cmp: cmp, kind: kind, delta: delta, bet: p.bet, chips: p.chips, hand: ph, dealerHand: dealerHand, short: 0 }); });
+  let net = 0; st.players.forEach(function (p) { net += p.delta; }); let dDelta = r2(-net);
+  st.dealer.short = 0; if (st.dealer.chips + dDelta < 0) {
+    /* 赔不过来：按设定的次序赔，赔到 0 为止，欠的部分不赔 */
+    st.dealer.short = r2(-(st.dealer.chips + dDelta)); let need = st.dealer.short;
+    clawbackOrder(st, results).forEach(function (item) { if (need <= 0) return;
+      const take = Math.min(item.delta, need), p = st.players[item.seat];
+      item.delta = r2(item.delta - take); item.short = r2(take);
+      p.delta = item.delta; p.chips = r2(p.chips - take); p.short = r2(take);
+      need = r2(need - take); }); let net2 = 0;
+    st.players.forEach(function (p) { net2 += p.delta; }); st.dealer.chips = 0; dDelta = r2(-net2);
+  } else st.dealer.chips = r2(st.dealer.chips + dDelta);
+  st.dealer.delta = dDelta; st.dealerDelta = dDelta; st.dealerShort = st.dealer.short; st.pot = totalPot(st);
+  results.forEach(function (it) {                        /* 每个人本局的累计胜负（排行榜用） */
+    const p = st.players[it.seat];
+    if (it.kind === 'win') p.wins++; else if (it.kind === 'draw') p.draws++; else p.loses++; });
+  const cnt = function (f) { return results.filter(f).length; };
+  const wins = cnt(function (x) { return x.kind === 'win'; }), folds = cnt(function (x) { return x.kind === 'fold'; });
+  const loses = cnt(function (x) { return x.kind === 'lose' || x.kind === 'fold'; }), draws = cnt(function (x) { return x.kind === 'draw'; });
+  st.summary = '庄家 ' + dealerHand.desc + ' ｜ ' + wins + ' 赢 · ' + loses + ' 输' + (draws ? ' · ' + draws + ' 平' : '') + (folds ? '（含 ' + folds + ' 人弃牌）' : '');
+  st.log.push('开牌：庄家 ' + dealerHand.desc + '（' + cardsText(st.dealer.hand) + '）');
+  results.forEach(function (it) {
+    st.log.push('  ' + it.name + ' ' + it.hand.desc + ' ' + cardsText(it.hand.cards) + ' → ' + (it.kind === 'win' ? '赢' : it.kind === 'lose' ? '输' : it.kind === 'draw' ? '平' : '弃牌') + ' ' + signedInt(it.delta) + (it.short > 0 ? '（本钱不够，少拿 ' + it.short + '）' : '')); });
+  if (st.dealer.short > 0) st.log.push('庄家本钱不够，还欠 ' + st.dealer.short + ' 分（按' + (st.payOrder === 'points' ? '牌型大小' : '玩家顺序') + '赔）');
+  st.results = results;
+  return { results: results, dealerHand: dealerHand, dealerDelta: dDelta, dealerShort: st.dealer.short, wins: wins, loses: loses, draws: draws, folds: folds, pot: st.pot, summary: st.summary }; }
+/* 这一局对某个座位来说是赢是输（战绩用） */
+function seatOutcome(st, seat) {
+  const it = (st.results || []).filter(function (x) { return x.seat === seat; })[0];
+  if (!it || it.kind === 'draw') return 'draw'; return it.kind === 'win' ? 'win' : 'lose'; }
+/* 枚举 C(52,3)=22100 种组合，算各种牌型的真实概率（教学条用） */
+function handTypeOdds() { const deck = makeDeck(), n = deck.length, cnt = {}, out = {};
+  HAND_TYPES.forEach(function (t) { cnt[t] = 0; }); let total = 0;
+  for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) for (let k = j + 1; k < n; k++) {
+    cnt[evaluateHand([deck[i], deck[j], deck[k]]).type]++; total++; }
+  HAND_TYPES.forEach(function (t) { out[t] = { count: cnt[t], p: cnt[t] / total }; });
+  out.total = total; return out; }
+/* 清桌：回到「还没发牌」的状态（筹码不动，底注不收） */
+function clearTable(st) { if (!st) return null;
+  st.phase = 'bet'; st.turn = 0; st.dealt = false; st.results = []; st.summary = ''; st.pot = 0;
+  st.dealerDelta = 0; st.dealerShort = 0;
+  st.dealer.hand = []; st.dealer.handInfo = null; st.dealer.ante = 0; st.dealer.delta = 0; st.dealer.short = 0; st.dealer.lastAction = '';
+  st.players.forEach(function (p) {
+    p.hand = []; p.handInfo = null; p.seen = false; p.folded = false;
+    p.bet = 0; p.lastAction = ''; p.delta = 0; p.short = 0; p.kind = ''; }); return st; }
+/* ============ 以上是 core 的全部导出（ui 脚本把纯逻辑透到调试钩子上） ============ */
+</script>
+
+<script id="ui">
+(function () { 'use strict'; const $ = function (id) { return document.getElementById(id); };
+  const clamp = function (v, a, b) { return Math.max(a, Math.min(b, v)); };
+  const num = function (v, d) { const n = Number(v); return isFinite(n) ? n : d; };
+
+  /* ============ 本次战绩：只在内存里（刷新即清零），一局结束按「你」(0 号座位)的结果记一次 ============ */
+  const stats = { total: 0, win: 0, lose: 0, draw: 0 }; let baoziSeen = 0; function renderStats() {
+    $('stTotal').textContent = stats.total; $('stWin').textContent = stats.win;
+    $('stLose').textContent = stats.lose; $('stDraw').textContent = stats.draw; $('stBaozi').textContent = baoziSeen; }
+  function recordResult(r) { if (r !== 'win' && r !== 'lose' && r !== 'draw') r = 'draw';
+    stats.total++;
+    if (r === 'win') stats.win++; else if (r === 'lose') stats.lose++; else stats.draw++;
+    renderStats(); return r; }
+  function resetStats() { stats.total = 0; stats.win = 0; stats.lose = 0; stats.draw = 0; baoziSeen = 0; renderStats(); }
+
+  /* ============ 设置存取（localStorage 键统一 zjh. 前缀；筹码和战绩一律不落盘） ============ */
+  const pref = {
+    get: function (k, d) { try { const v = localStorage.getItem(k); return v === null ? d : v; } catch (e) { return d; } }, set: function (k, v) { try { localStorage.setItem(k, String(v)); } catch (e) {} } };
+
+  /* ============ 主题：一行一套配色，applyTheme() 写 CSS 变量 ============ */
+  const THEMES = {
+    midnight: { name:'午夜蓝', bg:'#070f1c', g1:'#12294a', g2:'#171a3a', felt1:'#12402f', felt2:'#07231a', panel:'rgba(17,26,43,.80)', panel2:'#0e1727', brd:'rgba(148,163,184,.20)', line:'rgba(148,163,184,.22)', text:'#e8eefb', muted:'#8fa2bb', accent:'#38bdf8', accent2:'#f5b942', danger:'#f87171', win:'#4ade80' }, emerald: { name:'翡翠', bg:'#05120d', g1:'#0f3d2e', g2:'#14261c', felt1:'#14624a', felt2:'#062a1e', panel:'rgba(11,32,25,.82)', panel2:'#0a1f18', brd:'rgba(110,231,183,.20)', line:'rgba(110,231,183,.22)', text:'#e4f5ec', muted:'#7fa595', accent:'#34d399', accent2:'#fbbf24', danger:'#fb7185', win:'#4ade80' }, rosewood: { name:'紫檀', bg:'#150e09', g1:'#4a2415', g2:'#2b1620', felt1:'#5c2a1c', felt2:'#2a1109', panel:'rgba(38,22,16,.82)', panel2:'#251610', brd:'rgba(214,160,110,.22)', line:'rgba(214,160,110,.24)', text:'#f8ece3', muted:'#b69884', accent:'#f59e0b', accent2:'#60a5fa', danger:'#ef4444', win:'#86efac' }, frost: { name:'霜白', bg:'#eef2f8', g1:'#dbeafe', g2:'#e6e6ff', felt1:'#1f6f52', felt2:'#0d3a2a', panel:'rgba(255,255,255,.90)', panel2:'#ffffff', brd:'rgba(100,116,139,.24)', line:'rgba(100,116,139,.26)', text:'#1e293b', muted:'#64748b', accent:'#2563eb', accent2:'#b45309', danger:'#dc2626', win:'#16a34a' }, obsidian: { name:'曜金', bg:'#08080a', g1:'#2c2614', g2:'#1a1a22', felt1:'#2a2a30', felt2:'#141418', panel:'rgba(22,22,26,.82)', panel2:'#16161a', brd:'rgba(234,179,8,.20)', line:'rgba(234,179,8,.22)', text:'#f6f2e6', muted:'#a49c86', accent:'#eab308', accent2:'#22d3ee', danger:'#f87171', win:'#4ade80' } };
+  const THEME_LIST = ['midnight', 'emerald', 'rosewood', 'frost', 'obsidian'];
+  const THEME_CSS = { bg:'--bg', g1:'--glow-1', g2:'--glow-2', felt1:'--felt-1', felt2:'--felt-2', panel:'--panel', panel2:'--panel2', brd:'--panel-brd', line:'--line', text:'--text', muted:'--muted', accent:'--accent', accent2:'--accent-2', danger:'--danger', win:'--win' };
+  let themeKey = THEME_LIST.indexOf(pref.get('zjh.theme', 'midnight')) >= 0 ? pref.get('zjh.theme', 'midnight') : 'midnight';
+  function applyTheme(k) { if (k !== undefined && THEME_LIST.indexOf(k) >= 0) themeKey = k;
+    const t = THEMES[themeKey] || THEMES.midnight, s = document.documentElement.style;
+    for (const key in THEME_CSS) s.setProperty(THEME_CSS[key], t[key]); return themeKey; }
+
+  /* ============ 音效：WebAudio 实时合成（不依赖任何外部文件）
+     主增益 = 音量百分比（0~1）直接映射到 master.gain ============ */
+  const Sfx = (function () { const VOLS = { off: 0, low: 0.35, mid: 0.68, high: 1 };
+    let ctx = null, master = null, noiseBuf = null, vol = VOLS.mid;
+    const sv = pref.get('zjh.vol', null);
+    if (sv !== null) { const v = Number(sv); if (isFinite(v) && v >= 0 && v <= 1) vol = v; }
+    let on = pref.get('zjh.sound', 'on') !== 'off'; function gain() { return on ? vol : 0; }
+    function ensure() { if (gain() <= 0) return false; try { if (!ctx) {
+          const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return false;
+          ctx = new AC();
+          master = ctx.createGain(); master.gain.value = gain(); master.connect(ctx.destination);
+          const len = Math.max(1, Math.floor(ctx.sampleRate * 0.14));
+          noiseBuf = ctx.createBuffer(1, len, ctx.sampleRate); const d = noiseBuf.getChannelData(0);
+          for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 2.2); }
+        if (ctx.state === 'suspended') ctx.resume(); master.gain.value = gain(); return true;
+      } catch (e) { return false; } } function tone(o) { if (!ensure()) return;
+      const t = ctx.currentTime + (o.delay || 0), osc = ctx.createOscillator(), g = ctx.createGain();
+      osc.type = o.type || 'triangle'; osc.frequency.setValueAtTime(o.freq, t);
+      if (o.slideTo) osc.frequency.exponentialRampToValueAtTime(Math.max(40, o.slideTo), t + (o.dur || 0.14));
+      const peak = o.gain === undefined ? 0.16 : o.gain; g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(Math.max(0.0002, peak), t + (o.atk || 0.008));
+      g.gain.exponentialRampToValueAtTime(0.0001, t + (o.dur || 0.14));
+      osc.connect(g); g.connect(master); osc.start(t); osc.stop(t + (o.dur || 0.14) + 0.03); }
+    function fizz(o) { if (!ensure()) return;
+      const t = ctx.currentTime + (o.delay || 0), src = ctx.createBufferSource(), bp = ctx.createBiquadFilter(), g = ctx.createGain();
+      src.buffer = noiseBuf; bp.type = o.type || 'bandpass';
+      bp.frequency.setValueAtTime(o.bright || 1800, t);
+      if (o.slideTo) bp.frequency.exponentialRampToValueAtTime(Math.max(80, o.slideTo), t + (o.dur || 0.12));
+      bp.Q.value = o.q === undefined ? 1 : o.q;
+      g.gain.setValueAtTime(Math.max(0.0002, o.gain === undefined ? 0.24 : o.gain), t);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + (o.dur || 0.12));
+      src.connect(bp); bp.connect(g); g.connect(master); src.start(t); src.stop(t + (o.dur || 0.12) + 0.03); }
+    function seq(notes, type, peak, gap) { const g = gap || 0.075;
+      notes.forEach(function (f, i) { tone({ freq: f, delay: i * g, dur: 0.17, type: type || 'triangle', gain: peak || 0.16 }); }); }
+    const api = {
+      get enabled() { return on && vol > 0; }, get on() { return on; }, get volume() { return vol; }, get level() { return (!on || vol <= 0) ? 'off' : (vol <= 0.35 ? 'low' : (vol <= 0.7 ? 'mid' : 'high')); }, get VOLS() { return VOLS; }, get master() { return master; }, get ctx() { return ctx; }, get gain() { return gain(); }, setVolume: function (v) {                        /* 主增益 = 音量百分比（0~1）直接映射 */
+        let x = Number(v); if (!isFinite(x)) x = 0;
+        if (x > 1) x = x / 100;                        /* 传 0~100 的百分比也认 */
+        vol = clamp(x, 0, 1); pref.set('zjh.vol', String(vol));
+        if (master) master.gain.value = gain(); return vol;
+      }, setOn: function (v) { on = !!v; pref.set('zjh.sound', on ? 'on' : 'off'); if (master) master.gain.value = gain(); return on; }, set: function (v) { const r = api.setOn(v); if (r) api.click(); return r; }, setLevel: function (lv) {                        /* 四档：off 只静音，其余三档同时把音量调到对应百分比 */
+        if (VOLS[lv] === undefined) lv = 'mid';
+        if (lv === 'off') { api.setOn(false); return 'off'; }
+        api.setOn(true); api.setVolume(VOLS[lv]); return lv;
+      }, unlock: function () { return ensure(); }, click: function () { tone({ freq: 880, dur: 0.05, gain: 0.10 }); }, chip: function () { fizz({ bright: 4200, dur: 0.06, gain: 0.20 }); fizz({ bright: 3200, dur: 0.06, gain: 0.14, delay: 0.055 }); tone({ freq: 1240, dur: 0.05, gain: 0.07, type: 'square' }); }, deal: function () {
+        for (let i = 0; i < 4; i++) fizz({ bright: 2600 - i * 220, dur: 0.09, gain: 0.20, delay: i * 0.09, slideTo: 900 });
+        tone({ freq: 260, dur: 0.30, gain: 0.09, type: 'sine', slideTo: 160 });
+      }, flip: function () { fizz({ bright: 1400, dur: 0.10, gain: 0.18, slideTo: 3200, q: 0.7 }); }, win: function () { seq([523, 659, 784, 1047], 'triangle', 0.17); }, lose: function () { seq([392, 330, 262], 'sine', 0.16, 0.12); }, push: function () { tone({ freq: 494, dur: 0.18, gain: 0.13 }); tone({ freq: 494, dur: 0.22, gain: 0.12, delay: 0.16 }); }, baozi: function () { seq([659, 784, 988, 1319, 1568, 2093], 'triangle', 0.17, 0.08); }, broke: function () { seq([330, 294, 262, 196, 147], 'sawtooth', 0.15, 0.14); } };
+    return api; })(); function segValue(seg, attr, val) { if (!seg) return;
+    [].forEach.call(seg.querySelectorAll('button'), function (b) { b.classList.toggle('on', b.dataset[attr] === val); }); }
+
+  /* ============ 局面状态（规则全在 core，这里只管界面与流程） ============ */
+  let st = null, busy = false, dealing = false, gen = 0, timers = [], autoSeq = 0, autoLeft = 0, autoShown = -1, seedVal = null;
+  let ante = normAnte(pref.get('zjh.ante', ANTE_DEFAULT));
+  let dealerBank = normDealerBank(pref.get('zjh.bank', DEALER_BANK_DEFAULT));
+  let payOrder = normPayOrder(pref.get('zjh.payorder', PAY_ORDER_DEFAULT));
+  let playerCount = normPlayerCount(pref.get('zjh.players', PLAYERS_DEFAULT));
+  let dealMs = num(pref.get('zjh.dealgap', 900), 900);
+  let gapMs = num(pref.get('zjh.showgap', 900), 900);
+  let myLimit = num(pref.get('zjh.mylimit', 8000), 8000);
+  let coachOn = pref.get('zjh.coach', 'on') !== 'off';
+  let autoOn = pref.get('zjh.auto', 'off') === 'on'; let coachInfo = null, coachKey = '';
+  let customNames = ['', '', '', '']; try { const raw = pref.get('zjh.names', '');
+    if (raw) { const arr = JSON.parse(raw); if (Array.isArray(arr)) for (let i = 0; i < 4; i++) customNames[i] = String(arr[i] || '').slice(0, NAME_MAX); }
+  } catch (e) {}
+
+  function later(fn, ms) {
+    const t = setTimeout(function () { timers = timers.filter(function (x) { return x !== t; }); fn(); }, Math.max(0, ms));
+    timers.push(t); return t; }
+  function clearTimers() { timers.forEach(function (t) { clearTimeout(t); }); timers = []; }
+  const defaultName = function (i, n) { return (n === 1) ? '你' : ('玩家 ' + (i + 1)); };
+  function nameFor(i, n) { const c = String(customNames[i] || '').trim();
+    return c ? c.slice(0, NAME_MAX) : defaultName(i, n === undefined ? playerCount : n); }
+  const curP = function () { return (st && st.players && st.turn >= 0) ? st.players[st.turn] : null; };
+  const PAY_ORDER_CN = { points: '按牌型大小', order: '按玩家顺序' };
+
+  /* 牌型概率（枚举 C(52,3)=22100 种组合，算一次缓存） */
+  let oddsCache = null;
+  function odds() { if (!oddsCache) { try { oddsCache = handTypeOdds(); } catch (e) { oddsCache = null; } } return oddsCache; }
+  function oddsLine() { const o = odds(); if (!o) return '一副 52 张，每人 3 张，共 22100 种等可能组合。';
+    const f = function (t) { return (o[t].p * 100).toFixed(2) + '%'; };
+    return '一手牌的概率（共 ' + o.total + ' 种组合）：豹子 <b>' + f('baozi') + '</b> · 同花顺 <b>' + f('tonghuashun') + '</b> · 金花 <b>' + f('jinhua') + '</b> · 顺子 <b>' + f('shunzi') + '</b> · 对子 <b>' + f('duizi') + '</b> · 单张 <b>' + f('danzhang') + '</b>。'; }
+
+  /* ============ 渲染：牌面用 DOM + CSS 画（♠♥♣♦ + 点数），不用 canvas / 图片 ============ */
+  function cardHTML(card, faceUp, delay) {
+    const d = delay ? ' style="animation-delay:' + delay + 'ms"' : '';
+    if (!card) return '<div class="card3 empty"' + d + '></div>';
+    if (!faceUp) return '<div class="card3 back"' + d + '></div>';
+    return '<div class="card3' + (card.red ? ' red' : '') + '"' + d + '><span class="cc">' + card.sym + '</span><span class="cr">' + card.label + '</span><span class="cs">' + card.sym + '</span></div>'; }
+  function cardsHTML(cards, faceUp, animate) { if (!cards || !cards.length) return '';   /* 还没发牌就什么都不画 */ let h = '';
+    for (let i = 0; i < 3; i++) h += cardHTML(cards[i], faceUp, animate ? i * 110 : 0);
+    return h; }
+  const seatFaceUp = function (p) { return !!(p && (p.seen || (st && st.phase === 'over'))); };
+
+  function buildPlayersUI() { const row = $('playersRow'); row.innerHTML = '';
+    row.classList.toggle('many', playerCount >= 3); for (let i = 0; i < playerCount; i++) {
+      const z = document.createElement('div'); z.className = 'pzone'; z.id = 'pzone-' + i;
+      z.innerHTML = '<div class="hand-title"><span id="pName-' + i + '">' + nameFor(i) + '</span>' + '<span class="pv" id="pPv-' + i + '">—</span></div>' + '<div class="cards-zone" id="pCards-' + i + '"></div>' + '<div class="pstate" id="pState-' + i + '">等待</div>' + '<div class="pbet">本局已下 <b id="pBet-' + i + '">0</b> 分</div>';
+      row.appendChild(z); } } function buildNameInputs() { const box = $('nameBox');
+    if (!box) return; box.innerHTML = ''; for (let i = 0; i < playerCount; i++) {
+      const lb = document.createElement('label'); lb.className = 'namefield';
+      const sp = document.createElement('span'); sp.id = 'nameLabel-' + i;
+      sp.textContent = (playerCount === 1) ? '你的昵称' : ('玩家 ' + (i + 1));
+      const inp = document.createElement('input');
+      inp.id = 'nameIn-' + i; inp.type = 'text'; inp.maxLength = NAME_MAX;
+      inp.value = customNames[i] || ''; inp.placeholder = defaultName(i, playerCount);
+      inp.addEventListener('input', function () { setPlayerName(i, this.value); });
+      lb.appendChild(sp); lb.appendChild(inp); box.appendChild(lb); } } function syncNameInputs() {
+    for (let i = 0; i < 4; i++) { const inp = $('nameIn-' + i), lb = $('nameLabel-' + i);
+      if (inp) { if (inp.value !== (customNames[i] || '')) inp.value = customNames[i] || ''; inp.placeholder = defaultName(i, playerCount); }
+      if (lb) lb.textContent = (playerCount === 1) ? '你的昵称' : ('玩家 ' + (i + 1)); } }
+  function setPlayerName(i, v) { if (!(i >= 0 && i < 4)) return false;
+    customNames[i] = String(v == null ? '' : v).trim().slice(0, NAME_MAX);
+    pref.set('zjh.names', JSON.stringify(customNames));
+    if (st && st.players[i]) st.players[i].name = nameFor(i); render(); syncNameInputs();
+    return true; } function pStateText(p) { if (!p) return '等待';
+    if (p.kind === 'win') return '赢 ' + signedInt(p.delta);
+    if (p.kind === 'lose') return '输 ' + p.delta; if (p.kind === 'draw') return '平 ±0';
+    if (p.kind === 'fold' || p.folded) return '弃牌 ' + signedInt(-p.bet);
+    if (!p.seen && p.bet) return '闷牌 ' + p.bet; if (p.seen && p.bet) return '已看牌 ' + p.bet;
+    return '等待'; }
+  function pvHTML(p) { return !p.handInfo ? '—' : (seatFaceUp(p) ? p.handInfo.desc : '暗牌'); }
+  function pvClass(p) { if (!p.handInfo || !seatFaceUp(p)) return 'pv';
+    if (p.handInfo.type === 'baozi') return 'pv baozi';
+    if (p.handInfo.type === 'tonghuashun' || p.handInfo.type === 'jinhua') return 'pv big';
+    if (p.handInfo.type === 'danzhang') return 'pv small'; return 'pv'; } function renderRank() {
+    const inTurn = !!(st && st.phase === 'bet' && st.turn >= 0);
+    const order = (st ? st.players.map(function (p, i) { return { p: p, i: i }; }) : [])
+      .sort(function (a, b) { return (b.p.chips - a.p.chips) || (a.i - b.i); }); let h = '';
+    if (st) {
+      h += '<div class="rankrow dealer' + (st.dealer.chips <= 0 ? ' broke' : '') + '"><span class="rk">庄</span>' + '<span class="rn">' + st.dealer.name + '</span><span class="rc">' + st.dealer.chips + '</span>' + '<span class="rd ' + (st.dealer.delta > 0 ? 'up' : st.dealer.delta < 0 ? 'down' : '') + '">' + ((st.phase === 'over' || st.dealer.delta !== 0) ? signedInt(st.dealer.delta) + (st.dealer.short > 0 ? ' 欠' + st.dealer.short : '') : '—') + '</span><span class="rs">本钱 ' + dealerBank + '</span></div>'; }
+    order.forEach(function (o, k) { const p = o.p;
+      h += '<div class="rankrow' + (inTurn && o.i === st.turn ? ' active' : '') + '"><span class="rk">' + (k + 1) + '</span>' + '<span class="rn">' + p.name + (inTurn && o.i === st.turn ? ' ▸' : '') + '</span><span class="rc">' + p.chips + '</span>' + '<span class="rd ' + (p.delta > 0 ? 'up' : p.delta < 0 ? 'down' : '') + '">' + pStateText(p) + '</span>' + '<span class="rs">胜 ' + p.wins + ' 负 ' + p.loses + ' 和 ' + p.draws + '</span></div>'; });
+    $('rankBox').innerHTML = h || '<div class="ranknote">点「🃏 发牌」开始</div>'; }
+  function countdownText() { if (!st || st.phase !== 'bet' || busy || dealing) return '';
+    if (!autoOn && myLimit < 0) return '';
+    return autoOn ? '🤖 自动打牌：' + Math.max(0, Math.ceil(autoLeft)) + ' 秒后替你决定'
+                  : '⏱ 限时 ' + Math.round(myLimit / 1000) + ' 秒：' + Math.max(0, Math.ceil(autoLeft)) + ' 秒后自动接管'; }
+  /* 教学条 */
+  function coachAdviseFor(seat) {
+    const p = st.players[seat], info = p.handInfo, unit = callUnit(st, p), d = aiDecision(st, seat);
+    const actCn = { look: '看牌', call: '跟注', raise: '加注', fold: '弃牌' }; let main, why, warn;
+    if (!p.seen) { main = '👀 先看牌（免费）—— 看完才知道该不该跟';
+      why = '不看牌就叫<b>闷牌</b>，跟注只要 <b>' + unit + ' 分</b>（1 份底注）；看完牌跟注要 <b>' + (unit * 2) + ' 分</b>（翻倍）。<br>轮到你时可以「看牌 → 再跟注/加注/弃牌」，看牌本身不花钱、也不结束你的回合。';
+      warn = '💡 底注 ' + st.ante + ' 分 · 你本局已下 <b>' + p.bet + ' 分</b>，筹码还剩 ' + p.chips + ' 分。';
+    } else {
+      main = '建议：' + (actCn[d.action] || '跟注') + ' —— ' + info.desc + (info.type === 'baozi' ? ' 🎉' : '');
+      why = '你的 3 张牌是 <b>' + cardsText(p.hand) + '</b> → <b>' + info.desc + '</b>（' + info.name + '）。<br>' + '跟注要 <b>' + unit + ' 分</b>，加注 ×3 要 <b>' + (unit * 3) + ' 分</b>；' + (info.type === 'baozi' || info.type === 'tonghuashun' ? '这是天花板级别的牌型，遇到就该把注加大。'
+              : info.type === 'jinhua' || info.type === 'shunzi' ? '能赢下大部分单张和对子，但还不是无敌，跟注或小加就好。'
+              : info.type === 'duizi' ? '对子能赢单张，但碰到金花以上就输了，别下太重。'
+              : '单张是最大路货（约 74% 都是单张），点数不够大就该弃牌。'); warn = d.note ? '🤖 自动打牌会这么打：' + d.note : ''; }
+    return { seat: seat, main: main, why: why, warn: warn, foot: oddsLine() + '<br>庄家本钱 <b>' + st.dealer.chips + '</b> · 桌面总注 <b>' + st.pot + '</b>' + (countdownText() ? ' · ' + countdownText() : ''), decision: d }; }
+  function renderCoach() {
+    const tag = $('coachTag'), main = $('coachMain'), why = $('coachWhy'), warn = $('coachWarn'), foot = $('coachFoot');
+    if (!st || !st.dealt) { tag.textContent = '准备'; main.innerHTML = '点「🃏 发牌」开始一局';
+      why.innerHTML = '每人先下 <b>' + ante + ' 分</b>底注，然后发 3 张暗牌；轮到你时再决定看牌 / 跟注 / 加注 / 弃牌。';
+      warn.innerHTML = coachOn ? '' : '教学关着（按 G 或点「🎓 教学中」打开）'; foot.innerHTML = oddsLine();
+      return; } if (st.phase === 'over') {
+      tag.textContent = '结果'; main.innerHTML = st.summary || '本局结束';
+      why.innerHTML = st.log.slice(-(st.players.length + 1)).join('<br>'); warn.innerHTML = '';
+      foot.innerHTML = '庄家本钱 <b>' + st.dealer.chips + '</b> · 本局 <b>' + signedInt(st.dealer.delta) + '</b>' + (st.dealer.short > 0 ? '（还欠 ' + st.dealer.short + '）' : '');
+      return; } if (st.phase === 'show') {
+      tag.textContent = '开牌'; main.innerHTML = '所有人都决定完了 —— 庄家亮牌';
+      why.innerHTML = '庄家 ' + (gapMs > 0 ? (gapMs / 1000) + ' 秒后' : '马上') + '自动开牌，也可以点「🎴 开牌」立刻揭牌。';
+      warn.innerHTML = '';
+      foot.innerHTML = '桌面总注 <b>' + st.pot + '</b> 分 · 在场上 ' + st.players.filter(function (p) { return !p.folded; }).length + ' 人';
+      return; } const p = curP();
+    if (!p) { tag.textContent = '等待'; main.innerHTML = '这一局没人能下注了'; return; }
+    const key = 'k' + p.seat + '-' + p.bet + '-' + (p.seen ? 1 : 0) + '-' + p.chips;
+    if (key !== coachKey) { coachKey = key; coachInfo = coachAdviseFor(p.seat); }
+    const s = coachInfo || coachAdviseFor(p.seat);
+    tag.textContent = (autoOn ? '自动 · ' : '建议 · ') + p.name;
+    main.innerHTML = s.main; why.innerHTML = s.why; warn.innerHTML = s.warn; foot.innerHTML = s.foot; }
+  function say(msg, big) { $('centerMsg').innerHTML = big ? '<span class="big">' + msg + '</span>' : msg; }
+  function resultLine(name, hand, delta, short, tail) {
+    const cls = delta > 0 ? 'up' : delta < 0 ? 'down' : '';
+    return '<div class="resline">' + name + '：' + (hand ? hand.desc : '—') + '，<b class="' + cls + '">' + signedInt(delta) + '</b>' + (short > 0 ? '（本钱不够，少拿 ' + short + ' 分）' : '') + (tail || '') + '</div>'; }
+  function renderResultBox(res) {
+    const cnt = function (k) { return res.results.filter(function (x) { return x.kind === k; }).length; };
+    let left = '<div class="resgroup"><div class="resgtitle">【本局总结】</div>' + '<div class="resline">赢：' + cnt('win') + ' 人</div><div class="resline">输：' + (cnt('lose') + cnt('fold')) + ' 人</div>' + '<div class="resline">平：' + cnt('draw') + ' 人</div>' + (cnt('fold') ? '<div class="resline">弃牌：' + cnt('fold') + ' 人</div>' : '') + '</div>';
+    let right = '<div class="resgroup"><div class="resgtitle">【详情情况】</div>' + resultLine('庄家', res.dealerHand, res.dealerDelta, 0, res.dealerShort > 0 ? '（还欠 ' + res.dealerShort + ' 分）' : '');
+    res.results.forEach(function (it) { right += resultLine(it.name, it.hand, it.delta, it.short, it.kind === 'fold' ? '（弃牌）' : ''); });
+    return '<div class="resbox">' + left + right + '</div>'; }
+
+  function render() { if (!st) return; const row = $('playersRow');
+    row.classList.toggle('many', playerCount >= 3);
+    if (row.children.length !== playerCount) buildPlayersUI();
+    const dc = $('dealerCards'), dealerUp = st.phase === 'over';
+    dc.classList.toggle('dealing', dealing);
+    dc.innerHTML = cardsHTML(st.dealer.hand, dealerUp, dealing); const dpv = $('dealerPv');
+    dpv.textContent = st.dealer.handInfo ? (dealerUp ? st.dealer.handInfo.desc : '暗牌') : '—';
+    dpv.className = (dealerUp && st.dealer.handInfo) ? (st.dealer.handInfo.type === 'baozi' ? 'pv baozi'
+      : (st.dealer.handInfo.type === 'danzhang' ? 'pv small' : 'pv big')) : 'pv';
+    const dk = $('dealerBank');
+    dk.innerHTML = '本钱 <b>' + st.dealer.chips + '</b>' + ((st.phase === 'over' || st.dealer.delta !== 0) ? ' · 本局 <b class="' + (st.dealer.delta > 0 ? 'up' : st.dealer.delta < 0 ? 'down' : '') + '">' + signedInt(st.dealer.delta) + '</b>' : '') + (st.dealer.short > 0 ? ' · 欠 ' + st.dealer.short : (st.dealer.chips <= 0 ? ' · 已赔光' : ''));
+    dk.classList.toggle('broke', st.dealer.chips <= 0); st.players.forEach(function (p, i) {
+      const z = $('pzone-' + i), box = $('pCards-' + i), pv = $('pPv-' + i), sp = $('pState-' + i), nm = $('pName-' + i);
+      if (!z || !box) return; if (nm && nm.textContent !== p.name) nm.textContent = p.name;
+      box.classList.toggle('dealing', dealing);
+      box.innerHTML = cardsHTML(p.hand, seatFaceUp(p), dealing);
+      if (pv) { pv.textContent = pvHTML(p); pv.className = pvClass(p); }
+      const active = st.phase === 'bet' && st.turn === i && !busy; if (sp) {
+        sp.className = 'pstate' + (p.kind === 'win' ? ' win' : (p.kind === 'lose' || p.folded) ? ' lose'
+          : active ? (p.seen ? ' decide' : ' turn') : '');
+        sp.textContent = (active ? '▸ ' : '') + pStateText(p); }
+      z.classList.toggle('active', active); z.classList.toggle('win', p.kind === 'win');
+      z.classList.toggle('lose', p.kind === 'lose'); z.classList.toggle('fold', !!p.folded);
+      const pb = $('pBet-' + i); if (pb) pb.textContent = p.bet; });
+    if (!st.dealt) say('选好底注和人数，点「🃏 发牌」开局'); else if (dealing) say('发牌中… 每人 3 张暗牌');
+    else if (st.phase === 'over' && st.results.length) {
+      const mine = st.results.filter(function (x) { return x.seat === 0; })[0];
+      const head = (playerCount === 1)
+        ? (mine.kind === 'win' ? '🎉 你赢了' : mine.kind === 'draw' ? '和局' : mine.kind === 'fold' ? '你弃牌了' : '你输了')
+        : (st.results.filter(function (x) { return x.kind === 'win'; }).length + ' 人赢 · ' + st.results.filter(function (x) { return x.kind !== 'win'; }).length + ' 人输/弃牌');
+      say('<span class="big">' + head + '</span><br>庄家 ' + st.dealer.handInfo.desc, true);
+    } else if (st.phase === 'show') say('所有人都决定完了 —— 等庄家亮牌（或点「🎴 开牌」）');
+    else { const p = curP(); say(p ? ('轮到 <b>' + p.name + '</b> —— 看牌 / 跟注 / 加注 / 弃牌') : '本局结束'); }
+    renderRank(); renderCoach(); layout(); } function layout() { const row = $('playersRow');
+    if (row) row.classList.toggle('many', playerCount >= 3);
+    return { playerCount: playerCount, phase: st ? st.phase : 'bet' }; } function updatePanel() {
+    if (!st) return;
+    const p = curP(), inTurn = st.phase === 'bet' && st.turn >= 0 && !busy && !dealing;
+    $('turnNow').textContent = p ? (p.name + '（第 ' + (st.turn + 1) + ' 位）') : '—';
+    $('chips').textContent = p ? p.chips : '—'; $('betNow').textContent = p ? p.bet : '—';
+    $('seenNow').textContent = p ? (p.seen ? '已看牌（跟注 ×2）' : '闷牌（跟注 ×1）') : '—';
+    $('handNow').textContent = (p && p.handInfo) ? ((p.seen || st.phase === 'over') ? p.handInfo.desc : '暗牌（未看）') : '—';
+    $('dealerHandNow').textContent = (st.dealer.handInfo && st.phase === 'over') ? st.dealer.handInfo.desc : '暗牌';
+    $('potNow').textContent = st.pot; $('dealerChips').textContent = st.dealer.chips;
+    const dd = $('dealerDelta'); if (st.phase === 'over' || st.dealer.delta !== 0) {
+      dd.innerHTML = '<span style="color:' + (st.dealer.delta > 0 ? 'var(--win)' : st.dealer.delta < 0 ? 'var(--danger)' : 'inherit') + '">' + signedInt(st.dealer.delta) + '</span>' + (st.dealer.short > 0 ? '（欠 ' + st.dealer.short + '）' : '');
+    } else dd.textContent = '—';
+    $('resNow').textContent = st.phase === 'over' ? (st.summary || '—') : '—';
+    const unit = p ? callUnit(st, p) : st.ante;
+    $('dealBtn').disabled = !(!busy && !dealing && (!st.dealt || st.phase === 'over'));
+    $('dealBtn').textContent = (st.dealt && st.phase === 'over') ? '🃏 再来一局' : '🃏 发牌';
+    $('look').disabled = !(inTurn && p && !p.seen);
+    $('call').disabled = !(inTurn && p && p.chips >= unit);
+    $('raise1').disabled = !(inTurn && p && p.chips >= unit);
+    $('raise2').disabled = !(inTurn && p && p.chips >= unit * 2);
+    $('raise3').disabled = !(inTurn && p && p.chips >= unit * 3); $('fold').disabled = !inTurn;
+    $('hint').disabled = !inTurn;
+    $('showBtn').disabled = !(st.phase === 'show' && !busy && !dealing);
+    $('nextBtn').disabled = !(!busy && !dealing && st.dealt);
+    $('call').textContent = '💰 跟注 ' + unit + ' 分 (空格)';
+    $('raise1').textContent = '📈 加注 ' + unit + ' (D)';
+    $('raise2').textContent = '×2 = ' + (unit * 2) + ' (E)';
+    $('raise3').textContent = '×3 = ' + (unit * 3) + ' (W)'; $('anteSel').value = String(ante);
+    const bankIn = $('dealerBankIn'); let focused = false;
+    try { focused = (document.activeElement === bankIn); } catch (e) {}
+    if (bankIn && !focused && bankIn.value !== String(dealerBank)) bankIn.value = String(dealerBank);
+    $('payOrderSel').value = payOrder; $('playerSel').value = String(playerCount);
+    $('dealMsSel').value = String(dealMs); $('gapSel').value = String(gapMs); $('myDelaySel').value = String(myLimit);
+    $('selInfo').innerHTML = (!st.dealt) ? '选底注（' + ante + ' 分）和人数，点「🃏 ' + (playerCount > 1 ? defaultName(0, playerCount) + ' 先发牌' : '发牌') + '」'
+      : dealing ? '发牌中…'
+      : st.phase === 'bet' ? (p ? (p.name + '：本局已下 ' + p.bet + ' 分 · ' + (p.seen ? '已看牌（跟注翻倍）' : '闷牌（跟注 ' + st.ante + ' 分）') + ' · 请决定：看牌 / 跟注 / 加注 / 弃牌' + (countdownText() ? ' · ' + countdownText() : '')) : '本局结束')
+      : st.phase === 'show' ? '所有人都决定完了 —— ' + (gapMs > 0 ? (gapMs / 1000) + ' 秒后' : '即将') + '开牌（点「🎴 开牌」立刻揭牌）'
+      : (st.summary || '本局结束') + ' —— 点「➡ 下一局」继续'; renderStats(); }
+
+  /* ============ 浮层 ============ */
+  function toast(msg) { const el = $('toast'); el.textContent = msg; el.classList.add('on');
+    clearTimeout(el._t); el._t = setTimeout(function () { el.classList.remove('on'); }, 1900); }
+  const isOpen = function (id) { const m = $(id); return !!m && m.classList.contains('on'); };
+  function openModal(id) { const m = $(id); if (m) m.classList.add('on'); }
+  function closeModal(id) { const m = $(id); if (m) m.classList.remove('on'); }
+  function closeModals() { closeModal('rulesModal'); closeModal('resultModal'); closeModal('brokeModal'); }
+  function showResultCard() { if (!st || st.phase !== 'over') return false;
+    const mine = st.results.filter(function (x) { return x.seat === 0; })[0], title = $('resultTitle');
+    if (playerCount === 1 && mine) {
+      title.textContent = mine.kind === 'win' ? '🎉 你赢了 ' + signedInt(mine.delta) + ' 分'
+        : mine.kind === 'draw' ? '和局（退还本注）'
+        : mine.kind === 'fold' ? '你弃牌了，损失 ' + mine.bet + ' 分' : '你输了 ' + mine.delta + ' 分';
+      title.className = 'res-big ' + (mine.kind === 'win' ? 'win' : 'lose'); } else {
+      title.textContent = '本局结束 · ' + st.results.filter(function (x) { return x.kind === 'win'; }).length + ' 人赢';
+      title.className = 'res-big'; }
+    $('resultBox').innerHTML = '<p style="margin:0 0 8px;color:var(--muted)">庄家亮牌：<b style="color:var(--text)">' + st.dealer.handInfo.desc + '</b>（' + cardsText(st.dealer.hand) + '）</p>' + renderResultBox({ results: st.results, dealerHand: st.dealer.handInfo, dealerDelta: st.dealer.delta, dealerShort: st.dealer.short }) + '<p style="margin:10px 0 0;color:var(--muted);font-size:12.5px">' + oddsLine() + '</p>';
+    openModal('resultModal'); Sfx.flip(); return true; } function showBrokeCard() {
+    if (isOpen('brokeModal') || !st) return false; closeModal('resultModal');
+    const owed = st.dealer.short > 0 ? st.dealer.short : 0;
+    $('brokeTitle').textContent = '庄家本钱赔光了 —— 这一局结束了';
+    $('brokeText').innerHTML = '庄家现在 <b style="color:#ffb4b4">0 分</b>，一分钱都赔不出来，再打下去赢了也拿不到钱。' + '补给庄家就能接着玩，或者你自己改个本钱数。';
+    let h = '<div class="broke-kv"><span>本局庄家盈亏</span><b class="' + (st.dealer.delta < 0 ? 'down' : '') + '">' + signedInt(st.dealer.delta) + ' 分</b></div>' + '<div class="broke-kv"><span>庄家本钱</span><b class="down">' + st.dealer.chips + ' 分</b></div>';
+    if (owed) h += '<div class="broke-kv"><span>还欠赢家（不赔）</span><b class="down">' + owed + ' 分</b></div>';
+    h += '<div class="broke-kv"><span>赔付次序</span><b>' + PAY_ORDER_CN[payOrder] + '</b></div>' + '<div class="broke-kv"><span>你的筹码</span><b>' + (st.players[0] ? st.players[0].chips : 0) + ' 分</b></div>' + '<div class="broke-kv"><span>补给后本钱</span><b>' + dealerBank + ' 分</b></div>';
+    $('brokeStats').innerHTML = h;
+    $('brokeContinue').textContent = '🔄 补给庄家 ' + dealerBank + ' 分，继续下一局';
+    openModal('brokeModal'); Sfx.broke(); return true; }
+
+  /* ============ 流程：发牌 → 轮流决定 → 开牌 → 结算 → 下一局 ============ */
+  function makeState(seed) { const names = [];
+    for (let i = 0; i < playerCount; i++) names.push(nameFor(i, playerCount));
+    return newGameState({ playerCount: playerCount, names: names, ante: ante, chips: CHIPS_START, dealerChips: dealerBank, seed: (seed === undefined ? seedVal : seed), payOrder: payOrder }); }
+  /* 重新开局（保留本次战绩）：同一个 seed 永远复现同一串牌 */
+  function newGame(seed) {
+    if (seed !== undefined && seed !== null && seed !== '') seedVal = (Number(seed) >>> 0);
+    gen++; clearTimers(); busy = false; dealing = false; autoSeq++; autoLeft = 0;
+    closeModals(); coachKey = ''; coachInfo = null; st = makeState(seedVal);
+    buildPlayersUI(); buildNameInputs(); render(); updatePanel(); return deal(); }
+  function setSeed(n) {
+    seedVal = (n === null || n === undefined || n === '') ? null : (Number(n) >>> 0);
+    if (st) { st.seed = seedVal; st.rng = (seedVal === null ? null : mulberry32(seedVal)); }
+    return seedVal; }
+  function resetAll() { resetStats(); newGame(seedVal); Sfx.click(); toast('已重新开局（筹码和战绩都清零）'); }
+  function deal() { if (!st || busy || dealing) return false;
+    if (st.dealt && st.phase !== 'over') { toast('这一局还没结束呢'); return false; } gen++;
+    const myGen = gen; clearTimers(); closeModals();
+    dealing = true; busy = true; autoSeq++; autoLeft = 0; coachKey = ''; coachInfo = null;
+    clearTable(st); dealRound(st); render(); updatePanel(); Sfx.deal(); later(function () {
+      if (myGen !== gen) return; dealing = false; busy = false; Sfx.flip(); render(); updatePanel();
+      if (st.phase === 'show') scheduleShow(); else scheduleAuto(); }, clamp(dealMs, 260, 4000));
+    return true; } function resolve() {
+    if (!st || !st.dealt || busy || dealing || st.phase === 'over') return null;
+    if (st.phase !== 'show') { toast('还有人在考虑，等大家都决定完再开牌'); return null; } gen++; clearTimers();
+    busy = false; dealing = false; autoSeq++; autoLeft = 0; const res = resolveRound(st);
+    const mine = res.results.filter(function (x) { return x.seat === 0; })[0];
+    if (res.results.some(function (x) { return x.hand.type === 'baozi'; })) { baoziSeen++; Sfx.baozi(); }
+    if (mine && mine.kind === 'win') Sfx.win();
+    else if (mine && (mine.kind === 'lose' || mine.kind === 'fold')) Sfx.lose(); else Sfx.push();
+    recordResult(seatOutcome(st, 0)); coachKey = ''; coachInfo = null; render(); updatePanel();
+    if (st.dealer.chips <= 0) {
+      if (autoOn) { autoOn = false; pref.set('zjh.auto', 'off'); renderAutoBtn(); toast('庄家本钱赔光了，自动打牌已停'); }
+      later(showBrokeCard, 900); } else { later(showResultCard, 520); if (autoOn) {
+        const myGen = gen;
+        later(function () { if (gen === myGen && autoOn && st && st.phase === 'over' && st.dealer.chips > 0) nextRound(); }, 1900); } }
+    return res; } function nextRound() { if (!st || busy || dealing) return false;
+    gen++; clearTimers(); closeModals(); clearTable(st); coachKey = ''; coachInfo = null;
+    render(); updatePanel(); return deal(); }
+  /* 玩家动作：界面点按钮 / 按键 / 测试都走这里 */
+  function act(seat, action, amount) { if (!st) return { ok: false, reason: '还没开局' };
+    if (busy || dealing) return { ok: false, reason: '正忙，稍等一下' };
+    if (!st.dealt || st.phase !== 'bet') return { ok: false, reason: '现在不是下注阶段' };
+    const p = st.players[seat]; if (!p) return { ok: false, reason: '没有这个座位' };
+    if (st.turn !== seat) { toast('还没轮到 ' + p.name); return { ok: false, reason: '还没轮到他', turn: st.turn }; }
+    const res = playerAction(st, seat, action, amount);
+    if (!res || !res.ok) { if (res && res.reason) toast(res.reason); render(); updatePanel(); return res || { ok: false }; }
+    if (res.action === 'look') { Sfx.flip(); say('<b>' + p.name + '</b> 看牌：' + p.handInfo.desc); }
+    else if (res.action === 'fold') { Sfx.lose(); say('<b>' + p.name + '</b> 弃牌，损失 ' + p.bet + ' 分'); }
+    else { Sfx.chip(); say('<b>' + p.name + '</b> ' + (res.action === 'raise' ? ('加注 ×' + res.mult + '：') : '跟注 ') + res.cost + ' 分（本局已下 ' + p.bet + '）'); }
+    coachKey = ''; coachInfo = null; render(); updatePanel();
+    if (st.phase === 'show') scheduleShow(); else scheduleAuto(); return res; }
+  function aiStep(seat) { if (!st || st.phase !== 'bet' || st.turn !== seat) return null;
+    let d = aiDecision(st, seat); if (d.action === 'look') { act(seat, 'look');
+      if (!st || st.phase !== 'bet' || st.turn !== seat) return { decision: d, result: null };
+      d = aiDecision(st, seat); } let r = act(seat, d.action, d.amount);
+    if (r && !r.ok && d.action !== 'fold') r = act(seat, 'fold');
+    return { decision: d, result: r }; } function scheduleShow() {
+    if (!st || st.phase !== 'show' || busy || dealing) return false; const myGen = gen;
+    later(function () { if (gen === myGen && st && st.phase === 'show') resolve(); }, clamp(gapMs, 0, 8000));
+    return true; } function stopCountdown() { autoSeq++; autoLeft = 0; autoShown = -1; }
+  function scheduleAuto() { stopCountdown(); if (!st || busy || dealing) return;
+    if (st.phase === 'show') { scheduleShow(); return; }
+    if (st.phase !== 'bet' || st.turn < 0) return; if (autoOn) {
+      const seq = autoSeq, seat = st.turn;
+      later(function () { if (seq === autoSeq && st && st.phase === 'bet' && st.turn === seat) aiStep(seat); }, 620);
+      renderCoach(); return; } if (myLimit < 0) return;                          /* 不限时：等你自己点 */
+    const seq = autoSeq; autoLeft = myLimit / 1000; autoShown = Math.ceil(autoLeft); renderCoach();
+    const step = function () {
+      if (seq !== autoSeq || !st || st.phase !== 'bet' || busy) return;   /* 旧的计时器直接退出，绝不动新计时器的 autoLeft */
+      autoLeft = Math.max(0, autoLeft - 0.25); const sec = Math.ceil(autoLeft);
+      if (sec !== autoShown) { autoShown = sec; renderCoach(); updatePanel(); }
+      if (autoLeft <= 0) { toast('⏱ 限时到，AI 替你接管这一手'); aiStep(st.turn); return; }
+      later(step, 250); }; later(step, 250); } function renderAutoBtn() {
+    $('auto').textContent = autoOn ? '🤖 自动打牌中' : '🤖 自动打牌';
+    $('sound').textContent = Sfx.enabled ? '🔊 音效' : '🔇 音效关'; }
+  function renderCoachBtn() { $('coach').textContent = coachOn ? '🎓 教学中' : '🎓 教学关'; }
+  function toggleAuto() { autoOn = !autoOn; pref.set('zjh.auto', autoOn ? 'on' : 'off');
+    renderAutoBtn(); if (autoOn) {
+      if (myLimit < 0) { myLimit = 8000; pref.set('zjh.mylimit', '8000'); }
+      if (st && st.dealt && st.phase === 'bet' && st.turn >= 0) scheduleAuto();
+      else if (st && st.phase === 'show') scheduleShow();
+      else if (st && st.phase === 'over') nextRound(); else if (st && !st.dealt) deal();
+    } else stopCountdown(); render(); updatePanel(); return autoOn; }
+
+  /* ============ 设置项 ============ */
+  function applyAnte(v) { ante = normAnte(v); pref.set('zjh.ante', String(ante));
+    if (st && !st.dealt) st.ante = ante; $('anteSel').value = String(ante); render(); updatePanel();
+    return ante; } function applyDealerBank(v, quiet, strict) {
+    const raw = String(v == null ? '' : v).trim(); let n;
+    if (raw === '' || !isFinite(Number(raw))) { if (!strict) return dealerBank; n = DEALER_BANK_DEFAULT; }
+    else n = Math.floor(Number(raw)); dealerBank = normDealerBank(n);
+    pref.set('zjh.bank', String(dealerBank));
+    if (st && !st.dealt) { st.dealer.bank = dealerBank; st.dealer.chips = dealerBank; }
+    const inp = $('dealerBankIn'); if (inp) inp.value = String(dealerBank); render(); updatePanel();
+    if (!quiet) toast('庄家本钱改成 ' + dealerBank + ' 分（下次发牌生效）'); return dealerBank; }
+  function setPayOrder(v) { payOrder = normPayOrder(v); pref.set('zjh.payorder', payOrder);
+    if (st) st.payOrder = payOrder; $('payOrderSel').value = payOrder;
+    $('payOrderHint').textContent = (payOrder === 'points') ? '牌型强的先拿满，牌型弱的少拿/拿不到' : '先上阵的先拿满，后面的少拿/拿不到';
+    render(); updatePanel(); return payOrder; } function setPlayers(n) {
+    playerCount = normPlayerCount(n); pref.set('zjh.players', String(playerCount));
+    $('playerSel').value = String(playerCount); gen++; clearTimers(); st = makeState(seedVal);
+    buildPlayersUI(); buildNameInputs(); render(); updatePanel();
+    toast('改成 ' + playerCount + ' 个人 —— 每人 1000 分，重新开始'); deal(); return playerCount; }
+  function setSoundLevel(lv) { if (lv === 'off') Sfx.setOn(false); else { Sfx.setOn(true);
+      Sfx.setVolume(Sfx.VOLS[lv] === undefined ? 0.68 : Sfx.VOLS[lv]);
+      renderVolume(Math.round(Sfx.volume * 100)); Sfx.chip(); }
+    segValue($('soundSeg'), 'vol', Sfx.level);
+    $('sound').textContent = Sfx.enabled ? '🔊 音效' : '🔇 音效关'; return Sfx.level; }
+  const volRange = $('volRange'), volNum = $('volNum'); let lastBeep = 0;
+  /* 家测口径的 setVolume(v)：v 传 0~1 的小数或 0~100 的百分比都认，改完顺便响一声 */
+  function setVolume(v) {
+    const x = Number(v), pct = (!isFinite(x)) ? 0 : (x > 1 ? x : x * 100);
+    renderVolume(pct);
+    if (Sfx.enabled) Sfx.chip();
+    return Sfx.volume;
+  }
+  function renderVolume(pctRaw) { const pct = clamp(Math.round(num(pctRaw, 0)), 0, 100);
+    volRange.value = String(pct); volNum.textContent = String(pct);
+    Sfx.setVolume(pct / 100);                       /* 主增益 = 音量百分比（0~1）直接映射 */
+    if (pct === 0) Sfx.setOn(false);                /* 音量为 0 -> 高亮切到「关」 */
+    else if (!Sfx.enabled) Sfx.setOn(true); segValue($('soundSeg'), 'vol', Sfx.level);
+    $('sound').textContent = Sfx.enabled ? '🔊 音效' : '🔇 音效关'; return pct; } function beepVolume() {
+    const now = Date.now();
+    if (Sfx.enabled && now - lastBeep > 140) { lastBeep = now; Sfx.click(); return true; }
+    return false; } function buildHowto() {
+    $('howtoBox').innerHTML = '<b style="color:var(--text)">1~4 个人</b>轮流上阵（1 个人就是单人模式），每人自己一份 1000 分筹码，各押各的底注，' + '最后<b style="color:var(--text)">同一个庄家</b>亮牌，跟每个没弃牌的人分别比牌型。<br>' + '牌型由强到弱：<b style="color:var(--text)">豹子 &gt; 同花顺 &gt; 金花 &gt; 顺子 &gt; 对子 &gt; 单张</b>；' + 'A 最大，<b style="color:var(--text)">A23 是最小的顺子</b>；完全相同比花色 ♠&gt;♥&gt;♣&gt;♦。<br>' + '<b style="color:var(--win)">看牌会让跟注翻倍</b>：闷牌跟 1 份底注，看完牌跟 2 份 —— 看牌前先想清楚。<br>' + '底注可选 ' + ANTES.join(' / ') + ' 分（默认 ' + ANTE_DEFAULT + '）。<br>' + '<span style="display:inline-block;margin-top:6px">快捷键：<kbd>空格</kbd> 跟注 · <kbd>L</kbd> 看牌 · ' + '<kbd>D</kbd>/<kbd>E</kbd>/<kbd>W</kbd> 加注 ×1/×2/×3 · <kbd>F</kbd> 弃牌 · <kbd>Enter</kbd> 开牌 / 关浮层并继续 · ' + '<kbd>Esc</kbd> 只关浮层 · <kbd>R</kbd> 新一局 · <kbd>A</kbd> 自动 · <kbd>G</kbd> 教学 · <kbd>H</kbd> 规则 · ' + '<kbd>M</kbd> 音效 · <kbd>Shift</kbd>+<kbd>F</kbd> 专注</span>'; }
+
+  /* ============ 接线 ============ */
+  function bind() {
+    $('dealBtn').addEventListener('click', function () { if (st && st.dealt && st.phase === 'over') nextRound(); else deal(); });
+    $('look').addEventListener('click', function () { if (st) act(st.turn, 'look'); });
+    $('call').addEventListener('click', function () { if (st) act(st.turn, 'call'); });
+    $('raise1').addEventListener('click', function () { if (st) act(st.turn, 'raise', 1); });
+    $('raise2').addEventListener('click', function () { if (st) act(st.turn, 'raise', 2); });
+    $('raise3').addEventListener('click', function () { if (st) act(st.turn, 'raise', 3); });
+    $('fold').addEventListener('click', function () { if (st) act(st.turn, 'fold'); });
+    $('showBtn').addEventListener('click', function () { resolve(); });
+    $('nextBtn').addEventListener('click', function () { nextRound(); });
+    $('hint').addEventListener('click', function () {
+      if (!st || st.phase !== 'bet' || st.turn < 0) return; Sfx.click();
+      toast(coachAdviseFor(curP().seat).main.replace(/<[^>]+>/g, ''));
+      coachKey = ''; renderCoach(); }); $('auto').addEventListener('click', toggleAuto);
+    $('coach').addEventListener('click', function () {
+      coachOn = !coachOn; pref.set('zjh.coach', coachOn ? 'on' : 'off');
+      renderCoachBtn(); renderCoach(); }); $('sound').addEventListener('click', function () {
+      Sfx.set(!Sfx.enabled);
+      setSoundLevel(Sfx.enabled ? (Sfx.volume <= 0 ? 'mid' : Sfx.level) : 'off'); });
+    $('soundSeg').addEventListener('click', function (ev) {
+      const b = ev.target.closest ? ev.target.closest('button') : null;
+      if (b) setSoundLevel(b.dataset.vol); });
+    volRange.addEventListener('input', function () { renderVolume(this.value); beepVolume(); });
+    volRange.addEventListener('change', function () { renderVolume(this.value); if (Sfx.enabled) Sfx.chip(); });
+    $('anteSel').addEventListener('change', function () { applyAnte(this.value); Sfx.click(); toast('底注改成 ' + ante + ' 分（下次发牌生效）'); });
+    $('payOrderSel').addEventListener('change', function () { setPayOrder(this.value); Sfx.click(); toast('本钱不够时改成：' + PAY_ORDER_CN[payOrder] + '赔'); });
+    $('playerSel').addEventListener('change', function () { setPlayers(this.value); Sfx.click(); });
+    $('dealerBankIn').addEventListener('change', function () { applyDealerBank(this.value, false, true); this.value = String(dealerBank); Sfx.chip(); });
+    $('dealerBankIn').addEventListener('input', function () {
+      const v = applyDealerBank(this.value, true);
+      if (String(v) !== this.value && this.value !== '') this.value = String(v); });
+    $('dealMsSel').addEventListener('change', function () { dealMs = num(this.value, 900); pref.set('zjh.dealgap', String(dealMs)); });
+    $('gapSel').addEventListener('change', function () { gapMs = num(this.value, 900); pref.set('zjh.showgap', String(gapMs)); });
+    $('myDelaySel').addEventListener('change', function () { myLimit = num(this.value, 8000);
+      if (myLimit < -1) myLimit = 8000; pref.set('zjh.mylimit', String(myLimit));
+      if (st && st.phase === 'bet' && st.turn >= 0) scheduleAuto(); updatePanel(); });
+    $('theme').addEventListener('change', function () {
+      applyTheme(this.value); pref.set('zjh.theme', this.value); Sfx.click(); render(); updatePanel(); });
+    $('rulesBtn').addEventListener('click', function () { openModal('rulesModal'); Sfx.click(); });
+    $('rulesClose').addEventListener('click', function () { closeModal('rulesModal'); });
+    $('rulesModal').addEventListener('click', function (e) { if (e.target === this) closeModal('rulesModal'); });
+    $('resultNext').addEventListener('click', function () { closeModal('resultModal'); nextRound(); });
+    $('resultClose').addEventListener('click', function () { closeModal('resultModal'); });
+    $('resultModal').addEventListener('click', function (e) { if (e.target === this) closeModal('resultModal'); });
+    $('brokeContinue').addEventListener('click', function () { closeModal('brokeModal');
+      if (!st) return; st.dealer.chips = dealerBank; st.dealer.short = 0;
+      Sfx.chip(); toast('庄家补给 ' + dealerBank + ' 分，开下一局'); render(); updatePanel(); nextRound(); });
+    $('brokeEdit').addEventListener('click', function () { closeModal('brokeModal');
+      const inp = $('dealerBankIn'); if (inp && inp.focus) inp.focus();
+      toast('改「庄家本钱」的数值就能继续（改完点「🃏 发牌」）'); render(); updatePanel(); });
+    $('brokeClose').addEventListener('click', function () { closeModal('brokeModal'); });
+    $('brokeModal').addEventListener('click', function (e) { if (e.target === this) closeModal('brokeModal'); });
+    $('reset').addEventListener('click', function () { if (!st) return;
+      st.players.forEach(function (p) { p.chips = CHIPS_START; });
+      st.dealer.chips = dealerBank; st.dealer.short = 0;
+      Sfx.chip(); toast('所有人筹码回到 1000，庄家本钱回到 ' + dealerBank); render(); updatePanel(); });
+    $('newRound').addEventListener('click', function () { resetAll(); });
+
+    window.addEventListener('keydown', function (ev) {
+      const tn = (ev.target && ev.target.tagName) || '';
+      if (tn === 'INPUT' || tn === 'SELECT' || tn === 'TEXTAREA') {
+        if (ev.key === 'Escape' && ev.target.blur) ev.target.blur(); return; }
+      const k = (ev.key || '').toLowerCase(); if (ev.key === 'Enter') { ev.preventDefault();
+        if (isOpen('rulesModal')) { closeModal('rulesModal'); return; }
+        if (isOpen('brokeModal')) { closeModal('brokeModal'); nextRound(); return; }
+        if (isOpen('resultModal')) { closeModal('resultModal'); nextRound(); return; }
+        if (st && st.phase === 'show') { resolve(); return; }
+        if (st && st.phase === 'over') { nextRound(); return; } if (st && !st.dealt) deal();
+        return; } if (ev.key === 'Escape') { closeModals(); return; }
+      if (k === ' ' || k === 'spacebar') { ev.preventDefault(); if (!st) return;
+        if (!st.dealt) { deal(); return; } if (st.phase === 'over') { nextRound(); return; }
+        if (st.phase === 'show') { resolve(); return; } if (st.turn >= 0) act(st.turn, 'call');
+        return; } if (k === 'l') { if (st && st.turn >= 0) act(st.turn, 'look'); }
+      else if (k === 'd') { if (st && st.turn >= 0) act(st.turn, 'raise', 1); }
+      else if (k === 'e') { if (st && st.turn >= 0) act(st.turn, 'raise', 2); }
+      else if (k === 'w') { if (st && st.turn >= 0) act(st.turn, 'raise', 3); }
+      else if (k === 'f') { if (st && st.turn >= 0) act(st.turn, 'fold'); }
+      else if (k === 'r') nextRound(); else if (k === 'a') toggleAuto();
+      else if (k === 'g') { coachOn = !coachOn; pref.set('zjh.coach', coachOn ? 'on' : 'off'); renderCoachBtn(); renderCoach(); }
+      else if (k === 'h') { if (isOpen('rulesModal')) closeModal('rulesModal'); else { openModal('rulesModal'); Sfx.click(); } }
+      else if (k === 'm') { Sfx.set(!Sfx.enabled); setSoundLevel(Sfx.enabled ? (Sfx.volume <= 0 ? 'mid' : Sfx.level) : 'off'); } }); }
+
+  /* ============ 启动 ============ */
+  function boot() { applyTheme(themeKey); const sel = $('theme'); THEME_LIST.forEach(function (k) {
+      const o = document.createElement('option'); o.value = k; o.textContent = THEMES[k].name;
+      sel.appendChild(o); }); sel.value = themeKey; ANTES.forEach(function (v) {
+      const o = document.createElement('option'); o.value = String(v); o.textContent = v + ' 分';
+      $('anteSel').appendChild(o); }); PLAYER_COUNTS.forEach(function (n) {
+      const o = document.createElement('option'); o.value = String(n); o.textContent = n + ' 个人';
+      $('playerSel').appendChild(o); });
+    $('anteRuleLi').innerHTML = '<b>下底注</b>：可选 ' + ANTES.join(' / ') + ' 分（默认 ' + ANTE_DEFAULT + ' 分）。开局时每个人（包括庄家）先交一份底注进桌面，之后跟注/加注都是在它上面加。';
+    buildHowto(); $('anteSel').value = String(ante); $('payOrderSel').value = payOrder;
+    $('payOrderHint').textContent = (payOrder === 'points') ? '牌型强的先拿满，牌型弱的少拿/拿不到' : '先上阵的先拿满，后面的少拿/拿不到';
+    $('playerSel').value = String(playerCount); $('dealMsSel').value = String(dealMs);
+    $('gapSel').value = String(gapMs); $('myDelaySel').value = String(myLimit);
+    $('dealerBankIn').value = String(dealerBank); const savedVol = pref.get('zjh.vol', null);
+    renderVolume(savedVol !== null && isFinite(Number(savedVol)) ? Math.round(Number(savedVol) * 100) : 68);
+    segValue($('soundSeg'), 'vol', Sfx.level); bind();
+    renderAutoBtn(); renderCoachBtn(); renderStats(); st = makeState(seedVal);
+    buildPlayersUI(); buildNameInputs(); render(); updatePanel();
+    odds();                                    /* 预热牌型概率（枚举 22100 种组合） */
+  }
+
+  /* ============ 调试 / 自动化测试钩子 ============ */
+  function rebuildFromState() { if (!st) return; playerCount = st.players.length;
+    $('playerSel').value = String(playerCount); buildPlayersUI(); buildNameInputs();
+    render(); updatePanel(); } window.__ZJH = {
+    get st() { return st; }, set st(v) { st = v; rebuildFromState(); }, stats: stats, recordResult: recordResult, renderStats: renderStats, resetStats: resetStats, get baoziSeen() { return baoziSeen; }, newGame: newGame, resetAll: resetAll, deal: deal, nextRound: nextRound, resolve: resolve, act: act, aiStep: aiStep, setSeed: setSeed, get seed() { return seedVal; }, render: render, updatePanel: updatePanel, layout: layout, renderCoach: renderCoach, renderRank: renderRank, toast: toast, say: say, setVolume: setVolume, get volume() { return Sfx.volume; }, get volumePct() { return Math.round(Sfx.volume * 100); }, renderVolume: renderVolume, setSoundLevel: setSoundLevel, get soundLevel() { return Sfx.level; }, Sfx: Sfx, applyTheme: applyTheme, get theme() { return themeKey; }, THEMES: THEMES, THEME_LIST: THEME_LIST, get ante() { return ante; }, set ante(v) { applyAnte(v); }, applyAnte: applyAnte, get anteList() { return ANTES.slice(); }, get dealerBank() { return dealerBank; }, set dealerBank(v) { applyDealerBank(v); }, applyDealerBank: applyDealerBank, get payOrder() { return payOrder; }, set payOrder(v) { setPayOrder(v); }, setPayOrder: setPayOrder, get playerCount() { return playerCount; }, set playerCount(v) { setPlayers(v); }, setPlayers: setPlayers, setPlayerName: setPlayerName, nameFor: nameFor, get names() { return customNames.slice(); }, get coachOn() { return coachOn; }, set coachOn(v) { coachOn = !!v; pref.set('zjh.coach', coachOn ? 'on' : 'off'); renderCoachBtn(); renderCoach(); }, get autoOn() { return autoOn; }, set autoOn(v) { if (!!v !== autoOn) toggleAuto(); }, toggleAuto: toggleAuto, get autoLeft() { return autoLeft; }, get myLimit() { return myLimit; }, set myLimit(v) { myLimit = num(v, 8000); pref.set('zjh.mylimit', String(myLimit)); updatePanel(); }, get dealMs() { return dealMs; }, set dealMs(v) { dealMs = num(v, 900); }, get gapMs() { return gapMs; }, set gapMs(v) { gapMs = num(v, 900); }, get busy() { return busy; }, get dealing() { return dealing; }, get phase() { return st ? st.phase : 'bet'; }, get cur() { return st ? st.turn : -1; }, get players() { return st ? st.players.map(function (p) { return JSON.parse(JSON.stringify(p)); }) : []; }, get dealer() {
+      return st ? { name: st.dealer.name, chips: st.dealer.chips, delta: st.dealer.delta, short: st.dealer.short, bank: st.dealer.bank, hand: st.dealer.hand.slice(), handInfo: st.dealer.handInfo } : null;
+    }, handText: function (cards) { return cardsText(cards); }, evalHand: function (cards) { return evaluateHand(cards); }, compare: function (a, b) { return compareHands(a, b); }, handTypeOdds: handTypeOdds, oddsLine: oddsLine, showRules: function () { openModal('rulesModal'); }, hideRules: function () { closeModal('rulesModal'); }, showResultCard: showResultCard, showBrokeCard: showBrokeCard, get modalOpen() { return { rules: isOpen('rulesModal'), result: isOpen('resultModal'), broke: isOpen('brokeModal') }; }, /* core 的纯逻辑也透出去，方便直接在控制台 / 测试里调 */
+    SUITS: SUITS, RANK_LABEL: RANK_LABEL, HAND_TYPES: HAND_TYPES, HAND_NAMES: HAND_NAMES, makeDeck: makeDeck, shuffleCards: shuffleCards, mulberry32: mulberry32, newGameState: newGameState, dealRound: dealRound, playerAction: playerAction, aiDecision: aiDecision, resolveRound: resolveRound, seatOutcome: seatOutcome, clearTable: clearTable, callUnit: callUnit, handScore: handScore, clawbackOrder: clawbackOrder, ANTES: ANTES, ANTE_DEFAULT: ANTE_DEFAULT, CHIPS_START: CHIPS_START, DEALER_BANK_DEFAULT: DEALER_BANK_DEFAULT, PLAYER_COUNTS: PLAYER_COUNTS };
+  window.__STATS = window.__ZJH; boot(); })();
+</script>
+
+<script>
+/* ===== 专注/全屏模式：独立于游戏本体，不改游戏自己的代码 ===== */
+(function () { var fab = document.getElementById('focusFab'); function setLabel(on) {
+    if (!fab) return; fab.innerHTML = on ? '⛶ 退出专注' : '⛶ 专注模式';
+    fab.title = on ? '恢复标题和两侧面板（Shift+F）' : '隐藏标题和两侧面板，让中间占满窗口（Shift+F）'; }
+  function refit() { try { window.dispatchEvent(new Event('resize')); } catch (e) {} }
+  function toggleFocus() { var on = document.body.classList.toggle('focus');
+    setLabel(on); refit(); setTimeout(refit, 60); return on; }
+  if (fab) fab.addEventListener('click', toggleFocus);
+  /* 用 Shift+F：普通 f 在本游戏里是「弃牌」，不能抢。
+     捕获阶段 + stopPropagation，保证游戏自己的按键处理不会同时触发。 */
+  window.addEventListener('keydown', function (e) { var t = (e.target && e.target.tagName) || '';
+    if (t === 'INPUT' || t === 'SELECT' || t === 'TEXTAREA') return;
+    if ((e.key === 'F' || e.key === 'f') && e.shiftKey) { e.preventDefault(); e.stopPropagation(); toggleFocus(); }
+  }, true); })();
+</script>
+</body>
+</html>
